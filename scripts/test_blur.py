@@ -32,7 +32,8 @@ import cache_io
 import uformer
 # from uformer import lightning
 from uformer.utils.misc import optional,rslice_pair
-from uformer.utils.model_utils import temporal_chop
+from uformer.utils.model_utils import temporal_chop,expand2square
+
 
 def run_exp(cfg):
 
@@ -52,16 +53,19 @@ def run_exp(cfg):
     results.timer_deno = []
 
     # -- network --
+    noise_version = "blur"
     if cfg.model_type == "original":
-        model = uformer.original.load_model().to(cfg.device)
+        model = uformer.original.load_model(noise_version=noise_version).to(cfg.device)
     elif cfg.model_type == "aug_refactored":
         attn_mode = "refactored"
-        model = uformer.augmented.load_model(cfg.sigma,attn_mode=attn_mode,
+        model = uformer.augmented.load_model(noise_version=noise_version,
+                                             attn_mode=attn_mode,
                                              stride=cfg.stride,sb=-1)
                                              # ws=cfg.ws,wt=cfg.wt)#*1024)
     elif cfg.model_type == "aug_dnls":
         attn_mode = "dnls"
-        model = uformer.augmented.load_model(cfg.sigma,attn_mode=attn_mode,
+        model = uformer.augmented.load_model(noise_version=noise_version,
+                                             attn_mode=attn_mode,
                                              stride=cfg.stride)
                                              # ws=cfg.ws,wt=cfg.wt)
     else:
@@ -91,7 +95,7 @@ def run_exp(cfg):
 
         # -- unpack --
         sample = data[cfg.dset][index]
-        noisy,clean = sample['noisy'],sample['clean']
+        noisy,clean = sample['blur'],sample['sharp']
         noisy,clean = noisy.to(cfg.device),clean.to(cfg.device)
         vid_frames,region = sample['fnums'],optional(sample,'region',None)
         fstart = min(vid_frames)
@@ -115,9 +119,21 @@ def run_exp(cfg):
         # -- denoise --
         timer.start("deno")
         with th.no_grad():
-            tsize = 5
-            deno = temporal_chop(noisy/imax,tsize,model)
 
+            vshape = noisy.shape
+            print("noisy.shape: ",noisy.shape)
+            if cfg.model_type == "original" or True:
+                noisy_sq,mask = expand2square(noisy)
+            else: noisy_sq = noisy
+            print("noisy_sq.shape: ",noisy_sq.shape)
+
+            tsize = 2
+            deno = temporal_chop(noisy_sq/imax,tsize,model)
+
+            print("deno.shape: ",deno.shape)
+            if cfg.model_type == "original" or True:
+                deno = th.masked_select(deno,mask.bool()).reshape(*vshape)
+            print("deno.shape: ",deno.shape)
             # t = noisy.shape[0]
             # deno = []
             # for ti in range(t):
@@ -260,15 +276,13 @@ def main():
     # -- get cache --
     cache_dir = ".cache_io"
     # cache_name = "test_rgb_net"
-    cache_name = "sidd_rgb_bench"
+    cache_name = "gopro_bench"
     cache = cache_io.ExpCache(cache_dir,cache_name)
     # cache.clear()
 
     # -- get mesh --
-    # dnames = ["sidd_rgb"]
-    # dnames = ["sidd_rgb_bench"]
-    dnames = ["sidd_rgb_val"]
-    dset = ["val"]
+    dnames = ["gopro"]
+    dset = ["te"]
     vid_names = ["%02d" % x for x in np.arange(0,40)]
     vid_names = vid_names[1:2]
 
@@ -299,9 +313,10 @@ def main():
 
     # -- group with default --
     cfg = default_cfg()
-    # cfg.nframes = 4
-    # cfg.frame_start = 0
-    # cfg.frame_end = cfg.nframes-1
+    cfg.isize = "256_256"
+    cfg.nframes = 2
+    cfg.frame_start = 0
+    cfg.frame_end = cfg.frame_start + cfg.nframes - 1
     # cfg.isize = "256_256"
     cache_io.append_configs(exps,cfg) # merge the two
 
@@ -319,8 +334,8 @@ def main():
         # -- logic --
         uuid = cache.get_uuid(exp) # assing ID to each Dict in Meshgrid
         # cache.clear_exp(uuid)
-        # if exp.model_type == "original":
-        #     cache.clear_exp(uuid)
+        if exp.model_type == "original":
+            cache.clear_exp(uuid)
         # if exp.model_type == "aug_refactored":
         #     cache.clear_exp(uuid)
         if exp.model_type == "aug_dnls":
@@ -395,7 +410,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# 29.768 @ ?
-# 30.047 @ 1297.05/497
-# ...

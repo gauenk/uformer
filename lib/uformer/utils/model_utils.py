@@ -1,3 +1,4 @@
+import math
 import torch as th
 import torch.nn as nn
 import os
@@ -154,3 +155,17 @@ def temporal_chop(x,tsize,fwd_fxn,flows=None):
     return x_agg
 
 
+def expand2square(timg,factor=16.0):
+    t, _, h, w = timg.size()
+
+    X = int(math.ceil(max(h,w)/float(factor))*factor)
+
+    img = th.zeros(t,3,X,X).type_as(timg) # 3, h,w
+    mask = th.zeros(t,1,X,X).type_as(timg)
+
+    print(img.size(),mask.size())
+    # print((X - h)//2, (X - h)//2+h, (X - w)//2, (X - w)//2+w)
+    img[:,:, ((X - h)//2):((X - h)//2 + h),((X - w)//2):((X - w)//2 + w)] = timg
+    mask[:,:, ((X - h)//2):((X - h)//2 + h),((X - w)//2):((X - w)//2 + w)].fill_(1)
+
+    return img, mask

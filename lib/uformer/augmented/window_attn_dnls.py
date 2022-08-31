@@ -121,13 +121,24 @@ class WindowAttentionDnls(nn.Module):
         use_search_abs = False
         only_full = False
         exact = True
-        search = dnls.search.init("window",fflow, bflow, k,
+        stype = "window"
+        # stype = "prod_with_heads"
+
+        # -- switching input params --
+        if stype == "window":
+            use_adj = False
+            full_ws = True
+        else:
+            use_adj = False
+            full_ws = True
+
+        search = dnls.search.init(stype,fflow, bflow, k,
                                   ps_search, pt, ws, wt, nheads,
                                   chnls=-1,dilation=dil,
                                   stride0=stride,stride1=stride,
                                   reflect_bounds=reflect_bounds,
-                                  use_k=use_k,use_adj=False,full_ws=True,
-                                  search_abs=use_search_abs,
+                                  use_k=use_k,use_adj=use_adj,
+                                  search_abs=use_search_abs,full_ws=full_ws,
                                   h0_off=0,w0_off=0,h1_off=0,w1_off=0,
                                   exact=exact)
         wpsum = dnls.reducers.WeightedPatchSumHeads(ps_search, pt, h_off=0, w_off=0,
