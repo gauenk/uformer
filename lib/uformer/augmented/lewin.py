@@ -5,10 +5,12 @@ import torch.nn as nn
 from einops import rearrange,repeat
 
 # -- extra deps --
+import math
 import torch.nn.functional as F
 from timm.models.layers import DropPath, to_2tuple
 
 # -- project deps --
+from .mlps import FastLeFF,LeFF,Mlp
 from .attn import Attention
 from .window_attn import WindowAttention
 from .window_utils import window_partition,window_reverse

@@ -39,7 +39,6 @@ def load_model(*args,**kwargs):
 
     # -- other configs --
     embed_dim = optional(kwargs,'embed_dim',32)
-    # embed_dim = optional(kwargs,'embed_dim',44)
     win_size = optional(kwargs,'win_size',8)
     mlp_ratio = optional(kwargs,'mlp_ratio',4)
     qkv_bias = optional(kwargs,'qkv_bias',True)
@@ -47,22 +46,23 @@ def load_model(*args,**kwargs):
     token_mlp = optional(kwargs,'token_mlp','leff')
     modulator = optional(kwargs,'modulator',default_modulator)
     cross_modulator = optional(kwargs,'cross_modulator',False)
+    dd_in = optional(kwargs,'dd_in',3)
 
     # -- relevant configs --
-    fwd_mode = optional(kwargs,'fwd_mode',"dnls_k")
+    attn_mode = optional(kwargs,'attn_mode',"dnls_k")
     stride = optional(kwargs,'stride',None)
     ws = optional(kwargs,'ws',-1)
     wt = optional(kwargs,'wt',0)
     k = optional(kwargs,'k',-1)
-    sb = optional(kwargs,'sb',None)
+    bs = optional(kwargs,'bs',None)
 
     # -- init model --
     model = Uformer(img_size=input_size, in_chans=nchnls, embed_dim=embed_dim,
                     depths=depths, win_size=win_size, mlp_ratio=mlp_ratio,
                     qkv_bias=qkv_bias, token_projection=token_projection,
-                    token_mlp=token_mlp,stride=stride,fwd_mode=fwd_mode,
-                    ws=ws,wt=wt,k=k,sb=sb,
-                    modulator=modulator,cross_modulator=cross_modulator)
+                    token_mlp=token_mlp,modulator=modulator,
+                    cross_modulator=cross_modulator,dd_in=dd_in,
+                    attn_mode=attn_mode,ws=ws,wt=wt,k=k,stride=stride,bs=bs)
     model = model.to(device)
 
     # -- load weights --
@@ -73,10 +73,10 @@ def load_model(*args,**kwargs):
         # state_fn = "output/checkpoints/bc1b491e-e536-43a6-9261-88de75c17deb-epoch=15-val_loss=1.58e-04.ckpt"
         # state_fn = "output/checkpoints/44006e54-ddb2-4776-8cb0-e86edc464370-epoch=09-val_loss=1.55e-04.ckpt"
         # lit = True
-        state_fn = fdir / "models/Uformer_sidd_B.pth"
+        state_fn = fdir / "weights/Uformer_sidd_B.pth"
         lit = False
     elif noise_version == "blur":
-        state_fn = fdir / "models/Uformer_gopro_B.pth"
+        state_fn = fdir / "weights/Uformer_gopro_B.pth"
     else:
         raise ValueError(f"Uknown noise_version [{noise_version}]")
     assert os.path.isfile(str(state_fn))

@@ -10,18 +10,19 @@ from timm.models.layers import trunc_normal_
 # -- project deps --
 from .proj import InputProj,OutputProj
 from .basic_uformer import BasicUformerLayer
-
-
+from .scaling import Downsample,Upsample
 
 class Uformer(nn.Module):
     def __init__(self, img_size=256, in_chans=3, dd_in=3,
-                 embed_dim=32, depths=[2, 2, 2, 2, 2, 2, 2, 2, 2], num_heads=[1, 2, 4, 8, 16, 16, 8, 4, 2],
+                 embed_dim=32, depths=[2, 2, 2, 2, 2, 2, 2, 2, 2],
+                 num_heads=[1, 2, 4, 8, 16, 16, 8, 4, 2],
                  win_size=8, mlp_ratio=4., qkv_bias=True, qk_scale=None,
                  drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1,
                  norm_layer=nn.LayerNorm, patch_norm=True,
                  use_checkpoint=False, token_projection='linear', token_mlp='leff',
                  dowsample=Downsample, upsample=Upsample, shift_flag=True,
-                 modulator=False, cross_modulator=False, **kwargs):
+                 modulator=False, cross_modulator=False,
+                 attn_mode="default",ws=8,wt=0,k=-1,stride=1,bs=-1,**kwargs):
         super().__init__()
 
         self.num_enc_layers = len(depths)//2
@@ -36,8 +37,16 @@ class Uformer(nn.Module):
         self.pos_drop = nn.Dropout(p=drop_rate)
         self.dd_in = dd_in
 
+        # -- our search --
+        self.attn_mode = attn_mode
+        self.ws = ws
+        self.wt = wt
+        self.k = k
+        self.stride = stride
+        self.bs = bs
+
         # stochastic depth
-        enc_dpr = [x.item() for x in torch.linspace(0, drop_path_rate,
+        enc_dpr = [x.item() for x in th.linspace(0, drop_path_rate,
                                                     sum(depths[:self.num_enc_layers]))]
         conv_dpr = [drop_path_rate]*depths[4]
         dec_dpr = enc_dpr[::-1]
@@ -205,18 +214,18 @@ class Uformer(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    @torch.jit.ignore
+    @th.jit.ignore
     def no_weight_decay(self):
         return {'absolute_pos_embed'}
 
-    @torch.jit.ignore
+    @th.jit.ignore
     def no_weight_decay_keywords(self):
         return {'relative_position_bias_table'}
 
     def extra_repr(self) -> str:
         return f"embed_dim={self.embed_dim}, token_projection={self.token_projection}, token_mlp={self.mlp},win_size={self.win_size}"
 
-    def forward(self, x, mask=None):
+    def forward(self, x, mask=None, flows=None):
         # Input Projection
         y = self.input_proj(x)
         y = self.pos_drop(y)
@@ -235,19 +244,19 @@ class Uformer(nn.Module):
 
         #Decoder
         up0 = self.upsample_0(conv4)
-        deconv0 = torch.cat([up0,conv3],-1)
+        deconv0 = th.cat([up0,conv3],-1)
         deconv0 = self.decoderlayer_0(deconv0,mask=mask)
 
         up1 = self.upsample_1(deconv0)
-        deconv1 = torch.cat([up1,conv2],-1)
+        deconv1 = th.cat([up1,conv2],-1)
         deconv1 = self.decoderlayer_1(deconv1,mask=mask)
 
         up2 = self.upsample_2(deconv1)
-        deconv2 = torch.cat([up2,conv1],-1)
+        deconv2 = th.cat([up2,conv1],-1)
         deconv2 = self.decoderlayer_2(deconv2,mask=mask)
 
         up3 = self.upsample_3(deconv2)
-        deconv3 = torch.cat([up3,conv0],-1)
+        deconv3 = th.cat([up3,conv0],-1)
         deconv3 = self.decoderlayer_3(deconv3,mask=mask)
 
         # Output Projection
@@ -275,61 +284,4 @@ class Uformer(nn.Module):
 
         # Output Projection
         flops += self.output_proj.flops(self.reso,self.reso)
-        return flops
-
-# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#
-#    Scaling Image Resolution
-#
-# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-# Downsample Block
-class Downsample(nn.Module):
-    def __init__(self, in_channel, out_channel):
-        super(Downsample, self).__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_channel, out_channel, kernel_size=4, stride=2, padding=1),
-        )
-        self.in_channel = in_channel
-        self.out_channel = out_channel
-
-    def forward(self, x):
-        B, L, C = x.shape
-        # import pdb;pdb.set_trace()
-        H = int(math.sqrt(L))
-        W = int(math.sqrt(L))
-        x = x.transpose(1, 2).contiguous().view(B, C, H, W)
-        out = self.conv(x).flatten(2).transpose(1,2).contiguous()  # B H*W C
-        return out
-
-    def flops(self, H, W):
-        flops = 0
-        # conv
-        flops += H/2*W/2*self.in_channel*self.out_channel*4*4
-        print("Downsample:{%.2f}"%(flops/1e9))
-        return flops
-
-# Upsample Block
-class Upsample(nn.Module):
-    def __init__(self, in_channel, out_channel):
-        super(Upsample, self).__init__()
-        self.deconv = nn.Sequential(
-            nn.ConvTranspose2d(in_channel, out_channel, kernel_size=2, stride=2),
-        )
-        self.in_channel = in_channel
-        self.out_channel = out_channel
-
-    def forward(self, x):
-        B, L, C = x.shape
-        H = int(math.sqrt(L))
-        W = int(math.sqrt(L))
-        x = x.transpose(1, 2).contiguous().view(B, C, H, W)
-        out = self.deconv(x).flatten(2).transpose(1,2).contiguous() # B H*W C
-        return out
-
-    def flops(self, H, W):
-        flops = 0
-        # conv
-        flops += H*2*W*2*self.in_channel*self.out_channel*2*2
-        print("Upsample:{%.2f}"%(flops/1e9))
         return flops

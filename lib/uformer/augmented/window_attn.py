@@ -3,9 +3,11 @@ import torch as th
 import torch.nn as nn
 from einops import rearrange,repeat
 
+# -- extra deps --
+from timm.models.layers import trunc_normal_
+
 # -- project deps --
 from .proj import ConvProjection,LinearProjection
-
 
 class WindowAttention(nn.Module):
     def __init__(self, dim, win_size,num_heads, token_projection='linear',

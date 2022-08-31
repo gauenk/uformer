@@ -114,7 +114,7 @@ def test_original_refactored(sigma,ref_version):
     region = None#[0,t,0,0,h,w] if ref_version == "ref" else None
     model_te = uformer.refactored.load_model(sigma,mode=ref_version,stride=8)
     with th.no_grad():
-        deno_te = model_te(noisy,region=region).detach()
+        deno_te = model_te(noisy,flows=flows).detach()
 
     # -- viz --
     if verbose:
@@ -193,7 +193,7 @@ def test_augmented_fwd(sigma,ref_version):
     model_te.eval()
     timer.start("aug")
     with th.no_grad():
-        deno_te = model_te(noisy,flows=flows,region=region).detach()
+        deno_te = model_te(noisy,flows=flows).detach()
     th.cuda.synchronize()
     timer.stop("aug")
 

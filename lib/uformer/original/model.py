@@ -61,7 +61,7 @@ def conv(in_channels, out_channels, kernel_size, bias=False, stride = 1):
     return nn.Conv2d(
         in_channels, out_channels, kernel_size,
         padding=(kernel_size//2), bias=bias, stride = stride)
-        
+
 ## Supervised Attention Module
 class SAM(nn.Module):
     def __init__(self, n_feat, kernel_size=3, bias=True):
@@ -1073,8 +1073,8 @@ class Uformer(nn.Module):
                  drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1,
                  norm_layer=nn.LayerNorm, patch_norm=True,
                  use_checkpoint=False, token_projection='linear', token_mlp='leff',
-                 dowsample=Downsample, upsample=Upsample, shift_flag=True, modulator=False, 
-                 cross_modulator=False, **kwargs):
+                 dowsample=Downsample, upsample=Upsample, shift_flag=True,
+                 modulator=False, cross_modulator=False, **kwargs):
         super().__init__()
 
         self.num_enc_layers = len(depths)//2

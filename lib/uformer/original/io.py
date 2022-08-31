@@ -24,8 +24,6 @@ def load_model(*args,**kwargs):
     if noise_version == "noise":
         default_modulator = True
         default_depth = [1, 2, 8, 8, 2, 8, 8, 2, 1]
-        # default_modulator = False
-        # default_depth = [2, 2, 2, 2, 2, 2, 2, 2, 2]
     elif noise_version == "blur":
         default_modulator = True
         default_depth = [1, 2, 8, 8, 2, 8, 8, 2, 1]
@@ -40,7 +38,6 @@ def load_model(*args,**kwargs):
 
     # -- other configs --
     embed_dim = optional(kwargs,'embed_dim',32)
-    # embed_dim = optional(kwargs,'embed_dim',44)
     win_size = optional(kwargs,'win_size',8)
     mlp_ratio = optional(kwargs,'mlp_ratio',4)
     qkv_bias = optional(kwargs,'qkv_bias',True)
@@ -48,7 +45,7 @@ def load_model(*args,**kwargs):
     token_mlp = optional(kwargs,'token_mlp','leff')
     modulator = optional(kwargs,'modulator',default_modulator)
     cross_modulator = optional(kwargs,'cross_modulator',False)
-
+    dd_in = optional(kwargs,'dd_in',3)
 
     # -- init model --
     model = Uformer(img_size=input_size, in_chans=nchnls, embed_dim=embed_dim,
@@ -56,16 +53,16 @@ def load_model(*args,**kwargs):
                     qkv_bias=qkv_bias, token_projection=token_projection,
                     token_mlp=token_mlp, downsample=Downsample,
                     upsample=Upsample, modulator=modulator,
-                    cross_modulator=cross_modulator)
+                    cross_modulator=cross_modulator,dd_in=dd_in)
     model = model.to(device)
 
     # -- load weights --
     # model_sigma = select_sigma(data_sigma)
     fdir = Path(__file__).absolute().parents[0] / "../../../" # parent of "./lib"
     if noise_version == "noise":
-        state_fn = fdir / "models/Uformer_sidd_B.pth"
+        state_fn = fdir / "weights/Uformer_sidd_B.pth"
     elif noise_version == "blur":
-        state_fn = fdir / "models/Uformer_gopro_B.pth"
+        state_fn = fdir / "weights/Uformer_gopro_B.pth"
     else:
         raise ValueError(f"Uknown noise_version [{noise_version}]")
     assert os.path.isfile(str(state_fn))

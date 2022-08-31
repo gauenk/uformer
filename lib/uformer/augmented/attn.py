@@ -1,3 +1,13 @@
+
+# -- torch network deps --
+import torch as th
+import torch.nn as nn
+from einops import rearrange,repeat
+
+# -- project deps --
+from .proj import ConvProjection,LinearProjection
+
+
 class Attention(nn.Module):
     def __init__(self, dim,num_heads, token_projection='linear', qkv_bias=True, qk_scale=None, attn_drop=0., proj_drop=0.):
 

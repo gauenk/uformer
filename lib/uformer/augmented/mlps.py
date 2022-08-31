@@ -1,7 +1,12 @@
+
 # -- torch network deps --
 import torch as th
 import torch.nn as nn
 from einops import rearrange,repeat
+
+# -- extra deps --
+import math
+
 
 class FastLeFF(nn.Module):
 
@@ -12,8 +17,9 @@ class FastLeFF(nn.Module):
 
         self.linear1 = nn.Sequential(nn.Linear(dim, hidden_dim),
                                 act_layer())
-        self.dwconv = nn.Sequential(DepthwiseConv2d(hidden_dim, hidden_dim, kernel_size=3,stride=1,padding=1),
-                        act_layer())
+        self.dwconv = nn.Sequential(DepthwiseConv2d(hidden_dim, hidden_dim,
+                                                    kernel_size=3,stride=1,padding=1),
+                                    act_layer())
         self.linear2 = nn.Sequential(nn.Linear(hidden_dim, dim))
         self.dim = dim
         self.hidden_dim = hidden_dim

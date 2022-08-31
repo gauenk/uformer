@@ -4,6 +4,9 @@ import torch as th
 import torch.nn as nn
 from einops import rearrange,repeat
 
+# -- extra deps --
+import math
+
 
 # Input Projection
 class InputProj(nn.Module):
