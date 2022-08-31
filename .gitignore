@@ -4,6 +4,7 @@ build/*
 cmake/*
 data/*
 output/*
+weights/*
 lib/*egg-info/
 .cache_io/*
 *.py[co]
