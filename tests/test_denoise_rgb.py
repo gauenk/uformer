@@ -61,72 +61,6 @@ def pytest_generate_tests(metafunc):
         if key in metafunc.fixturenames:
             metafunc.parametrize(key,val)
 
-# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#
-# -->  Test original vs refactored code base  <--
-#
-# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-# @pytest.mark.skip()
-def test_original_refactored(sigma,ref_version):
-
-    # -- params --
-    device = "cuda:0"
-    # vid_set = "sidd_rgb"
-    # vid_name = "00"
-    # dset = "val"
-    vid_set = "set8"
-    vid_name = "motorbike"
-    verbose = False
-    isize = "128_128"
-    dset = "te"
-    # ref_version = "original"
-
-    # -- setup cfg --
-    cfg = edict()
-    cfg.dname = vid_set
-    cfg.vid_name = vid_name
-    cfg.isize = isize
-    cfg.sigma = 5.
-
-    # -- video --
-    data,loaders = data_hub.sets.load(cfg)
-    groups = data[dset].groups
-    indices = [i for i,g in enumerate(groups) if cfg.vid_name == g]
-    index = indices[0]
-
-    # -- unpack --
-    sample = data[dset][index]
-    region = sample['region']
-    noisy,clean = sample['noisy'],sample['clean']
-    noisy,clean = rslice_pair(noisy,clean,region)
-    noisy,clean = noisy.to(device),clean.to(device)
-    vid_frames = sample['fnums']
-    noisy /= 255.
-
-    # -- original exec --
-    model_gt = uformer.original.load_model(sigma)
-    with th.no_grad():
-        deno_gt = model_gt(noisy.clone()).detach()
-
-    # -- refactored exec --
-    t,c,h,w = noisy.shape
-    region = None#[0,t,0,0,h,w] if ref_version == "ref" else None
-    model_te = uformer.refactored.load_model(sigma,mode=ref_version,stride=8)
-    with th.no_grad():
-        deno_te = model_te(noisy,flows=flows).detach()
-
-    # -- viz --
-    if verbose:
-        print(deno_gt[0,0,:3,:3])
-        print(deno_te[0,0,:3,:3])
-
-    # -- test --
-    error = th.sum((deno_gt - deno_te)**2).item()
-    if verbose: print("error: ",error)
-    assert error < 1e-15
-
-
 def test_augmented_fwd(sigma,ref_version):
 
     # -- params --
@@ -186,9 +120,9 @@ def test_augmented_fwd(sigma,ref_version):
     # -- refactored exec --
     t,c,h,w = noisy.shape
     region = None#[0,t,0,0,h,w] if ref_version == "ref" else None
-    # fwd_mode = "original"
-    fwd_mode = "dnls_k"
-    model_te = uformer.augmented.load_model(sigma,fwd_mode=fwd_mode,
+    # attn_mode = "original"
+    attn_mode = "dnls_k"
+    model_te = uformer.augmented.load_model(sigma,attn_mode=attn_mode,
                                              stride=8,noise_version=noise_version)
     model_te.eval()
     timer.start("aug")
@@ -267,7 +201,7 @@ def test_augmented_bwd(sigma,ref_version):
 
     # -- original exec --
     model_gt = uformer.original.load_model(sigma,noise_version=noise_version)
-    model_gt.train()
+    params_require_grad(model_gt)
     timer.start("original")
     deno_gt = model_gt(noisy.clone())
     th.cuda.synchronize()
@@ -276,13 +210,14 @@ def test_augmented_bwd(sigma,ref_version):
     # -- refactored exec --
     t,c,h,w = noisy.shape
     region = None#[0,t,0,0,h,w] if ref_version == "ref" else None
-    # fwd_mode = "original"
-    fwd_mode = "dnls_k"
+    # attn_mode = "original"
+    attn_mode = "dnls_k"
     # model_te = uformer.original.load_model(sigma,noise_version=noise_version)
     # model_te.train()
-    model_te = uformer.augmented.load_model(sigma,fwd_mode=fwd_mode,
-                                             stride=8,noise_version=noise_version)
-    model_te.train()
+    model_te = uformer.augmented.load_model(sigma,attn_mode=attn_mode,
+                                            stride=8,noise_version=noise_version)
+    params_require_grad(model_te)
+    # model_te.train()
     timer.start("aug")
     deno_te = model_te(noisy.clone())
     th.cuda.synchronize()
@@ -375,3 +310,13 @@ def pack_params(model):
         names.extend([name for _ in range(N)])
     params = th.cat(params)
     return names,params
+
+def params_require_grad(model):
+    """
+    Set params to require grad AND
+    turn off all dropout layers for comparison
+    """
+    for param in model.parameters():
+        # print(dir(param))
+        param.requires_grad_(True)
+

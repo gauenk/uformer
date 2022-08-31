@@ -1049,7 +1049,7 @@ class BasicUformerLayer(nn.Module):
             for i in range(depth)])
 
     def extra_repr(self) -> str:
-        return f"dim={self.dim}, input_resolution={self.input_resolution}, depth={self.depth}"    
+        return f"dim={self.dim}, input_resolution={self.input_resolution}, depth={self.depth}"
 
     def forward(self, x, mask=None):
         for blk in self.blocks:
@@ -1090,21 +1090,23 @@ class Uformer(nn.Module):
         self.dd_in = dd_in
 
         # stochastic depth
-        enc_dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths[:self.num_enc_layers]))] 
+        enc_dpr = [x.item() for x in torch.linspace(0, drop_path_rate,
+                                                    sum(depths[:self.num_enc_layers]))]
         conv_dpr = [drop_path_rate]*depths[4]
         dec_dpr = enc_dpr[::-1]
 
         # build layers
 
         # Input/Output
-        self.input_proj = InputProj(in_channel=dd_in, out_channel=embed_dim, kernel_size=3, stride=1, act_layer=nn.LeakyReLU)
-        self.output_proj = OutputProj(in_channel=2*embed_dim, out_channel=in_chans, kernel_size=3, stride=1)
-        
+        self.input_proj = InputProj(in_channel=dd_in, out_channel=embed_dim,
+                                    kernel_size=3, stride=1, act_layer=nn.LeakyReLU)
+        self.output_proj = OutputProj(in_channel=2*embed_dim,
+                                      out_channel=in_chans, kernel_size=3, stride=1)
+
         # Encoder
         self.encoderlayer_0 = BasicUformerLayer(dim=embed_dim,
                             output_dim=embed_dim,
-                            input_resolution=(img_size,
-                                                img_size),
+                            input_resolution=(img_size,img_size),
                             depth=depths[0],
                             num_heads=num_heads[0],
                             win_size=win_size,
@@ -1129,7 +1131,8 @@ class Uformer(nn.Module):
                             drop_path=enc_dpr[sum(depths[:1]):sum(depths[:2])],
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag)
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag)
         self.dowsample_1 = dowsample(embed_dim*2, embed_dim*4)
         self.encoderlayer_2 = BasicUformerLayer(dim=embed_dim*4,
                             output_dim=embed_dim*4,
@@ -1144,7 +1147,8 @@ class Uformer(nn.Module):
                             drop_path=enc_dpr[sum(depths[:2]):sum(depths[:3])],
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag)
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag)
         self.dowsample_2 = dowsample(embed_dim*4, embed_dim*8)
         self.encoderlayer_3 = BasicUformerLayer(dim=embed_dim*8,
                             output_dim=embed_dim*8,
@@ -1159,7 +1163,8 @@ class Uformer(nn.Module):
                             drop_path=enc_dpr[sum(depths[:3]):sum(depths[:4])],
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag)
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag)
         self.dowsample_3 = dowsample(embed_dim*8, embed_dim*16)
 
         # Bottleneck
@@ -1176,7 +1181,8 @@ class Uformer(nn.Module):
                             drop_path=conv_dpr,
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag)
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag)
 
         # Decoder
         self.upsample_0 = upsample(embed_dim*16, embed_dim*8)
@@ -1193,7 +1199,8 @@ class Uformer(nn.Module):
                             drop_path=dec_dpr[:depths[5]],
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag,
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag,
                             modulator=modulator,cross_modulator=cross_modulator)
         self.upsample_1 = upsample(embed_dim*16, embed_dim*4)
         self.decoderlayer_1 = BasicUformerLayer(dim=embed_dim*8,
@@ -1209,7 +1216,8 @@ class Uformer(nn.Module):
                             drop_path=dec_dpr[sum(depths[5:6]):sum(depths[5:7])],
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag,
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag,
                             modulator=modulator,cross_modulator=cross_modulator)
         self.upsample_2 = upsample(embed_dim*8, embed_dim*2)
         self.decoderlayer_2 = BasicUformerLayer(dim=embed_dim*4,
@@ -1225,7 +1233,8 @@ class Uformer(nn.Module):
                             drop_path=dec_dpr[sum(depths[5:7]):sum(depths[5:8])],
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag,
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag,
                             modulator=modulator,cross_modulator=cross_modulator)
         self.upsample_3 = upsample(embed_dim*4, embed_dim)
         self.decoderlayer_3 = BasicUformerLayer(dim=embed_dim*2,
@@ -1241,7 +1250,8 @@ class Uformer(nn.Module):
                             drop_path=dec_dpr[sum(depths[5:8]):sum(depths[5:9])],
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag,
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag,
                             modulator=modulator,cross_modulator=cross_modulator)
 
         self.apply(self._init_weights)
