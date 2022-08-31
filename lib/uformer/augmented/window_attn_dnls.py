@@ -54,6 +54,7 @@ class WindowAttentionDnls(nn.Module):
         # -- unpack --
         vid = rearrange(vid,'t h w c -> t c h w')
         T, C, H, W = vid.shape
+        # print("vid.shape: ",vid.shape)
 
         # -- init --
         rel_pos = self.get_rel_pos()
@@ -62,10 +63,12 @@ class WindowAttentionDnls(nn.Module):
         # -- qkv --
         q_vid, k_vid, v_vid = self.qkv(vid,attn_kv)
         q_vid = q_vid * self.scale
+        # print("q_vid.shape: ",q_vid.shape)
 
         # -- attn map --
         ntotal = T*H*W
         dists,inds = search(q_vid,0,ntotal,k_vid)
+        # print("dists.shape: ",dists.shape)
         dists = search.window_attn_mod(dists,rel_pos,mask,vid.shape)
         dists = self.attn_drop(dists)
 

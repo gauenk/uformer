@@ -32,6 +32,7 @@ import cache_io
 import uformer
 # from uformer import lightning
 from uformer.utils.misc import optional,rslice_pair
+from uformer.utils.model_utils import temporal_chop
 
 def run_exp(cfg):
 
@@ -114,12 +115,16 @@ def run_exp(cfg):
         # -- denoise --
         timer.start("deno")
         with th.no_grad():
-            t = noisy.shape[0]
-            deno = []
-            for ti in range(t):
-                deno_t = model(noisy[[ti]]/imax)
-                deno.append(deno_t)
-            deno = th.cat(deno)
+            tsize = 5
+            deno = temporal_chop(noisy,tsize,model)
+
+            # t = noisy.shape[0]
+            # deno = []
+            # for ti in range(t):
+            #     deno_t = model(noisy[[ti]]/imax)
+            #     deno.append(deno_t)
+            # deno = th.cat(deno)
+
             deno = th.clamp(deno,0.,1.)*imax
         timer.stop("deno")
 
@@ -316,10 +321,10 @@ def main():
         # cache.clear_exp(uuid)
         # if exp.model_type == "original":
         #     cache.clear_exp(uuid)
-        # if exp.model_type == "aug_original":
+        # if exp.model_type == "aug_refactored":
         #     cache.clear_exp(uuid)
-        # if exp.model_type == "aug_dnls_k":
-        #     cache.clear_exp(uuid)
+        if exp.model_type == "aug_dnls":
+            cache.clear_exp(uuid)
         # if exp.use_train == "true":
         #     cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result

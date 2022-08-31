@@ -1,4 +1,4 @@
-import torch
+import torch as th
 import torch.nn as nn
 import os
 from collections import OrderedDict
@@ -21,10 +21,10 @@ def is_frozen(model):
 def save_checkpoint(model_dir, state, session):
     epoch = state['epoch']
     model_out_path = os.path.join(model_dir,"model_epoch_{}_{}.pth".format(epoch,session))
-    torch.save(state, model_out_path)
+    th.save(state, model_out_path)
 
 def load_checkpoint_qkv(model, weights):
-    checkpoint = torch.load(weights)
+    checkpoint = th.load(weights)
     state_dict = checkpoint["state_dict"]
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
@@ -75,7 +75,7 @@ def load_checkpoint_qkv(model, weights):
     model.load_state_dict(new_state_dict)
 
 def load_checkpoint(model, weights):
-    checkpoint = torch.load(weights)
+    checkpoint = th.load(weights)
     try:
         # model.load_state_dict(checkpoint["state_dict"])
         raise ValueError("")
@@ -88,7 +88,7 @@ def load_checkpoint(model, weights):
         model.load_state_dict(new_state_dict)
 
 def load_checkpoint_multigpu(model, weights):
-    checkpoint = torch.load(weights)
+    checkpoint = th.load(weights)
     state_dict = checkpoint["state_dict"]
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
@@ -97,12 +97,12 @@ def load_checkpoint_multigpu(model, weights):
     model.load_state_dict(new_state_dict)
 
 def load_start_epoch(weights):
-    checkpoint = torch.load(weights)
+    checkpoint = th.load(weights)
     epoch = checkpoint["epoch"]
     return epoch
 
 def load_optim(optimizer, weights):
-    checkpoint = torch.load(weights)
+    checkpoint = th.load(weights)
     optimizer.load_state_dict(checkpoint['optimizer'])
     for p in optimizer.param_groups: lr = p['lr']
     return lr
@@ -136,3 +136,21 @@ def remove_lightning_load_state(state):
         name_new = ".".join(name_new)
         state[name_new] = state[name]
         del state[name]
+
+def temporal_chop(x,tsize,fwd_fxn,flows=None):
+    nframes = x.shape[0]
+    nslice = (nframes-1)//tsize+1
+    x_agg = []
+    for ti in range(nslice):
+        ts = ti*tsize
+        te = min((ti+1)*tsize,nframes)
+        tslice = slice(ts,te)
+        if flows:
+            x_t = fwd_fxn(x[tslice],flows)
+        else:
+            x_t = fwd_fxn(x[tslice])
+        x_agg.append(x_t)
+    x_agg = th.cat(x_agg)
+    return x_agg
+
+
