@@ -13,10 +13,22 @@ from timm.models.layers import DropPath, to_2tuple
 from .mlps import FastLeFF,LeFF,Mlp
 from .attn import Attention
 from .window_attn import WindowAttention
+from .window_attn_ref import WindowAttentionRefactored
+from .window_attn_dnls import WindowAttentionDnls
 from .window_utils import window_partition,window_reverse
 
 
-class LeWinTransformerBlock(nn.Module):
+def select_window_attn(attn_type):
+    if attn_type == "default":
+        return WindowAttention
+    elif attn_type == "refactored":
+        return WindowAttentionRefactored
+    elif attn_type == "dnls":
+        return WindowAttentionDnls
+    else:
+        raise ValueError(f"Uknown window attn type [{attn_type}]")
+
+class LeWinTransformerBlockRefactored(nn.Module):
     def __init__(self, dim, input_resolution, num_heads, win_size=8, shift_size=0,
                  mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0.,
                  drop_path=0., act_layer=nn.GELU,
@@ -35,6 +47,9 @@ class LeWinTransformerBlock(nn.Module):
             self.win_size = min(self.input_resolution)
         assert 0 <= self.shift_size < self.win_size, "shift_size must in 0-win_size"
 
+        # self.attn_type = "default"
+        self.attn_type = "refactored"
+        # self.attn_type = "dnls"
         if modulator:
             self.modulator = nn.Embedding(win_size*win_size, dim) # modulator
         else:
@@ -49,11 +64,12 @@ class LeWinTransformerBlock(nn.Module):
             self.cross_modulator = None
 
         self.norm1 = norm_layer(dim)
-        self.attn = WindowAttention(
+
+        wattn_block = select_window_attn(self.attn_type)
+        self.attn = wattn_block(
             dim, win_size=to_2tuple(self.win_size), num_heads=num_heads,
             qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop,
-            proj_drop=drop,
-            token_projection=token_projection)
+            proj_drop=drop, token_projection=token_projection)
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         self.norm2 = norm_layer(dim)
@@ -134,6 +150,50 @@ class LeWinTransformerBlock(nn.Module):
         else:
             shifted_x = x
 
+        shifted_x = self.run_window_attn(shifted_x,attn_mask)
+
+        # reverse cyclic shift
+        if self.shift_size > 0:
+            x = th.roll(shifted_x, shifts=(self.shift_size,
+                                           self.shift_size), dims=(1, 2))
+        else:
+            x = shifted_x
+        x = x.view(B, H * W, C)
+
+        # FFN
+        x = shortcut + self.drop_path(x)
+        x = x + self.drop_path(self.mlp(self.norm2(x)))
+        del attn_mask
+        return x
+
+    def run_window_attn(self,shifted_x,attn_mask):
+        if self.attn_type == "default":
+            return self.run_default_window_attn(shifted_x,attn_mask)
+        elif self.attn_type == "refactored":
+            return self.run_refactored_window_attn(shifted_x,attn_mask)
+        elif self.attn_type == "dnls":
+            return self.run_refactored_window_attn(shifted_x,attn_mask)
+        else:
+            raise ValueError(f"Uknown attn type [{self.attn_type}]")
+
+    def run_refactored_window_attn(self,shifted_x,attn_mask,wsize=8):
+
+        # -- unpack --
+        B,H,W,C = shifted_x.shape
+
+        # with_modulator
+        wmsa_in = self.apply_modulator(shifted_x,wsize)
+
+        # W-MSA/SW-MSA
+        attn_windows = self.attn(wmsa_in, mask=attn_mask)  # nW*B, win_size*win_size, C
+
+        return attn_windows
+
+
+    def run_default_window_attn(self,shifted_x,attn_mask):
+        # -- unpack --
+        B,H,W,C = shifted_x.shape
+
         # partition windows
         x_windows = window_partition(shifted_x, self.win_size)  # nW*B, win_size, win_size, C  N*C->C
         x_windows = x_windows.view(-1, self.win_size * self.win_size, C)  # nW*B, win_size*win_size, C
@@ -151,18 +211,17 @@ class LeWinTransformerBlock(nn.Module):
         attn_windows = attn_windows.view(-1, self.win_size, self.win_size, C)
         shifted_x = window_reverse(attn_windows, self.win_size, H, W)  # B H' W' C
 
-        # reverse cyclic shift
-        if self.shift_size > 0:
-            x = th.roll(shifted_x, shifts=(self.shift_size,
-                                           self.shift_size), dims=(1, 2))
-        else:
-            x = shifted_x
-        x = x.view(B, H * W, C)
+        return shifted_x
 
-        # FFN
-        x = shortcut + self.drop_path(x)
-        x = x + self.drop_path(self.mlp(self.norm2(x)))
-        del attn_mask
+    def apply_modulator(self,x,wsize=8):
+        # -- if modular weight --
+        if not(self.modulator is None):
+            t,h,w,c = x.shape
+            mweight = self.modulator.weight
+            nh,nw = h//wsize,w//wsize
+            shape_s = '(wh ww) c -> 1 (rh wh) (rw ww) c'
+            mweight = repeat(mweight,shape_s,wh=wsize,rh=nh,rw=nw)
+            x = x + mweight
         return x
 
     def flops(self):

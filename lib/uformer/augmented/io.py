@@ -14,7 +14,8 @@ from .uformer import Uformer
 
 # -- misc imports --
 from ..common import optional,select_sigma
-from ..utils.model_utils import load_checkpoint,remove_lightning_load_state
+from ..utils.model_utils import load_checkpoint,load_checkpoint_qkv
+from ..utils.model_utils import remove_lightning_load_state
 
 def load_model(*args,**kwargs):
 
@@ -83,12 +84,20 @@ def load_model(*args,**kwargs):
     # model_state = th.load(str(state_fn))
 
     # -- fill weights --
-    if lit is False:
+    # if lit is False:
+    #     load_checkpoint(model,state_fn)
+    # else:
+    #     state = th.load(state_fn)['state_dict']
+    #     remove_lightning_load_state(state)
+    #     model.load_state_dict(state)
+
+    # attn_type = "default"
+    attn_type = "refactored"
+    # attn_type = "dnls"
+    if attn_type in ["default","refactored"]:
         load_checkpoint(model,state_fn)
     else:
-        state = th.load(state_fn)['state_dict']
-        remove_lightning_load_state(state)
-        model.load_state_dict(state)
+        load_checkpoint_qkv(model,state_fn)
 
     # load_checkpoint(model,model_state)
     # model.load_state_dict(model_state['state_dict'])

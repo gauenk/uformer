@@ -111,9 +111,11 @@ def test_augmented_fwd(sigma,ref_version):
     # -- original exec --
     model_gt = uformer.original.load_model(sigma,noise_version=noise_version)
     model_gt.eval()
+    with th.no_grad():
+        _ = model_gt(noisy).detach()
     timer.start("original")
     with th.no_grad():
-        deno_gt = model_gt(noisy.clone()).detach()
+        deno_gt = model_gt(noisy).detach()
     th.cuda.synchronize()
     timer.stop("original")
 
@@ -122,12 +124,14 @@ def test_augmented_fwd(sigma,ref_version):
     region = None#[0,t,0,0,h,w] if ref_version == "ref" else None
     # attn_mode = "original"
     attn_mode = "dnls_k"
+    # model_te = uformer.original.load_model(sigma,noise_version=noise_version)
     model_te = uformer.augmented.load_model(sigma,attn_mode=attn_mode,
-                                             stride=8,noise_version=noise_version)
+                                            stride=8,noise_version=noise_version)
+    print("-"*10)
     model_te.eval()
     timer.start("aug")
     with th.no_grad():
-        deno_te = model_te(noisy,flows=flows).detach()
+        deno_te = model_te(noisy).detach()
     th.cuda.synchronize()
     timer.stop("aug")
 

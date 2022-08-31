@@ -493,6 +493,7 @@ class WindowAttention(nn.Module):
 
     def forward(self, x, attn_kv=None, mask=None):
         B_, N, C = x.shape
+        # print("x.shape: ",x.shape)
         q, k, v = self.qkv(x,attn_kv)
         q = q * self.scale
         attn = (q @ k.transpose(-2, -1))
@@ -947,7 +948,7 @@ class LeWinTransformerBlock(nn.Module):
             x_cross = self.norm_cross(x)
             x_cross = self.cross_attn(x, self.cross_modulator.weight)
             x = shortcut + x_cross
-    
+
         shortcut = x
         x = self.norm1(x)
         x = x.view(B, H, W, C)

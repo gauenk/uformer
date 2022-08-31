@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 import os
 from collections import OrderedDict
+import copy
+ccopy = copy.copy
+from einops import repeat
 
 def freeze(model):
     for p in model.parameters():
@@ -19,6 +22,57 @@ def save_checkpoint(model_dir, state, session):
     epoch = state['epoch']
     model_out_path = os.path.join(model_dir,"model_epoch_{}_{}.pth".format(epoch,session))
     torch.save(state, model_out_path)
+
+def load_checkpoint_qkv(model, weights):
+    checkpoint = torch.load(weights)
+    state_dict = checkpoint["state_dict"]
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        # -- standard mod --
+        name = k[7:] if 'module.' in k else k
+        if not("attn.qkv" in name):
+            new_state_dict[name] = v
+
+        # -- mod qkv --
+        if "attn.qkv" in name:
+            if "to_q" in name:
+                if "weight" in name:
+                    new_state_dict[name] = v.data[:,:,None,None]
+                elif "bias" in name:
+                    new_state_dict[name] = v.data
+            elif "to_kv" in name:
+                if "weight" in name:
+                    # -- shapes --
+                    half = v.shape[0]//2
+
+                    # -- create v --
+                    name_v = ccopy(name)
+                    name_v = name_v.replace("to_kv","to_k")
+                    new_state_dict[name_v] = v[:half,:,None,None]
+
+                    # -- create k --
+                    name_k = ccopy(name)
+                    name_k = name_k.replace("to_kv","to_v")
+                    new_state_dict[name_k] = v[half:,:,None,None]
+
+                if "bias" in name:
+                    # -- shapes --
+                    half = v.shape[0]//2
+
+                    # -- create v --
+                    name_v = ccopy(name)
+                    name_v = name_v.replace("to_kv","to_k")
+                    new_state_dict[name_v] = v[:half,...]
+
+                    # -- create k --
+                    name_k = ccopy(name)
+                    name_k = name_k.replace("to_kv","to_v")
+                    new_state_dict[name_k] = v[half:,...]
+            else:
+                print("What??")
+                print(name)
+
+    model.load_state_dict(new_state_dict)
 
 def load_checkpoint(model, weights):
     checkpoint = torch.load(weights)

@@ -6,6 +6,8 @@ from einops import rearrange,repeat
 
 # -- project deps --
 from .lewin import LeWinTransformerBlock
+from .lewin_ref import LeWinTransformerBlockRefactored
+
 
 class BasicUformerLayer(nn.Module):
     def __init__(self, dim, output_dim, input_resolution, depth, num_heads, win_size,
@@ -20,9 +22,12 @@ class BasicUformerLayer(nn.Module):
         self.depth = depth
         self.use_checkpoint = use_checkpoint
         # build blocks
+        # lewin_type == "default" if wattn_type == "
+        # lewin_block = LeWinTransformerBlock
+        lewin_block = LeWinTransformerBlockRefactored
         if shift_flag:
             self.blocks = nn.ModuleList([
-                LeWinTransformerBlock(dim=dim, input_resolution=input_resolution,
+                lewin_block(dim=dim, input_resolution=input_resolution,
                                     num_heads=num_heads, win_size=win_size,
                                     shift_size=0 if (i % 2 == 0) else win_size // 2,
                                     mlp_ratio=mlp_ratio,
@@ -34,7 +39,7 @@ class BasicUformerLayer(nn.Module):
                 for i in range(depth)])
         else:
             self.blocks = nn.ModuleList([
-                LeWinTransformerBlock(dim=dim, input_resolution=input_resolution,
+                lewin_block(dim=dim, input_resolution=input_resolution,
                                     num_heads=num_heads, win_size=win_size,
                                     shift_size=0,
                                     mlp_ratio=mlp_ratio,
