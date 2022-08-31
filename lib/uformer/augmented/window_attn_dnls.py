@@ -91,28 +91,7 @@ class WindowAttentionDnls(nn.Module):
         vid = fold.vid
         vid = rearrange(vid,'t c h w -> t h w c')
 
-        # attn = (q @ k.transpose(-2, -1))
-        # rel_pos = self.get_rel_pos()
-        # attn = attn + rel_pos.unsqueeze(0)
-        # attn = self.modify_attn(attn,mask)
-        # attn = self.attn_drop(attn)
-
-        # x = (attn @ v).transpose(1, 2).reshape(B_, N, C)
-        # x = self.proj(x)
-        # x = self.proj_drop(x)
-
         return vid
-
-    def modify_attn(self,attn,mask):
-        if mask is not None:
-            nW = mask.shape[0]
-            mask = repeat(mask, 'nW m n -> nW m (n d)',d = ratio)
-            attn = attn.view(B_ // nW, nW, self.num_heads, N, N*ratio) + mask.unsqueeze(1).unsqueeze(0)
-            attn = attn.view(-1, self.num_heads, N, N*ratio)
-            attn = self.softmax(attn)
-        else:
-            attn = self.softmax(attn)
-        return attn
 
     def get_rel_pos(self):
         relative_position_bias = self.relative_position_bias_table[

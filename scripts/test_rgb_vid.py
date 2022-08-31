@@ -116,7 +116,7 @@ def run_exp(cfg):
         timer.start("deno")
         with th.no_grad():
             tsize = 5
-            deno = temporal_chop(noisy,tsize,model)
+            deno = temporal_chop(noisy/imax,tsize,model)
 
             # t = noisy.shape[0]
             # deno = []
