@@ -123,7 +123,8 @@ def test_augmented_fwd(sigma,ref_version):
     t,c,h,w = noisy.shape
     region = None#[0,t,0,0,h,w] if ref_version == "ref" else None
     # attn_mode = "original"
-    attn_mode = "dnls_k"
+    attn_mode = "dnls"
+    # attn_mode = "refactored"
     # model_te = uformer.original.load_model(sigma,noise_version=noise_version)
     model_te = uformer.augmented.load_model(sigma,attn_mode=attn_mode,
                                             stride=8,noise_version=noise_version)
@@ -215,7 +216,8 @@ def test_augmented_bwd(sigma,ref_version):
     t,c,h,w = noisy.shape
     region = None#[0,t,0,0,h,w] if ref_version == "ref" else None
     # attn_mode = "original"
-    attn_mode = "dnls_k"
+    attn_mode = "refactored"
+    # attn_mode = "dnls"
     # model_te = uformer.original.load_model(sigma,noise_version=noise_version)
     # model_te.train()
     model_te = uformer.augmented.load_model(sigma,attn_mode=attn_mode,

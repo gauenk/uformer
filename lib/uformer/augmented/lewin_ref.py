@@ -18,22 +18,22 @@ from .window_attn_dnls import WindowAttentionDnls
 from .window_utils import window_partition,window_reverse
 
 
-def select_window_attn(attn_type):
-    if attn_type == "default":
+def select_window_attn(attn_mode):
+    if attn_mode == "default":
         return WindowAttention
-    elif attn_type == "refactored":
+    elif attn_mode == "refactored":
         return WindowAttentionRefactored
-    elif attn_type == "dnls":
+    elif attn_mode == "dnls":
         return WindowAttentionDnls
     else:
-        raise ValueError(f"Uknown window attn type [{attn_type}]")
+        raise ValueError(f"Uknown window attn type [{attn_mode}]")
 
 class LeWinTransformerBlockRefactored(nn.Module):
     def __init__(self, dim, input_resolution, num_heads, win_size=8, shift_size=0,
                  mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0.,
                  drop_path=0., act_layer=nn.GELU,
                  norm_layer=nn.LayerNorm,token_projection='linear',token_mlp='leff',
-                 modulator=False,cross_modulator=False):
+                 modulator=False,cross_modulator=False,attn_mode="default"):
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
@@ -47,9 +47,10 @@ class LeWinTransformerBlockRefactored(nn.Module):
             self.win_size = min(self.input_resolution)
         assert 0 <= self.shift_size < self.win_size, "shift_size must in 0-win_size"
 
-        # self.attn_type = "default"
-        self.attn_type = "refactored"
-        # self.attn_type = "dnls"
+        # self.attn_mode = "default"
+        # self.attn_mode = "refactored"
+        # self.attn_mode = "dnls"
+        self.attn_mode = attn_mode
         if modulator:
             self.modulator = nn.Embedding(win_size*win_size, dim) # modulator
         else:
@@ -65,7 +66,7 @@ class LeWinTransformerBlockRefactored(nn.Module):
 
         self.norm1 = norm_layer(dim)
 
-        wattn_block = select_window_attn(self.attn_type)
+        wattn_block = select_window_attn(self.attn_mode)
         self.attn = wattn_block(
             dim, win_size=to_2tuple(self.win_size), num_heads=num_heads,
             qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop,
@@ -167,14 +168,14 @@ class LeWinTransformerBlockRefactored(nn.Module):
         return x
 
     def run_window_attn(self,shifted_x,attn_mask):
-        if self.attn_type == "default":
+        if self.attn_mode == "default":
             return self.run_default_window_attn(shifted_x,attn_mask)
-        elif self.attn_type == "refactored":
+        elif self.attn_mode == "refactored":
             return self.run_refactored_window_attn(shifted_x,attn_mask)
-        elif self.attn_type == "dnls":
+        elif self.attn_mode == "dnls":
             return self.run_refactored_window_attn(shifted_x,attn_mask)
         else:
-            raise ValueError(f"Uknown attn type [{self.attn_type}]")
+            raise ValueError(f"Uknown attn type [{self.attn_mode}]")
 
     def run_refactored_window_attn(self,shifted_x,attn_mask,wsize=8):
 

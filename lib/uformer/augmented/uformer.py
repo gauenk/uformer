@@ -73,7 +73,9 @@ class Uformer(nn.Module):
                             drop_path=enc_dpr[sum(depths[:0]):sum(depths[:1])],
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag)
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag,
+                            attn_mode=attn_mode)
         self.dowsample_0 = dowsample(embed_dim, embed_dim*2)
         self.encoderlayer_1 = BasicUformerLayer(dim=embed_dim*2,
                             output_dim=embed_dim*2,
@@ -88,7 +90,9 @@ class Uformer(nn.Module):
                             drop_path=enc_dpr[sum(depths[:1]):sum(depths[:2])],
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag)
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag,
+                            attn_mode=attn_mode)
         self.dowsample_1 = dowsample(embed_dim*2, embed_dim*4)
         self.encoderlayer_2 = BasicUformerLayer(dim=embed_dim*4,
                             output_dim=embed_dim*4,
@@ -103,7 +107,9 @@ class Uformer(nn.Module):
                             drop_path=enc_dpr[sum(depths[:2]):sum(depths[:3])],
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag)
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag,
+                            attn_mode=attn_mode)
         self.dowsample_2 = dowsample(embed_dim*4, embed_dim*8)
         self.encoderlayer_3 = BasicUformerLayer(dim=embed_dim*8,
                             output_dim=embed_dim*8,
@@ -118,7 +124,9 @@ class Uformer(nn.Module):
                             drop_path=enc_dpr[sum(depths[:3]):sum(depths[:4])],
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag)
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag,
+                            attn_mode=attn_mode)
         self.dowsample_3 = dowsample(embed_dim*8, embed_dim*16)
 
         # Bottleneck
@@ -135,7 +143,9 @@ class Uformer(nn.Module):
                             drop_path=conv_dpr,
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag)
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag,
+                            attn_mode=attn_mode)
 
         # Decoder
         self.upsample_0 = upsample(embed_dim*16, embed_dim*8)
@@ -152,8 +162,10 @@ class Uformer(nn.Module):
                             drop_path=dec_dpr[:depths[5]],
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag,
-                            modulator=modulator,cross_modulator=cross_modulator)
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag,
+                            modulator=modulator,cross_modulator=cross_modulator,
+                            attn_mode=attn_mode)
         self.upsample_1 = upsample(embed_dim*16, embed_dim*4)
         self.decoderlayer_1 = BasicUformerLayer(dim=embed_dim*8,
                             output_dim=embed_dim*8,
@@ -168,8 +180,10 @@ class Uformer(nn.Module):
                             drop_path=dec_dpr[sum(depths[5:6]):sum(depths[5:7])],
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag,
-                            modulator=modulator,cross_modulator=cross_modulator)
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag,
+                            modulator=modulator,cross_modulator=cross_modulator,
+                            attn_mode=attn_mode)
         self.upsample_2 = upsample(embed_dim*8, embed_dim*2)
         self.decoderlayer_2 = BasicUformerLayer(dim=embed_dim*4,
                             output_dim=embed_dim*4,
@@ -184,8 +198,10 @@ class Uformer(nn.Module):
                             drop_path=dec_dpr[sum(depths[5:7]):sum(depths[5:8])],
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag,
-                            modulator=modulator,cross_modulator=cross_modulator)
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag,
+                            modulator=modulator,cross_modulator=cross_modulator,
+                            attn_mode=attn_mode)
         self.upsample_3 = upsample(embed_dim*4, embed_dim)
         self.decoderlayer_3 = BasicUformerLayer(dim=embed_dim*2,
                             output_dim=embed_dim*2,
@@ -200,8 +216,10 @@ class Uformer(nn.Module):
                             drop_path=dec_dpr[sum(depths[5:8]):sum(depths[5:9])],
                             norm_layer=norm_layer,
                             use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,token_mlp=token_mlp,shift_flag=shift_flag,
-                            modulator=modulator,cross_modulator=cross_modulator)
+                            token_projection=token_projection,
+                            token_mlp=token_mlp,shift_flag=shift_flag,
+                            modulator=modulator,cross_modulator=cross_modulator,
+                            attn_mode=attn_mode)
 
         self.apply(self._init_weights)
 

@@ -14,13 +14,14 @@ class BasicUformerLayer(nn.Module):
                  mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0.,
                  drop_path=0., norm_layer=nn.LayerNorm, use_checkpoint=False,
                  token_projection='linear',token_mlp='ffn', shift_flag=True,
-                 modulator=False,cross_modulator=False):
+                 modulator=False,cross_modulator=False,attn_mode="default"):
 
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
         self.depth = depth
         self.use_checkpoint = use_checkpoint
+        self.attn_mode = attn_mode
         # build blocks
         # lewin_type == "default" if wattn_type == "
         # lewin_block = LeWinTransformerBlock
@@ -35,7 +36,8 @@ class BasicUformerLayer(nn.Module):
                                     drop=drop, attn_drop=attn_drop,
                                     drop_path=drop_path[i] if isinstance(drop_path, list) else drop_path,
                                     norm_layer=norm_layer,token_projection=token_projection,token_mlp=token_mlp,
-                                    modulator=modulator,cross_modulator=cross_modulator)
+                                    modulator=modulator,cross_modulator=cross_modulator,
+                            attn_mode=attn_mode)
                 for i in range(depth)])
         else:
             self.blocks = nn.ModuleList([
@@ -47,7 +49,8 @@ class BasicUformerLayer(nn.Module):
                                     drop=drop, attn_drop=attn_drop,
                                     drop_path=drop_path[i] if isinstance(drop_path, list) else drop_path,
                                     norm_layer=norm_layer,token_projection=token_projection,token_mlp=token_mlp,
-                                    modulator=modulator,cross_modulator=cross_modulator)
+                                    modulator=modulator,cross_modulator=cross_modulator,
+                            attn_mode=attn_mode)
             for i in range(depth)])
 
     def extra_repr(self) -> str:

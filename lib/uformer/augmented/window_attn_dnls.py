@@ -71,9 +71,7 @@ class WindowAttentionDnls(nn.Module):
 
         # -- prod with "v" --
         x = wpsum(v_vid,dists,inds)
-        print(x.shape)
         x = rearrange(x,'(o n) h c 1 1 -> o n (h c)',o=ntotal)
-        print(x.shape)
 
         # -- proj --
         x = self.proj(x)

@@ -50,7 +50,7 @@ def load_model(*args,**kwargs):
     dd_in = optional(kwargs,'dd_in',3)
 
     # -- relevant configs --
-    attn_mode = optional(kwargs,'attn_mode',"dnls_k")
+    attn_mode = optional(kwargs,'attn_mode',"dnls")
     stride = optional(kwargs,'stride',None)
     ws = optional(kwargs,'ws',-1)
     wt = optional(kwargs,'wt',0)
@@ -91,10 +91,10 @@ def load_model(*args,**kwargs):
     #     remove_lightning_load_state(state)
     #     model.load_state_dict(state)
 
-    # attn_type = "default"
-    attn_type = "refactored"
-    # attn_type = "dnls"
-    if attn_type in ["default","refactored"]:
+    # attn_mode = "default"
+    # attn_mode = "refactored"
+    # attn_mode = "dnls"
+    if attn_mode in ["default","refactored"]:
         load_checkpoint(model,state_fn)
     else:
         load_checkpoint_qkv(model,state_fn)
