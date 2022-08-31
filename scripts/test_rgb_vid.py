@@ -30,7 +30,7 @@ import cache_io
 
 # -- network --
 import uformer
-from uformer import lightning
+# from uformer import lightning
 from uformer.utils.misc import optional,rslice_pair
 
 def run_exp(cfg):
@@ -53,14 +53,14 @@ def run_exp(cfg):
     # -- network --
     if cfg.model_type == "original":
         model = uformer.original.load_model().to(cfg.device)
-    elif cfg.model_type == "aug_original":
-        fwd_mode = "original"
-        model = uformer.augmented.load_model(cfg.sigma,fwd_mode=fwd_mode,
+    elif cfg.model_type == "aug_refactored":
+        attn_mode = "refactored"
+        model = uformer.augmented.load_model(cfg.sigma,attn_mode=attn_mode,
                                              stride=cfg.stride,sb=-1)
                                              # ws=cfg.ws,wt=cfg.wt)#*1024)
-    elif cfg.model_type == "aug_dnls_k":
-        fwd_mode = "dnls_k"
-        model = uformer.augmented.load_model(cfg.sigma,fwd_mode=fwd_mode,
+    elif cfg.model_type == "aug_dnls":
+        attn_mode = "dnls"
+        model = uformer.augmented.load_model(cfg.sigma,attn_mode=attn_mode,
                                              stride=cfg.stride)
                                              # ws=cfg.ws,wt=cfg.wt)
     else:
@@ -156,12 +156,13 @@ def run_exp(cfg):
     return results
 
 def load_checkpoint(model,use_train):
-    if use_train == "true":
-        mpath = "output/checkpoints/df2d24cc-aa58-4938-b433-c5d116983893-epoch=52.ckpt"
-        # mpath = "output/checkpoints/44006e54-ddb2-4776-8cb0-e86edc464370-epoch=09-val_loss=1.55e-04.ckpt"
-        state = th.load(mpath)['state_dict']
-        lightning.remove_lightning_load_state(state)
-        model.load_state_dict(state)
+    # if use_train == "true":
+    #     mpath = "output/checkpoints/df2d24cc-aa58-4938-b433-c5d116983893-epoch=52.ckpt"
+    #     # mpath = "output/checkpoints/44006e54-ddb2-4776-8cb0-e86edc464370-epoch=09-val_loss=1.55e-04.ckpt"
+    #     state = th.load(mpath)['state_dict']
+    #     lightning.remove_lightning_load_state(state)
+    #     model.load_state_dict(state)
+    pass
 
 def compute_ssim(clean,deno,div=255.):
     nframes = clean.shape[0]
@@ -275,7 +276,7 @@ def main():
     isizes = ["none"]
     stride = [1]
     use_train = ["false"]
-    model_type = ["aug_original","aug_dnls_k"]
+    model_type = ["aug_refactored","aug_dnls"]
     exp_lists = {"dname":dnames,"vid_name":vid_names,"dset":dset,
                  "flow":flow,"ws":ws,"wt":wt,"model_type":model_type,
                  "isize":isizes,"stride":stride,"use_train":use_train}
@@ -315,8 +316,8 @@ def main():
         # cache.clear_exp(uuid)
         # if exp.model_type == "original":
         #     cache.clear_exp(uuid)
-        if exp.model_type == "aug_original":
-            cache.clear_exp(uuid)
+        # if exp.model_type == "aug_original":
+        #     cache.clear_exp(uuid)
         # if exp.model_type == "aug_dnls_k":
         #     cache.clear_exp(uuid)
         # if exp.use_train == "true":

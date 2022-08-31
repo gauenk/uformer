@@ -33,7 +33,7 @@ def load_model(*args,**kwargs):
     # -- get cfg --
     nchnls = optional(kwargs,'nchnls',3)
     input_size = optional(kwargs,'input_size',128)
-    depths = optional(kwargs,'input_size',default_depth)
+    depths = optional(kwargs,'input_depth',default_depth)
     device = optional(kwargs,'device','cuda:0')
 
     # -- other configs --
