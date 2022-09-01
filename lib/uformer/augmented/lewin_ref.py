@@ -16,7 +16,18 @@ from .window_attn import WindowAttention
 from .window_attn_ref import WindowAttentionRefactored
 from .window_attn_dnls import WindowAttentionDnls
 from .window_utils import window_partition,window_reverse
+from .product_attn import ProductAttention
 
+def select_attn(attn_mode,sub_attn_mode):
+    if attn_mode == "window":
+        return select_window_attn(sub_attn_mode)
+    elif attn_mode == "product":
+        return select_prod_attn(sub_attn_mode)
+    else:
+        raise ValueError(f"Uknown window attn type [{attn_mode}]")
+
+def select_prod_attn(attn_mode):
+    return ProductAttention
 
 def select_window_attn(attn_mode):
     if attn_mode == "default":
@@ -31,9 +42,11 @@ def select_window_attn(attn_mode):
 class LeWinTransformerBlockRefactored(nn.Module):
     def __init__(self, dim, input_resolution, num_heads, win_size=8, shift_size=0,
                  mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0.,
-                 drop_path=0., act_layer=nn.GELU,
-                 norm_layer=nn.LayerNorm,token_projection='linear',token_mlp='leff',
-                 modulator=False,cross_modulator=False,attn_mode="default"):
+                 drop_path=0., act_layer=nn.GELU,norm_layer=nn.LayerNorm,
+                 token_projection='linear',token_mlp='leff',
+                 modulator=False,cross_modulator=False,attn_mode="window_default",
+                 ps=1,pt=1,k=-1,ws=8,wt=0,stride0=1,stride1=1,dil=1,
+                 nbwd=1,rbwd=False,exact=False,bs=-1):
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
@@ -47,10 +60,6 @@ class LeWinTransformerBlockRefactored(nn.Module):
             self.win_size = min(self.input_resolution)
         assert 0 <= self.shift_size < self.win_size, "shift_size must in 0-win_size"
 
-        # self.attn_mode = "default"
-        # self.attn_mode = "refactored"
-        # self.attn_mode = "dnls"
-        self.attn_mode = attn_mode
         if modulator:
             self.modulator = nn.Embedding(win_size*win_size, dim) # modulator
         else:
@@ -66,11 +75,25 @@ class LeWinTransformerBlockRefactored(nn.Module):
 
         self.norm1 = norm_layer(dim)
 
-        wattn_block = select_window_attn(self.attn_mode)
-        self.attn = wattn_block(
-            dim, win_size=to_2tuple(self.win_size), num_heads=num_heads,
-            qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop,
-            proj_drop=drop, token_projection=token_projection)
+
+        self.attn_mode = attn_mode
+        main_attn_mode,sub_attn_mode = attn_mode.split("_")
+        attn_block = select_attn(main_attn_mode,sub_attn_mode)
+        if main_attn_mode == "window":
+            self.attn = attn_block(
+                dim, win_size=to_2tuple(self.win_size), num_heads=num_heads,
+                qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop,
+                proj_drop=drop, token_projection=token_projection)
+        elif main_attn_mode == "product":
+            self.attn = attn_block(
+                dim, win_size=to_2tuple(self.win_size), num_heads=num_heads,
+                qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop,
+                proj_drop=drop, token_projection=token_projection,
+                k=k, ps=ps, pt=pt, ws=ws, wt=wt, dil=dil,
+                stride0=stride0, stride1=stride1,
+                nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
+        else:
+            raise ValueError(f"Uknown attention mode [{attn_mode}]")
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         self.norm2 = norm_layer(dim)
@@ -94,10 +117,10 @@ class LeWinTransformerBlockRefactored(nn.Module):
         return f"dim={self.dim}, input_resolution={self.input_resolution}, num_heads={self.num_heads}, " \
                f"win_size={self.win_size}, shift_size={self.shift_size}, mlp_ratio={self.mlp_ratio},modulator={self.modulator}"
 
-    def forward(self, x, mask=None):
+    def forward(self, x, H, W, mask=None):
         B, L, C = x.shape
-        H = int(math.sqrt(L))
-        W = int(math.sqrt(L))
+        # H = int(math.sqrt(L))
+        # W = int(math.sqrt(L))
 
         ## input mask
         if mask != None:
@@ -151,7 +174,7 @@ class LeWinTransformerBlockRefactored(nn.Module):
         else:
             shifted_x = x
 
-        shifted_x = self.run_window_attn(shifted_x,attn_mask)
+        shifted_x = self.run_attn(shifted_x,attn_mask)
 
         # reverse cyclic shift
         if self.shift_size > 0:
@@ -167,15 +190,37 @@ class LeWinTransformerBlockRefactored(nn.Module):
         del attn_mask
         return x
 
+    def run_attn(self,shifted_x,attn_mask):
+        main,sub = self.attn_mode.split("_")
+        if main == "window":
+            return self.run_window_attn(shifted_x,attn_mask)
+        elif main == "product":
+            return self.run_product_attn(shifted_x,attn_mask)
+        else:
+            raise ValueError(f"Uknown attn type [{main}]")
+
+    def run_product_attn(self,shifted_x,attn_mask,wsize=8):
+        # -- unpack --
+        B,H,W,C = shifted_x.shape
+
+        # with_modulator
+        wmsa_in = self.apply_modulator(shifted_x,wsize)
+
+        # W-MSA/SW-MSA
+        attn_windows = self.attn(wmsa_in, mask=attn_mask)  # nW*B, win_size*win_size, C
+
+        return attn_windows
+
     def run_window_attn(self,shifted_x,attn_mask):
-        if self.attn_mode == "default":
+        main,sub = self.attn_mode.split("_")
+        if sub == "default":
             return self.run_default_window_attn(shifted_x,attn_mask)
-        elif self.attn_mode == "refactored":
+        elif sub == "refactored":
             return self.run_refactored_window_attn(shifted_x,attn_mask)
-        elif self.attn_mode == "dnls":
+        elif sub == "dnls":
             return self.run_refactored_window_attn(shifted_x,attn_mask)
         else:
-            raise ValueError(f"Uknown attn type [{self.attn_mode}]")
+            raise ValueError(f"Uknown attn type [{sub}]")
 
     def run_refactored_window_attn(self,shifted_x,attn_mask,wsize=8):
 

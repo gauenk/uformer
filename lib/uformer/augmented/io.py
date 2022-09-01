@@ -50,12 +50,18 @@ def load_model(*args,**kwargs):
     dd_in = optional(kwargs,'dd_in',3)
 
     # -- relevant configs --
-    attn_mode = optional(kwargs,'attn_mode',"dnls")
-    stride = optional(kwargs,'stride',None)
-    ws = optional(kwargs,'ws',-1)
-    wt = optional(kwargs,'wt',0)
+    attn_mode = optional(kwargs,'attn_mode',"window_dnls")
     k = optional(kwargs,'k',-1)
-    bs = optional(kwargs,'bs',None)
+    ps = optional(kwargs,'ps',1)
+    pt = optional(kwargs,'pt',1)
+    stride0 = optional(kwargs,'stride0',1)
+    stride1 = optional(kwargs,'stride1',1)
+    ws = optional(kwargs,'ws',8)
+    wt = optional(kwargs,'wt',0)
+    nbwd = optional(kwargs,'nbwd',1)
+    rbwd = optional(kwargs,'rbwd',False)
+    exact = optional(kwargs,'exact',False)
+    bs = optional(kwargs,'bs',-1)
 
     # -- init model --
     model = Uformer(img_size=input_size, in_chans=nchnls, embed_dim=embed_dim,
@@ -63,7 +69,9 @@ def load_model(*args,**kwargs):
                     qkv_bias=qkv_bias, token_projection=token_projection,
                     token_mlp=token_mlp,modulator=modulator,
                     cross_modulator=cross_modulator,dd_in=dd_in,
-                    attn_mode=attn_mode,ws=ws,wt=wt,k=k,stride=stride,bs=bs)
+                    attn_mode=attn_mode,ps=ps,pt=pt,ws=ws,wt=wt,k=k,
+                    stride0=stride0,stride1=stride1,
+                    nbwd=nbwd,rbwd=rbwd,exact=exact,bs=bs)
     model = model.to(device)
 
     # -- load weights --
@@ -94,13 +102,12 @@ def load_model(*args,**kwargs):
     # attn_mode = "default"
     # attn_mode = "refactored"
     # attn_mode = "dnls"
-    if attn_mode in ["default","refactored"]:
-        load_checkpoint(model,state_fn)
-    else:
-        load_checkpoint_qkv(model,state_fn)
-
-    # load_checkpoint(model,model_state)
-    # model.load_state_dict(model_state['state_dict'])
+    main_mode,sub_mode = attn_mode.split("_")
+    if main_mode == "window" or True:
+        if sub_mode in ["default","refactored"]:
+            load_checkpoint(model,state_fn)
+        else:
+            load_checkpoint_qkv(model,state_fn)
 
     # -- eval mode as default --
     model.eval()

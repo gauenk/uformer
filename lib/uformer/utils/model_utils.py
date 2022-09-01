@@ -169,3 +169,38 @@ def expand2square(timg,factor=16.0):
     mask[:,:, ((X - h)//2):((X - h)//2 + h),((X - w)//2):((X - w)//2 + w)].fill_(1)
 
     return img, mask
+
+
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#
+#     Modifying Layers In-Place after Loading
+#
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+def reset_product_attn_mods(model):
+    for name,param in model.named_parameters():
+        if "relative_position_bias_table" in name:
+            submod = model
+            submods = name.split(".")
+            for submod_i in submods:
+                submod = getattr(submod,submod_i)
+            submod.data = th.randn_like(submod.data).clamp(-1,1)/100.
+
+def filter_product_attn_mods(model):
+    for name,param in model.named_parameters():
+        if "relative_position_bias_table" in name:
+            submod = model
+            submods = name.split(".")
+            for submod_i in submods[:-1]:
+                submod = getattr(submod,submod_i)
+            setattr(submod,submods[-1],None)
+
+def get_product_attn_params(model):
+    params = []
+    for name,param in model.named_parameters():
+        if "relative_position_bias_table" in name:
+            # delattr(model,name)
+            param.requires_grad_(False)
+            continue
+        params.append(param)
+    return params

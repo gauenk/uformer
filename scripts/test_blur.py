@@ -30,10 +30,10 @@ import cache_io
 
 # -- network --
 import uformer
-# from uformer import lightning
+from uformer import lightning
 from uformer.utils.misc import optional,rslice_pair
 from uformer.utils.model_utils import temporal_chop,expand2square
-
+from uformer.utils.metrics import compute_psnrs,compute_ssims
 
 def run_exp(cfg):
 
@@ -57,21 +57,27 @@ def run_exp(cfg):
     if cfg.model_type == "original":
         model = uformer.original.load_model(noise_version=noise_version).to(cfg.device)
     elif cfg.model_type == "aug_refactored":
-        attn_mode = "refactored"
+        attn_mode = "window_refactored"
         model = uformer.augmented.load_model(noise_version=noise_version,
                                              attn_mode=attn_mode,
                                              stride=cfg.stride,sb=-1)
                                              # ws=cfg.ws,wt=cfg.wt)#*1024)
     elif cfg.model_type == "aug_dnls":
-        attn_mode = "dnls"
+        attn_mode = "window_dnls"
+        model = uformer.augmented.load_model(noise_version=noise_version,
+                                             attn_mode=attn_mode,
+                                             stride=cfg.stride)
+                                             # ws=cfg.ws,wt=cfg.wt)
+    elif cfg.model_type == "product_dnls":
+        attn_mode = "product_dnls"
         model = uformer.augmented.load_model(noise_version=noise_version,
                                              attn_mode=attn_mode,
                                              stride=cfg.stride)
                                              # ws=cfg.ws,wt=cfg.wt)
     else:
-        raise ValueError(f"Uknown model_type [{model_type}]")
+        raise ValueError(f"Uknown model_type [{cfg.model_type}]")
     model.eval()
-    load_checkpoint(model,cfg.use_train)
+    load_checkpoint(model,cfg.use_train,cfg.model_type)
     imax = 255.
 
     # -- data --
@@ -80,9 +86,9 @@ def run_exp(cfg):
     indices = [i for i,g in enumerate(groups) if cfg.vid_name in g]
 
     # -- optional filter --
-    frame_start = optional(cfg,"frame_start",0)
-    frame_end = optional(cfg,"frame_end",0)
-    if frame_start >= 0 and frame_end > 0:
+    frame_start = optional(cfg,"frame_start",-1)
+    frame_end = optional(cfg,"frame_end",-1)
+    if frame_start >= 0 and frame_end >= 0:
         def fbnds(fnums,lb,ub): return (lb <= np.min(fnums)) and (ub >= np.max(fnums))
         indices = [i for i in indices if fbnds(data[cfg.dset].paths['fnums'][groups[i]],
                                                cfg.frame_start,cfg.frame_end)]
@@ -156,10 +162,10 @@ def run_exp(cfg):
         #                             fstart=fstart,div=1.,fmt="np")
 
         # -- psnr --
-        noisy_psnrs = compute_psnr(clean,noisy,div=imax)
-        psnrs = compute_psnr(clean,deno,div=imax)
-        noisy_ssims = compute_ssim(clean,noisy,div=imax)
-        ssims = compute_ssim(clean,deno,div=imax)
+        noisy_psnrs = compute_psnrs(clean,noisy,div=imax)
+        psnrs = compute_psnrs(clean,deno,div=imax)
+        noisy_ssims = compute_ssims(clean,noisy,div=imax)
+        ssims = compute_ssims(clean,deno,div=imax)
         print(noisy_psnrs)
         print(psnrs)
 
@@ -176,90 +182,23 @@ def run_exp(cfg):
 
     return results
 
-def load_checkpoint(model,use_train):
-    # if use_train == "true":
-    #     mpath = "output/checkpoints/df2d24cc-aa58-4938-b433-c5d116983893-epoch=52.ckpt"
-    #     # mpath = "output/checkpoints/44006e54-ddb2-4776-8cb0-e86edc464370-epoch=09-val_loss=1.55e-04.ckpt"
-    #     state = th.load(mpath)['state_dict']
-    #     lightning.remove_lightning_load_state(state)
-    #     model.load_state_dict(state)
-    pass
-
-def compute_ssim(clean,deno,div=255.):
-    nframes = clean.shape[0]
-    ssims = []
-    for t in range(nframes):
-        clean_t = clean[t].cpu().numpy().squeeze().transpose((1,2,0))/div
-        deno_t = deno[t].cpu().numpy().squeeze().transpose((1,2,0))/div
-        ssim_t = compute_ssim_ski(clean_t,deno_t,channel_axis=-1)
-        ssims.append(ssim_t)
-    ssims = np.array(ssims)
-    return ssims
-
-def prepare_sidd(records,name):
-
-    # -- load denoised files --
-    deno_all_fns = list(np.stack(records['deno_fns'].to_numpy()))
-    denos = []
-    for deno_vid_fns in deno_all_fns:
-        deno_vid = []
-        for fn_t in deno_vid_fns[0]:
-            if "png" in fn_t:
-                frame_t = np.array(Image.open(fn_t))
-            else:
-                frame_t = np.load(fn_t).transpose(1,2,0)
-            deno_vid.append(frame_t)
-        deno_vid = np.stack(deno_vid)
-        denos.append(deno_vid)
-    denos = np.stack(denos)
-    ntotal = np.prod(denos.shape)
-
-    # -- average time --
-    times = list(np.stack(records['timer_deno'].to_numpy()))
-    times_mp = []
-    for vid_times in times:
-        vid_time = np.mean(vid_times)
-        times_mp.append(vid_time)
-    time_mp = np.mean(times_mp)
-    time_mp = time_mp * 1024 * 1024 / ntotal
-    # print(time_mp)
-    # print(denos.shape)
-
-    # -- out dir --
-    out_dir = Path("output/sidd_submit/%s/" % name)
-    if not out_dir.exists():
-        out_dir.mkdir()
-
-    # -- filenames --
-    fn_og = "output/sidd_submit/SubmitSrgbFromMatlab.mat"
-    fn = out_dir / "SubmitSrgb.mat"
-    if fn.exists():
-        os.remove(str(fn)) # remove old
-    fn = str(fn)
-
-    # -- read --
-    data = hdf5storage.loadmat(fn_og)
-    del data['DenoisedBlocksSrgb']
-    print(denos.shape)
-    data['DenoisedBlocksSrgb'] = denos
-    hdf5storage.savemat(fn,data)
-
-def compute_psnr(clean,deno,div=255.):
-    t = clean.shape[0]
-    deno = deno.detach()
-    clean_rs = clean.reshape((t,-1))/div
-    deno_rs = deno.reshape((t,-1))/div
-    mse = th.mean((clean_rs - deno_rs)**2,1)
-    psnrs = -10. * th.log10(mse).detach()
-    psnrs = psnrs.cpu().numpy()
-    return psnrs
+def load_checkpoint(model,use_train,model_type):
+    load = use_train == "true"# or "product_dnls" == model_type
+    croot = Path("output/checkpoints/")
+    print(load)
+    if load:
+        print("loading!")
+        mpath = croot / "e9becfae-2bc2-4adf-94bc-989a68b50128-epoch=01.ckpt"
+        state = th.load(str(mpath))['state_dict']
+        lightning.remove_lightning_load_state(state)
+        model.load_state_dict(state)
 
 def default_cfg():
     # -- config --
     cfg = edict()
     cfg.nframes = 0
-    cfg.frame_start = 0
-    cfg.frame_end = 0
+    cfg.frame_start = -1
+    cfg.frame_end = -1
     cfg.saved_dir = "./output/saved_results/"
     cfg.num_workers = 1
     cfg.device = "cuda:0"
@@ -295,11 +234,16 @@ def main():
     isizes = ["none"]
     stride = [1]
     use_train = ["false"]
-    model_type = ["aug_refactored","aug_dnls"]
+    model_type = ["aug_refactored","aug_dnls","product_dnls"]
     exp_lists = {"dname":dnames,"vid_name":vid_names,"dset":dset,
                  "flow":flow,"ws":ws,"wt":wt,"model_type":model_type,
                  "isize":isizes,"stride":stride,"use_train":use_train}
     exps_a = cache_io.mesh_pydicts(exp_lists) # create mesh
+
+    # -- version 3 --
+    exp_lists['use_train'] = ['true']
+    exp_lists['model_type'] = ['product_dnls']
+    exps_c = cache_io.mesh_pydicts(exp_lists) # create mesh
 
     # -- exps version 2 --
     exp_lists['ws'] = [-1]
@@ -309,12 +253,12 @@ def main():
     exp_lists['stride'] = [1]
     exp_lists['model_type'] = ['original']
     exps_b = cache_io.mesh_pydicts(exp_lists) # create mesh
-    exps = exps_b + exps_a
+    exps = exps_b + exps_a + exps_c
 
     # -- group with default --
     cfg = default_cfg()
-    cfg.isize = "256_256"
-    cfg.nframes = 2
+    # cfg.isize = "256_256"
+    cfg.nframes = 1
     cfg.frame_start = 0
     cfg.frame_end = cfg.frame_start + cfg.nframes - 1
     # cfg.isize = "256_256"
@@ -334,14 +278,16 @@ def main():
         # -- logic --
         uuid = cache.get_uuid(exp) # assing ID to each Dict in Meshgrid
         # cache.clear_exp(uuid)
-        if exp.model_type == "original":
-            cache.clear_exp(uuid)
+        # if exp.model_type == "original":
+        #     cache.clear_exp(uuid)
         # if exp.model_type == "aug_refactored":
         #     cache.clear_exp(uuid)
-        if exp.model_type == "aug_dnls":
-            cache.clear_exp(uuid)
-        # if exp.use_train == "true":
+        # if exp.model_type == "aug_dnls":
         #     cache.clear_exp(uuid)
+        # if exp.model_type == "product_dnls":
+        #     cache.clear_exp(uuid)
+        if exp.use_train == "true":
+            cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result
         if results is None: # check if no result
             exp.uuid = uuid
@@ -350,7 +296,7 @@ def main():
 
     # -- load results --
     records = cache.load_flat_records(exps)
-    print(records['psnrs'])
+    print(records[['model_type','use_train','psnrs']])
 
     for model_type,mdf in records.groupby("model_type"):
         for use_tr,tdf in mdf.groupby("use_train"):

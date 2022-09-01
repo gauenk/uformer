@@ -22,7 +22,9 @@ class Uformer(nn.Module):
                  use_checkpoint=False, token_projection='linear', token_mlp='leff',
                  dowsample=Downsample, upsample=Upsample, shift_flag=True,
                  modulator=False, cross_modulator=False,
-                 attn_mode="default",ws=8,wt=0,k=-1,stride=1,bs=-1,**kwargs):
+                 attn_mode="default", k=-1, ps=1, pt=1, ws=8,
+                 wt=0, dil=1, stride0=1, stride1=1, nbwd=1, rbwd=False,
+                 exact=False, bs=-1, **kwargs):
         super().__init__()
 
         self.num_enc_layers = len(depths)//2
@@ -39,11 +41,16 @@ class Uformer(nn.Module):
 
         # -- our search --
         self.attn_mode = attn_mode
+        self.k = k
+        self.ps = ps
+        self.pt = pt
         self.ws = ws
         self.wt = wt
-        self.k = k
-        self.stride = stride
-        self.bs = bs
+        self.dil = dil
+        self.stride0 = stride0
+        self.stride1 = stride1
+        self.nbwd = nbwd
+        self.exact = exact
 
         # stochastic depth
         enc_dpr = [x.item() for x in th.linspace(0, drop_path_rate,
@@ -75,7 +82,9 @@ class Uformer(nn.Module):
                             use_checkpoint=use_checkpoint,
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
-                            attn_mode=attn_mode)
+                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
+                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
+                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
         self.dowsample_0 = dowsample(embed_dim, embed_dim*2)
         self.encoderlayer_1 = BasicUformerLayer(dim=embed_dim*2,
                             output_dim=embed_dim*2,
@@ -92,7 +101,9 @@ class Uformer(nn.Module):
                             use_checkpoint=use_checkpoint,
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
-                            attn_mode=attn_mode)
+                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
+                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
+                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
         self.dowsample_1 = dowsample(embed_dim*2, embed_dim*4)
         self.encoderlayer_2 = BasicUformerLayer(dim=embed_dim*4,
                             output_dim=embed_dim*4,
@@ -109,7 +120,9 @@ class Uformer(nn.Module):
                             use_checkpoint=use_checkpoint,
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
-                            attn_mode=attn_mode)
+                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
+                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
+                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
         self.dowsample_2 = dowsample(embed_dim*4, embed_dim*8)
         self.encoderlayer_3 = BasicUformerLayer(dim=embed_dim*8,
                             output_dim=embed_dim*8,
@@ -126,7 +139,9 @@ class Uformer(nn.Module):
                             use_checkpoint=use_checkpoint,
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
-                            attn_mode=attn_mode)
+                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
+                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
+                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
         self.dowsample_3 = dowsample(embed_dim*8, embed_dim*16)
 
         # Bottleneck
@@ -145,7 +160,9 @@ class Uformer(nn.Module):
                             use_checkpoint=use_checkpoint,
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
-                            attn_mode=attn_mode)
+                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
+                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
+                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
 
         # Decoder
         self.upsample_0 = upsample(embed_dim*16, embed_dim*8)
@@ -165,7 +182,9 @@ class Uformer(nn.Module):
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
                             modulator=modulator,cross_modulator=cross_modulator,
-                            attn_mode=attn_mode)
+                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
+                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
+                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
         self.upsample_1 = upsample(embed_dim*16, embed_dim*4)
         self.decoderlayer_1 = BasicUformerLayer(dim=embed_dim*8,
                             output_dim=embed_dim*8,
@@ -183,7 +202,9 @@ class Uformer(nn.Module):
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
                             modulator=modulator,cross_modulator=cross_modulator,
-                            attn_mode=attn_mode)
+                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
+                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
+                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
         self.upsample_2 = upsample(embed_dim*8, embed_dim*2)
         self.decoderlayer_2 = BasicUformerLayer(dim=embed_dim*4,
                             output_dim=embed_dim*4,
@@ -201,7 +222,9 @@ class Uformer(nn.Module):
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
                             modulator=modulator,cross_modulator=cross_modulator,
-                            attn_mode=attn_mode)
+                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
+                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
+                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
         self.upsample_3 = upsample(embed_dim*4, embed_dim)
         self.decoderlayer_3 = BasicUformerLayer(dim=embed_dim*2,
                             output_dim=embed_dim*2,
@@ -219,7 +242,9 @@ class Uformer(nn.Module):
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
                             modulator=modulator,cross_modulator=cross_modulator,
-                            attn_mode=attn_mode)
+                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
+                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
+                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
 
         self.apply(self._init_weights)
 
@@ -245,37 +270,52 @@ class Uformer(nn.Module):
 
     def forward(self, x, mask=None, flows=None):
         # Input Projection
+        t,c,h,w = x.shape
         y = self.input_proj(x)
         y = self.pos_drop(y)
+
         #Encoder
-        conv0 = self.encoderlayer_0(y,mask=mask)
+        conv0 = self.encoderlayer_0(y,h,w,mask=mask)
         pool0 = self.dowsample_0(conv0)
-        conv1 = self.encoderlayer_1(pool0,mask=mask)
+        _h,_w = h//2,w//2
+        conv1 = self.encoderlayer_1(pool0,_h,_w,mask=mask)
         pool1 = self.dowsample_1(conv1)
-        conv2 = self.encoderlayer_2(pool1,mask=mask)
+        _h,_w = h//(2**2),w//(2**2)
+        conv2 = self.encoderlayer_2(pool1,_h,_w,mask=mask)
         pool2 = self.dowsample_2(conv2)
-        conv3 = self.encoderlayer_3(pool2,mask=mask)
+        _h,_w = h//(2**3),w//(2**3)
+        conv3 = self.encoderlayer_3(pool2,_h,_w,mask=mask)
         pool3 = self.dowsample_3(conv3)
 
         # Bottleneck
-        conv4 = self.conv(pool3, mask=mask)
+        _h,_w = h//(2**4),w//(2**4)
+        conv4 = self.conv(pool3, _h, _w, mask=mask)
 
         #Decoder
+        _h,_w = h//(2**3),w//(2**3)
         up0 = self.upsample_0(conv4)
         deconv0 = th.cat([up0,conv3],-1)
-        deconv0 = self.decoderlayer_0(deconv0,mask=mask)
+        deconv0 = self.decoderlayer_0(deconv0,_h,_w,mask=mask)
 
+        _h,_w = h//(2**2),w//(2**2)
         up1 = self.upsample_1(deconv0)
         deconv1 = th.cat([up1,conv2],-1)
-        deconv1 = self.decoderlayer_1(deconv1,mask=mask)
+        deconv1 = self.decoderlayer_1(deconv1,_h,_w,mask=mask)
+        del deconv0
+        th.cuda.empty_cache()
 
+        _h,_w = h//(2**1),w//(2**1)
         up2 = self.upsample_2(deconv1)
         deconv2 = th.cat([up2,conv1],-1)
-        deconv2 = self.decoderlayer_2(deconv2,mask=mask)
+        deconv2 = self.decoderlayer_2(deconv2,_h,_w,mask=mask)
+        del deconv1
+        th.cuda.empty_cache()
 
         up3 = self.upsample_3(deconv2)
         deconv3 = th.cat([up3,conv0],-1)
-        deconv3 = self.decoderlayer_3(deconv3,mask=mask)
+        deconv3 = self.decoderlayer_3(deconv3,h,w,mask=mask)
+        del deconv2
+        th.cuda.empty_cache()
 
         # Output Projection
         y = self.output_proj(deconv3)
