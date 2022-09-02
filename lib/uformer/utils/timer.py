@@ -1,4 +1,5 @@
 import time
+import torch as th
 
 class ExpTimer():
 
@@ -28,6 +29,10 @@ class ExpTimer():
         self.names.append(name)
         start_time = time.perf_counter()
         self.start_times.append(start_time)
+
+    def sync_stop(self,name):
+        th.cuda.synchronize()
+        self.stop(name)
 
     def stop(self,name):
         end_time = time.perf_counter() # at start

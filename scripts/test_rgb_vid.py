@@ -52,21 +52,22 @@ def run_exp(cfg):
     results.timer_deno = []
 
     # -- network --
-    if cfg.model_type == "original":
-        model = uformer.original.load_model().to(cfg.device)
-    elif cfg.model_type == "aug_refactored":
-        attn_mode = "refactored"
-        model = uformer.augmented.load_model(cfg.sigma,attn_mode=attn_mode,
-                                             stride=cfg.stride,sb=-1)
-                                             # ws=cfg.ws,wt=cfg.wt)#*1024)
-    elif cfg.model_type == "aug_dnls":
-        attn_mode = "dnls"
-        model = uformer.augmented.load_model(cfg.sigma,attn_mode=attn_mode,
-                                             stride=cfg.stride)
-                                             # ws=cfg.ws,wt=cfg.wt)
-    else:
-        raise ValueError(f"Uknown model_type [{model_type}]")
-    model.eval()
+    # if cfg.model_type == "original":
+    #     model = uformer.original.load_model().to(cfg.device)
+    # elif cfg.model_type == "aug_refactored":
+    #     attn_mode = "refactored"
+    #     model = uformer.augmented.load_model(cfg.sigma,attn_mode=attn_mode,
+    #                                          stride=cfg.stride,sb=-1)
+    #                                          # ws=cfg.ws,wt=cfg.wt)#*1024)
+    # elif cfg.model_type == "aug_dnls":
+    #     attn_mode = "dnls"
+    #     model = uformer.augmented.load_model(cfg.sigma,attn_mode=attn_mode,
+    #                                          stride=cfg.stride)
+    #                                          # ws=cfg.ws,wt=cfg.wt)
+    # else:
+    #     raise ValueError(f"Uknown model_type [{model_type}]")
+    model_cfg = uformer.extract_search(cfg)
+    model = uformer.load_model(model_cfg)
     load_checkpoint(model,cfg.use_train)
     imax = 255.
 

@@ -24,6 +24,7 @@ import cache_io
 
 # -- network --
 import uformer
+from uformer import lightning
 import uformer.configs as configs
 import uformer.utils.gpu_mem as gpu_mem
 from uformer.utils.timer import ExpTimer
@@ -77,6 +78,7 @@ def launch_training(_cfg):
                        wt=cfg.wt,stride0=cfg.stride0,stride1=cfg.stride1,
                        dil=cfg.dil,nbwd=cfg.nbwd,rbwd=cfg.rbwd,
                        exact=cfg.exact,bs=cfg.bs)
+    load_checkpoint(model,"true")
 
     # -- load dataset with testing mods isizes --
     # model.isize = None
@@ -193,6 +195,17 @@ def launch_training(_cfg):
     results.test_init_val_time = timer["init_val_te"]
 
     return results
+
+def load_checkpoint(model,use_train):
+    load = use_train == "true"# or "product_dnls" == model_type
+    croot = Path("output/checkpoints/")
+    # print(load)
+    if load:
+        print("loading!")
+        mpath = croot / "993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e-epoch=44.ckpt"
+        state = th.load(str(mpath))['state_dict']
+        lightning.remove_lightning_load_state(state)
+        model.net.load_state_dict(state)
 
 def main():
 

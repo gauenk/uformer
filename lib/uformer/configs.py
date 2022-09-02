@@ -10,23 +10,18 @@ import numpy as np
 import torch as th
 from easydict import EasyDict as edict
 
-def default_test_vid_cfg():
+def default_cfg():
     # -- config --
     cfg = edict()
     cfg.nframes = 0
     cfg.frame_start = 0
     cfg.frame_end = 0
     cfg.saved_dir = "./output/saved_results/"
-    cfg.checkpoint_dir = "/home/gauenk/Documents/packages/uformer/output/checkpoints/"
     cfg.num_workers = 1
     cfg.device = "cuda:0"
-    cfg.mtype = "gray"
-    cfg.bw = True
     cfg.seed = 123
-    cfg.internal_adapt_nsteps = 300
-    cfg.internal_adapt_nepochs = 0
+    cfg.noise_version = "blur"
     return cfg
-
 
 def default_train_cfg():
     # -- config --

@@ -173,6 +173,22 @@ def expand2square(timg,factor=16.0):
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #
+#     Extracting Relevant Fields from Larger Dict
+#
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+def extract_search(cfg):
+    fields = ["attn_mode","ws","wt","k","ps","pt","stride0",
+              "stride1","dil","nbwd","rbwd","exact","bs",
+              "noise_version"]
+    model_cfg = {}
+    for field in fields:
+        if field in cfg:
+            model_cfg[field] = cfg[field]
+    return model_cfg
+
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#
 #     Modifying Layers In-Place after Loading
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

@@ -1,8 +1,6 @@
 
 # -- misc --
-import os,math,tqdm,h5py
-import hdf5storage
-from skimage.metrics import structural_similarity as compute_ssim_ski
+import os
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -52,31 +50,35 @@ def run_exp(cfg):
     results.timer_flow = []
     results.timer_deno = []
 
-    # -- network --
-    noise_version = "blur"
-    if cfg.model_type == "original":
-        model = uformer.original.load_model(noise_version=noise_version).to(cfg.device)
-    elif cfg.model_type == "aug_refactored":
-        attn_mode = "window_refactored"
-        model = uformer.augmented.load_model(noise_version=noise_version,
-                                             attn_mode=attn_mode,
-                                             stride=cfg.stride,sb=-1)
-                                             # ws=cfg.ws,wt=cfg.wt)#*1024)
-    elif cfg.model_type == "aug_dnls":
-        attn_mode = "window_dnls"
-        model = uformer.augmented.load_model(noise_version=noise_version,
-                                             attn_mode=attn_mode,
-                                             stride=cfg.stride)
-                                             # ws=cfg.ws,wt=cfg.wt)
-    elif cfg.model_type == "product_dnls":
-        attn_mode = "product_dnls"
-        model = uformer.augmented.load_model(noise_version=noise_version,
-                                             attn_mode=attn_mode,
-                                             stride=cfg.stride)
-                                             # ws=cfg.ws,wt=cfg.wt)
-    else:
-        raise ValueError(f"Uknown model_type [{cfg.model_type}]")
-    model.eval()
+    # # -- network --
+    # noise_version = "blur"
+    # if cfg.model_type == "original":
+    #     model = uformer.original.load_model(noise_version=noise_version).to(cfg.device)
+    # elif cfg.model_type == "aug_refactored":
+    #     attn_mode = "window_refactored"
+    #     model = uformer.augmented.load_model(noise_version=noise_version,
+    #                                          attn_mode=attn_mode,
+    #                                          stride=cfg.stride,sb=-1)
+    #                                          # ws=cfg.ws,wt=cfg.wt)#*1024)
+    # elif cfg.model_type == "aug_dnls":
+    #     attn_mode = "window_dnls"
+    #     model = uformer.augmented.load_model(noise_version=noise_version,
+    #                                          attn_mode=attn_mode,
+    #                                          stride=cfg.stride)
+    #                                          # ws=cfg.ws,wt=cfg.wt)
+    # elif cfg.model_type == "product_dnls":
+    #     attn_mode = "product_dnls"
+    #     model = uformer.augmented.load_model(noise_version=noise_version,
+    #                                          attn_mode=attn_mode,
+    #                                          stride=cfg.stride)
+    #                                          # ws=cfg.ws,wt=cfg.wt)
+    # else:
+    #     raise ValueError(f"Uknown model_type [{cfg.model_type}]")
+    # model.eval()
+
+    # -- load model --
+    model_cfg = uformer.extract_search(cfg)
+    model = uformer.load_model(model_cfg)
     load_checkpoint(model,cfg.use_train,cfg.model_type)
     imax = 255.
 
@@ -188,7 +190,7 @@ def load_checkpoint(model,use_train,model_type):
     print(load)
     if load:
         print("loading!")
-        mpath = croot / "e9becfae-2bc2-4adf-94bc-989a68b50128-epoch=01.ckpt"
+        mpath = croot / "993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e-epoch=32.ckpt"
         state = th.load(str(mpath))['state_dict']
         lightning.remove_lightning_load_state(state)
         model.load_state_dict(state)
