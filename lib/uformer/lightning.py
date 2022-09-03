@@ -87,23 +87,24 @@ class UformerLit(pl.LightningModule):
             reset_product_attn_mods(self.net)
             # filter_product_attn_mods(self.net)
 
-    def forward(self,vid):
+    def forward(self,vid,clamp=False):
         main,sub = self.attn_mode.split("_")
         if main == "window":
-            return self.forward_default(vid)
+            return self.forward_default(vid,clamp=clamp)
         elif main == "product":
-            return self.forward_product(vid)
+            return self.forward_product(vid,clamp=clamp)
         else:
             msg = f"Uknown ca forward type [{self.attn_mode}]"
             raise ValueError(msg)
 
-    def forward_product(self,vid):
+    def forward_product(self,vid,clamp=False):
         flows = self._get_flow(vid)
         deno = self.net(vid,flows=flows)
-        deno = th.clamp(deno,0.,1.)
+        if clamp:
+            deno = th.clamp(deno,0.,1.)
         return deno
 
-    def forward_default(self,vid):
+    def forward_default(self,vid,clamp=False):
         flows = self._get_flow(vid)
         # model = self._model[0]
         # model.model = self.net
@@ -112,7 +113,8 @@ class UformerLit(pl.LightningModule):
             deno = self.net(vid)
         else:
             deno = self.net(vid,flows=flows)
-        deno = th.clamp(deno,0.,1.)
+        if clamp:
+            deno = th.clamp(deno,0.,1.)
         return deno
 
     def _get_flow(self,vid):
@@ -188,7 +190,7 @@ class UformerLit(pl.LightningModule):
         clean = rslice(clean,region)
 
         # -- foward --
-        deno = self.forward(noisy)
+        deno = self.forward(noisy,False)
 
         # -- save a few --
         # io.save_burst(deno,"./output/","deno")
@@ -197,7 +199,9 @@ class UformerLit(pl.LightningModule):
         # exit(0)
 
         # -- report loss --
-        loss = th.mean((clean - deno)**2)
+        eps = 1e-3
+        diff = th.sqrt((clean - deno)**2 + eps**2)
+        loss = th.mean(diff)
         return deno.detach(),clean,loss
 
     def validation_step(self, batch, batch_idx):
@@ -211,7 +215,7 @@ class UformerLit(pl.LightningModule):
         # -- forward --
         gpu_mem.print_peak_gpu_stats(False,"val",reset=True)
         with th.no_grad():
-            deno = self.forward(noisy)
+            deno = self.forward(noisy,True)
         mem_res,mem_alloc = gpu_mem.print_peak_gpu_stats(False,"val",reset=True)
 
         # -- loss --
@@ -241,7 +245,7 @@ class UformerLit(pl.LightningModule):
         # -- forward --
         gpu_mem.print_peak_gpu_stats(False,"test",reset=True)
         with th.no_grad():
-            deno = self.forward(noisy)
+            deno = self.forward(noisy,True)
         mem_res,mem_alloc = gpu_mem.print_peak_gpu_stats(False,"test",reset=True)
 
         # -- compare --

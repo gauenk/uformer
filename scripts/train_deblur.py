@@ -16,9 +16,6 @@ from easydict import EasyDict as edict
 # -- data --
 import data_hub
 
-# -- optical flow --
-import svnlb
-
 # -- caching results --
 import cache_io
 
@@ -202,7 +199,8 @@ def load_checkpoint(model,use_train):
     # print(load)
     if load:
         print("loading!")
-        mpath = croot / "993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e-epoch=44.ckpt"
+        # mpath = croot / "993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e-epoch=44.ckpt"
+        mpath = croot / "6c3c6bf6-8ab3-4bff-9866-8701d0eae6f2-epoch=08.ckpt"
         state = th.load(str(mpath))['state_dict']
         lightning.remove_lightning_load_state(state)
         model.net.load_state_dict(state)
@@ -273,7 +271,7 @@ def main():
 
     # -- trainig --
     cfg.batch_size_tr = 3
-    cfg.lr_init = 0.0002/200.
+    cfg.lr_init = 0.0002/1.
     cfg.weight_decay = 0.02
     cfg.nepochs = 250
     cfg.warmup_epochs = 0

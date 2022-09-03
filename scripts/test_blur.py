@@ -190,7 +190,8 @@ def load_checkpoint(model,use_train,model_type):
     print(load)
     if load:
         print("loading!")
-        mpath = croot / "993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e-epoch=32.ckpt"
+        # mpath = croot / "993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e-epoch=38.ckpt"
+        mpath = croot / "067f3bb0-5f50-423a-a02f-6ef6bdaf0336-epoch=05.ckpt"
         state = th.load(str(mpath))['state_dict']
         lightning.remove_lightning_load_state(state)
         model.load_state_dict(state)
