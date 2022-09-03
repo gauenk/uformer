@@ -50,36 +50,10 @@ def run_exp(cfg):
     results.timer_flow = []
     results.timer_deno = []
 
-    # # -- network --
-    # noise_version = "blur"
-    # if cfg.model_type == "original":
-    #     model = uformer.original.load_model(noise_version=noise_version).to(cfg.device)
-    # elif cfg.model_type == "aug_refactored":
-    #     attn_mode = "window_refactored"
-    #     model = uformer.augmented.load_model(noise_version=noise_version,
-    #                                          attn_mode=attn_mode,
-    #                                          stride=cfg.stride,sb=-1)
-    #                                          # ws=cfg.ws,wt=cfg.wt)#*1024)
-    # elif cfg.model_type == "aug_dnls":
-    #     attn_mode = "window_dnls"
-    #     model = uformer.augmented.load_model(noise_version=noise_version,
-    #                                          attn_mode=attn_mode,
-    #                                          stride=cfg.stride)
-    #                                          # ws=cfg.ws,wt=cfg.wt)
-    # elif cfg.model_type == "product_dnls":
-    #     attn_mode = "product_dnls"
-    #     model = uformer.augmented.load_model(noise_version=noise_version,
-    #                                          attn_mode=attn_mode,
-    #                                          stride=cfg.stride)
-    #                                          # ws=cfg.ws,wt=cfg.wt)
-    # else:
-    #     raise ValueError(f"Uknown model_type [{cfg.model_type}]")
-    # model.eval()
-
     # -- load model --
     model_cfg = uformer.extract_search(cfg)
-    model = uformer.load_model(model_cfg)
-    load_checkpoint(model,cfg.use_train,cfg.model_type)
+    model = uformer.load_model(**model_cfg)
+    load_checkpoint(model,cfg.use_train)
     imax = 255.
 
     # -- data --
@@ -130,17 +104,14 @@ def run_exp(cfg):
 
             vshape = noisy.shape
             print("noisy.shape: ",noisy.shape)
-            if cfg.model_type == "original" or True:
-                noisy_sq,mask = expand2square(noisy)
-            else: noisy_sq = noisy
+            noisy_sq,mask = expand2square(noisy)
             print("noisy_sq.shape: ",noisy_sq.shape)
 
             tsize = 2
             deno = temporal_chop(noisy_sq/imax,tsize,model)
 
             print("deno.shape: ",deno.shape)
-            if cfg.model_type == "original" or True:
-                deno = th.masked_select(deno,mask.bool()).reshape(*vshape)
+            deno = th.masked_select(deno,mask.bool()).reshape(*vshape)
             print("deno.shape: ",deno.shape)
             # t = noisy.shape[0]
             # deno = []
@@ -153,7 +124,7 @@ def run_exp(cfg):
         timer.stop("deno")
 
         # -- save example --
-        out_dir = Path(cfg.saved_dir) / cfg.dname / cfg.model_type / cfg.vid_name
+        out_dir = Path(cfg.saved_dir) / cfg.dname / cfg.attn_mode / cfg.vid_name
         deno_fns = uformer.utils.io.save_burst(deno,out_dir,"deno",
                                                fstart=fstart,div=1.,fmt="np")
         deno_fns = uformer.utils.io.save_burst(deno,out_dir,"deno",
@@ -184,14 +155,15 @@ def run_exp(cfg):
 
     return results
 
-def load_checkpoint(model,use_train,model_type):
+def load_checkpoint(model,use_train):
     load = use_train == "true"# or "product_dnls" == model_type
     croot = Path("output/checkpoints/")
     print(load)
     if load:
         print("loading!")
         # mpath = croot / "993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e-epoch=38.ckpt"
-        mpath = croot / "067f3bb0-5f50-423a-a02f-6ef6bdaf0336-epoch=05.ckpt"
+        # mpath = croot / "067f3bb0-5f50-423a-a02f-6ef6bdaf0336-epoch=05.ckpt"
+        mpath = croot / "7815163b-842f-4edb-9cf5-21ee7abb1dd6-epoch=26.ckpt"
         state = th.load(str(mpath))['state_dict']
         lightning.remove_lightning_load_state(state)
         model.load_state_dict(state)
@@ -237,15 +209,15 @@ def main():
     isizes = ["none"]
     stride = [1]
     use_train = ["false"]
-    model_type = ["aug_refactored","aug_dnls","product_dnls"]
+    attn_mode = ["window_refactored","window_dnls","product_dnls"]
     exp_lists = {"dname":dnames,"vid_name":vid_names,"dset":dset,
-                 "flow":flow,"ws":ws,"wt":wt,"model_type":model_type,
+                 "flow":flow,"ws":ws,"wt":wt,"attn_mode":attn_mode,
                  "isize":isizes,"stride":stride,"use_train":use_train}
     exps_a = cache_io.mesh_pydicts(exp_lists) # create mesh
 
     # -- version 3 --
     exp_lists['use_train'] = ['true']
-    exp_lists['model_type'] = ['product_dnls']
+    exp_lists['attn_mode'] = ['product_dnls','window_dnls']
     exps_c = cache_io.mesh_pydicts(exp_lists) # create mesh
 
     # -- exps version 2 --
@@ -254,7 +226,7 @@ def main():
     exp_lists['flow'] = ["false"]
     exp_lists['use_train'] = ["false"]
     exp_lists['stride'] = [1]
-    exp_lists['model_type'] = ['original']
+    exp_lists['attn_mode'] = ['original']
     exps_b = cache_io.mesh_pydicts(exp_lists) # create mesh
     exps = exps_b + exps_a + exps_c
 
@@ -265,6 +237,7 @@ def main():
     cfg.frame_start = 0
     cfg.frame_end = cfg.frame_start + cfg.nframes - 1
     # cfg.isize = "256_256"
+    cfg.noise_version = "blur"
     cache_io.append_configs(exps,cfg) # merge the two
 
     # -- run exps --
@@ -281,15 +254,16 @@ def main():
         # -- logic --
         uuid = cache.get_uuid(exp) # assing ID to each Dict in Meshgrid
         # cache.clear_exp(uuid)
-        # if exp.model_type == "original":
+        # if exp.attn_mode == "original":
         #     cache.clear_exp(uuid)
-        # if exp.model_type == "aug_refactored":
+        # if exp.attn_mode == "aug_refactored":
         #     cache.clear_exp(uuid)
-        # if exp.model_type == "aug_dnls":
+        # if exp.attn_mode == "aug_dnls":
         #     cache.clear_exp(uuid)
-        # if exp.model_type == "product_dnls":
+        # if exp.attn_mode == "product_dnls":
         #     cache.clear_exp(uuid)
         if exp.use_train == "true":
+            print(exp)
             cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result
         if results is None: # check if no result
@@ -299,9 +273,9 @@ def main():
 
     # -- load results --
     records = cache.load_flat_records(exps)
-    print(records[['model_type','use_train','psnrs']])
+    print(records[['attn_mode','use_train','psnrs']])
 
-    for model_type,mdf in records.groupby("model_type"):
+    for attn_mode,mdf in records.groupby("attn_mode"):
         for use_tr,tdf in mdf.groupby("use_train"):
             for stride,sdf in tdf.groupby("stride"):
                 for vname,vdf in sdf.groupby("vid_name"):
@@ -311,13 +285,13 @@ def main():
                     ssims_m = ssims.mean()
                     psnrs_m = psnrs.mean()
                     dtimes_m = dtimes.mean()
-                    print(model_type,use_tr,vname,stride,psnrs_m,ssims_m,dtimes)
+                    print(attn_mode,use_tr,vname,stride,psnrs_m,ssims_m,dtimes)
 
     exit(0)
 
-    for model_type,mdf in records.groupby('model_type'):
+    for attn_mode,mdf in records.groupby('attn_mode'):
         print(mdf['deno_fns'])
-        prepare_sidd(mdf,model_type)
+        prepare_sidd(mdf,attn_mode)
     exit(0)
     print(records)
     print(records.filter(like="timer"))

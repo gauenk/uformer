@@ -59,6 +59,7 @@ def load_model(*args,**kwargs):
     # -- load weights --
     # model_sigma = select_sigma(data_sigma)
     fdir = Path(__file__).absolute().parents[0] / "../../../" # parent of "./lib"
+    print("loadig: ",noise_version)
     if noise_version == "noise":
         state_fn = fdir / "weights/Uformer_sidd_B.pth"
     elif noise_version == "blur":

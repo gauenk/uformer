@@ -82,7 +82,7 @@ class ProductAttention(nn.Module):
         # -- qkv --
         q_vid, k_vid, v_vid = self.qkv(vid,attn_kv)
         q_vid = q_vid * self.scale
-        # print("q_vid.shape: ",q_vid.shape)
+        print("q_vid.shape: ",q_vid.shape,q_vid.shape[1]//self.num_heads)
 
         # -- attn map --
         ntotal = T*H*W
