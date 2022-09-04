@@ -169,7 +169,7 @@ def main():
     # cache_name = "test_rgb_net"
     cache_name = "gopro_bench"
     cache = cache_io.ExpCache(cache_dir,cache_name)
-    # cache.clear()
+    cache.clear()
 
     # -- get mesh --
     dnames = ["gopro"]
@@ -205,7 +205,7 @@ def main():
     exp_lists['stride'] = [1]
     exp_lists['attn_mode'] = ['original']
     exps_b = cache_io.mesh_pydicts(exp_lists) # create mesh
-    exps = exps_b + exps_a + exps_c
+    exps = exps_b + exps_a# + exps_c
 
     # -- group with default --
     cfg = configs.default_cfg()
