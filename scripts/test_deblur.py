@@ -36,6 +36,10 @@ from uformer.utils.model_utils import temporal_chop,expand2square,load_checkpoin
 
 def run_exp(cfg):
 
+    # -- total time --
+    timer0 = uformer.utils.timer.ExpTimer()
+    timer0.start("total")
+
     # -- set device --
     th.cuda.set_device(int(cfg.device.split(":")[1]))
     configs.set_seed(cfg.seed)
@@ -155,6 +159,11 @@ def run_exp(cfg):
         for name,time in timer.items():
             results[name].append(time)
 
+    # -- compute total time --
+    timer0.stop("total")
+    ttotal,N = timer0['total'],len(results.psnrs)
+    results.timer_total = [ttotal for _ in range(N)]
+
     return results
 
 def main():
@@ -250,7 +259,7 @@ def main():
 
     # -- load results --
     records = cache.load_flat_records(exps)
-    print(records[['attn_mode','use_train','psnrs']])
+    print(records[['attn_mode','use_train','psnrs','timer_total']])
 
     for attn_mode,mdf in records.groupby("attn_mode"):
         for use_tr,tdf in mdf.groupby("use_train"):
