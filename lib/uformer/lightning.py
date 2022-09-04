@@ -49,6 +49,12 @@ from pytorch_lightning.loggers import CSVLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.utilities.distributed import rank_zero_only
 
+def grab_grad(model):
+    for param in model.parameters():
+        if hasattr(param,'weight'):
+            print(param.weight.grad)
+            exit(0)
+
 class UformerLit(pl.LightningModule):
 
     def __init__(self,flow=True,isize=None,batch_size=32,lr_init=0.0002,
@@ -163,6 +169,7 @@ class UformerLit(pl.LightningModule):
         # -- append --
         denos = th.stack(denos)
         cleans = th.stack(cleans)
+        # grab_grad(self.net)
 
         # -- log --
         self.log("train_loss", loss.item(), on_step=True,
