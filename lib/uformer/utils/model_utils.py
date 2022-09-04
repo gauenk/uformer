@@ -6,6 +6,7 @@ from collections import OrderedDict
 import copy
 ccopy = copy.copy
 from einops import repeat
+from pathlib import Path
 
 def freeze(model):
     for p in model.parameters():
@@ -186,6 +187,48 @@ def extract_search(cfg):
         if field in cfg:
             model_cfg[field] = cfg[field]
     return model_cfg
+
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#
+#      Loading Checkpoint by Filename of Substr
+#
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
+def load_checkpoint(model,use_train,substr="",croot="output/checkpoints/"):
+    # -- do we load --
+    load = use_train == "true"
+
+    # -- get path --
+    substr = "993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e"
+    #substr = "993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e-epoch=38.ckpt"
+
+    # -- load to model --
+    if load:
+        mpath = load_recent(croot,substr)
+        print("Loading Model Checkpoint: ",mpath)
+        state = th.load(mpath)['state_dict']
+        remove_lightning_load_state(state)
+        model.load_state_dict(state)
+
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#
+#     Loading the Most Recent File
+#
+#     think:
+#     "path/to/dir/","this-is-my-uuid"
+#
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+def load_recent(root,substr):
+    root = Path(root)
+    files = []
+    for fn in root.iterdir():
+        fn = str(fn)
+        if substr == "" or substr in fn:
+            files.append(fn)
+    files = sorted(files,key=os.path.getmtime)
+    return str(files[0])
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #

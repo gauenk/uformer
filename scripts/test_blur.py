@@ -28,15 +28,17 @@ import cache_io
 
 # -- network --
 import uformer
+from uformer import configs
 from uformer import lightning
 from uformer.utils.misc import optional,rslice_pair
-from uformer.utils.model_utils import temporal_chop,expand2square
 from uformer.utils.metrics import compute_psnrs,compute_ssims
+from uformer.utils.model_utils import temporal_chop,expand2square,load_checkpoint
 
 def run_exp(cfg):
 
     # -- set device --
     th.cuda.set_device(int(cfg.device.split(":")[1]))
+    configs.set_seed(cfg.seed)
 
     # -- init results --
     results = edict()
@@ -53,7 +55,7 @@ def run_exp(cfg):
     # -- load model --
     model_cfg = uformer.extract_search(cfg)
     model = uformer.load_model(**model_cfg)
-    load_checkpoint(model,cfg.use_train)
+    load_checkpoint(model,cfg.use_train,"993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e")
     imax = 255.
 
     # -- data --
@@ -155,31 +157,6 @@ def run_exp(cfg):
 
     return results
 
-def load_checkpoint(model,use_train):
-    load = use_train == "true"# or "product_dnls" == model_type
-    croot = Path("output/checkpoints/")
-    print(load)
-    if load:
-        print("loading!")
-        # mpath = croot / "993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e-epoch=38.ckpt"
-        # mpath = croot / "067f3bb0-5f50-423a-a02f-6ef6bdaf0336-epoch=05.ckpt"
-        mpath = croot / "7815163b-842f-4edb-9cf5-21ee7abb1dd6-epoch=26.ckpt"
-        state = th.load(str(mpath))['state_dict']
-        lightning.remove_lightning_load_state(state)
-        model.load_state_dict(state)
-
-def default_cfg():
-    # -- config --
-    cfg = edict()
-    cfg.nframes = 0
-    cfg.frame_start = -1
-    cfg.frame_end = -1
-    cfg.saved_dir = "./output/saved_results/"
-    cfg.num_workers = 1
-    cfg.device = "cuda:0"
-    cfg.sigma = 50. # use large sigma to approx real noise for optical flow
-    return cfg
-
 def main():
 
     # -- (0) start info --
@@ -231,7 +208,7 @@ def main():
     exps = exps_b + exps_a + exps_c
 
     # -- group with default --
-    cfg = default_cfg()
+    cfg = configs.default_cfg()
     # cfg.isize = "256_256"
     cfg.nframes = 1
     cfg.frame_start = 0

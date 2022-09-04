@@ -10,17 +10,17 @@ import numpy as np
 import torch as th
 from easydict import EasyDict as edict
 
+
 def default_cfg():
     # -- config --
     cfg = edict()
     cfg.nframes = 0
-    cfg.frame_start = 0
-    cfg.frame_end = 0
+    cfg.frame_start = -1
+    cfg.frame_end = -1
     cfg.saved_dir = "./output/saved_results/"
     cfg.num_workers = 1
     cfg.device = "cuda:0"
-    cfg.seed = 123
-    cfg.noise_version = "blur"
+    cfg.sigma = 50. # use large sigma to approx real noise for optical flow
     return cfg
 
 def default_train_cfg():

@@ -30,6 +30,7 @@ import cache_io
 
 # -- network --
 import uformer
+from uformer import configs
 # from uformer import lightning
 from uformer.utils.misc import optional,rslice_pair
 from uformer.utils.model_utils import temporal_chop
@@ -38,6 +39,7 @@ def run_exp(cfg):
 
     # -- set device --
     th.cuda.set_device(int(cfg.device.split(":")[1]))
+    configs.set_seed(cfg.seed)
 
     # -- init results --
     results = edict()
@@ -299,7 +301,7 @@ def main():
     exps = exps_b + exps_a
 
     # -- group with default --
-    cfg = default_cfg()
+    cfg = configs.default_cfg()
     # cfg.nframes = 4
     # cfg.frame_start = 0
     # cfg.frame_end = cfg.nframes-1

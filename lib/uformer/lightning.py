@@ -75,7 +75,7 @@ class UformerLit(pl.LightningModule):
                      "pt":pt,"stride0":stride0,"stride1":stride1,"dil":dil,
                      "nbwd":nbwd,"rbwd":rbwd,"exact":exact,"bs":bs,
                      "noise_version":noise_version}
-        self.net = uformer.augmented.load_model(**model_cfg)
+        self.net = uformer.load_model(**model_cfg)
 
         # -- set logger --
         self.gen_loger = logging.getLogger('lightning')
