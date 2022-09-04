@@ -50,17 +50,18 @@ def launch_training(_cfg):
     cfg = copy.deepcopy(_cfg)
     cache_io.exp_strings2bools(cfg)
     configs.set_seed(cfg.seed)
+    root = Path(__file__).absolute()
 
     # -- create timer --
     timer = ExpTimer()
 
     # -- init log dir --
-    log_dir = Path(cfg.log_root) / str(cfg.uuid)
+    log_dir = root / "output/log/" / str(cfg.uuid)
     if not log_dir.exists():
         log_dir.mkdir(parents=True)
 
     # -- prepare save directory for pickles --
-    save_dir = Path("./output/training/") / cfg.uuid
+    save_dir = root / "output/training/" / cfg.uuid
     if not save_dir.exists():
         save_dir.mkdir(parents=True)
 
