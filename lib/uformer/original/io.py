@@ -70,7 +70,9 @@ def load_model(*args,**kwargs):
     # model_state = th.load(str(state_fn))
 
     # -- fill weights --
-    load_checkpoint_module(model,state_fn)
+    load_pretrained = optional(kwargs,"load_pretrained",True)
+    if load_pretrained:
+        load_checkpoint_module(model,state_fn)
 
     # -- eval mode as default --
     model.eval()

@@ -86,11 +86,13 @@ def load_model(*args,**kwargs):
         raise ValueError(f"Uknown noise_version [{noise_version}]")
     assert os.path.isfile(str(state_fn))
 
-    main_mode,sub_mode = attn_mode.split("_")
-    if attn_mode in ["window_default","window_refactored"]:
-        load_checkpoint_module(model,state_fn)
-    else:
-        load_checkpoint_qkv(model,state_fn)
+    load_pretrained = optional(kwargs,"load_pretrained",True)
+    if load_pretrained:
+        main_mode,sub_mode = attn_mode.split("_")
+        if attn_mode in ["window_default","window_refactored"]:
+            load_checkpoint_module(model,state_fn)
+        else:
+            load_checkpoint_qkv(model,state_fn)
 
     # -- eval mode as default --
     model.eval()

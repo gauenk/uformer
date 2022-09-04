@@ -74,7 +74,7 @@ def launch_training(_cfg):
                        ps=cfg.ps,pt=cfg.pt,k=cfg.k,ws=cfg.ws,
                        wt=cfg.wt,stride0=cfg.stride0,stride1=cfg.stride1,
                        dil=cfg.dil,nbwd=cfg.nbwd,rbwd=cfg.rbwd,
-                       exact=cfg.exact,bs=cfg.bs)
+                       exact=cfg.exact,bs=cfg.bs,load_pretrained=cfg.load_pretrained)
 
     # -- load dataset with testing mods isizes --
     # model.isize = None
@@ -91,7 +91,7 @@ def launch_training(_cfg):
                          max_epochs=3,log_every_n_steps=1,
                          callbacks=[init_val_report],logger=logger)
     timer.start("init_val_te")
-    trainer.test(model, loaders.te)
+    # trainer.test(model, loaders.te)
     timer.stop("init_val_te")
     init_val_results = init_val_report.metrics
     print("--- Init Validation Results ---")
@@ -124,7 +124,7 @@ def launch_training(_cfg):
     cc_recent = ModelCheckpoint(monitor="epoch",save_top_k=10,mode="max",
                                 dirpath=cfg.checkpoint_dir,filename=chkpt_fn)
     # swa_callback = StochasticWeightAveraging(swa_lrs=1e-4)
-    trainer = pl.Trainer(gpus=2,precision=32,
+    trainer = pl.Trainer(accelerator="gpu",devices=2,precision=32,
                          limit_train_batches=250,limit_val_batches=5,
                          max_epochs=cfg.nepochs-1,log_every_n_steps=1,
                          logger=logger,gradient_clip_val=0.0,
@@ -208,9 +208,9 @@ def main():
 
     # -- search info --
     attn_mode = ["product_dnls"]
-    ws = [15]
+    ws = [8]
     wt = [0]
-    k = [64]
+    k = [-1]
     ps = [1]
     pt = [1]
     stride0 = [1]
@@ -224,12 +224,13 @@ def main():
     # -- net info --
     flow = ['false']
     isize = ["128_128"]
+    load_pretrained = ["false"]
 
     # -- grid --
     exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,
                  "pt":pt,"stride0":stride0,"stride1":stride1,"dil":dil,
-                 "nbwd":nbwd,"rbwd":rbwd,"exact":exact,"bs":bs,
-                 'flow':flow,"isize":isize}
+                 "nbwd":nbwd,"rbwd":rbwd,"exact":exact,"bs":bs,'flow':flow,
+                 "isize":isize,"load_pretrained":load_pretrained}
     exps_a = cache_io.mesh_pydicts(exp_lists) # create mesh
 
     # -- default --
@@ -241,8 +242,8 @@ def main():
     exact,bs = ["false"],[-1]
     exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,
                  "pt":pt,"stride0":stride0,"stride1":stride1,"dil":dil,
-                 "nbwd":nbwd,"rbwd":rbwd,"exact":exact,"bs":bs,
-                 'flow':flow,"isize":isize}
+                 "nbwd":nbwd,"rbwd":rbwd,"exact":exact,"bs":bs,'flow':flow,
+                 "isize":isize,"load_pretrained":load_pretrained}
     exps_b = cache_io.mesh_pydicts(exp_lists) # create mesh
 
     # -- agg --

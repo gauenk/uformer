@@ -55,7 +55,7 @@ class UformerLit(pl.LightningModule):
                  weight_decay=0.02,nepochs=250,warmup_epochs=3,
                  attn_mode="product_dnls",ps=1,pt=1,k=-1,
                  ws=8,wt=0,stride0=1,stride1=1,dil=1,
-                 nbwd=1,rbwd=False,exact=False,bs=-1):
+                 nbwd=1,rbwd=False,exact=False,bs=-1,load_pretrained=False):
         super().__init__()
 
         # -- meta params --
@@ -74,7 +74,7 @@ class UformerLit(pl.LightningModule):
         model_cfg = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,
                      "pt":pt,"stride0":stride0,"stride1":stride1,"dil":dil,
                      "nbwd":nbwd,"rbwd":rbwd,"exact":exact,"bs":bs,
-                     "noise_version":noise_version}
+                     "noise_version":noise_version,"load_pretrained":load_pretrained}
         self.net = uformer.load_model(**model_cfg)
 
         # -- set logger --
@@ -220,14 +220,15 @@ class UformerLit(pl.LightningModule):
 
         # -- loss --
         loss = th.mean((clean - deno)**2)
+        _loss = loss.item()
 
         # -- report --
-        self.log("val_loss", loss.item(), on_step=False,
-                 on_epoch=True,batch_size=1)
+        self.log("val_loss", _loss, on_step=False,
+                 on_epoch=True,batch_size=1, sync_dist=True)
         self.log("val_mem_res", mem_res, on_step=False,
-                 on_epoch=True,batch_size=1)
+                 on_epoch=True,batch_size=1, sync_dist=True)
         self.log("val_mem_alloc", mem_alloc, on_step=False,
-                 on_epoch=True,batch_size=1)
+                 on_epoch=True,batch_size=1, sync_dist=True)
 
 
         # -- terminal log --
