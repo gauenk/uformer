@@ -142,6 +142,7 @@ class ProductAttention(nn.Module):
         nbwd    = self.nbwd
         rbwd    = self.rbwd
         exact   = self.exact
+        # print("k,ps,ws,wt: ",k,ps,ws,wt)
 
         # -- fixed --
         fflow,bflow = None,None

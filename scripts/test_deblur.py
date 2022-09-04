@@ -59,7 +59,7 @@ def run_exp(cfg):
     # -- load model --
     model_cfg = uformer.extract_search(cfg)
     model = uformer.load_model(**model_cfg)
-    load_checkpoint(model,cfg.use_train,"993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e")
+    load_checkpoint(model,cfg.use_train,"")
     imax = 255.
 
     # -- data --
@@ -178,7 +178,7 @@ def main():
     # cache_name = "test_rgb_net"
     cache_name = "gopro_bench"
     cache = cache_io.ExpCache(cache_dir,cache_name)
-    cache.clear()
+    # cache.clear()
 
     # -- get mesh --
     dnames = ["gopro"]
@@ -191,30 +191,36 @@ def main():
     # dset = ["te"]
 
     flow = ["false"]
-    ws,wt = [8],[0]
+    ws,wt,k = [8],[0],[-1]
     isizes = ["none"]
     stride = [1]
     use_train = ["false"]
     attn_mode = ["window_refactored","window_dnls","product_dnls"]
     exp_lists = {"dname":dnames,"vid_name":vid_names,"dset":dset,
                  "flow":flow,"ws":ws,"wt":wt,"attn_mode":attn_mode,
-                 "isize":isizes,"stride":stride,"use_train":use_train}
+                 "isize":isizes,"stride":stride,"use_train":use_train,"k":k}
     exps_a = cache_io.mesh_pydicts(exp_lists) # create mesh
 
     # -- version 3 --
     exp_lists['use_train'] = ['true']
+    exp_lists['attn_mode'] = ['window_dnls','product_dnls']
+    exps_c0 = cache_io.mesh_pydicts(exp_lists) # create mesh
+    exp_lists['ws'] = [8]
+    exp_lists['k'] = [64]
     exp_lists['attn_mode'] = ['product_dnls','window_dnls']
-    exps_c = cache_io.mesh_pydicts(exp_lists) # create mesh
+    exps_c1 = cache_io.mesh_pydicts(exp_lists) # create mesh
+    exps_c = exps_c0 + exps_c1
 
     # -- exps version 2 --
     exp_lists['ws'] = [-1]
     exp_lists['wt'] = [-1]
+    exp_lists['k'] = [-1]
     exp_lists['flow'] = ["false"]
     exp_lists['use_train'] = ["false"]
     exp_lists['stride'] = [1]
     exp_lists['attn_mode'] = ['original']
     exps_b = cache_io.mesh_pydicts(exp_lists) # create mesh
-    exps = exps_b + exps_a# + exps_c
+    exps = exps_b + exps_a + exps_c
 
     # -- group with default --
     cfg = configs.default_cfg()
@@ -248,9 +254,8 @@ def main():
         #     cache.clear_exp(uuid)
         # if exp.attn_mode == "product_dnls":
         #     cache.clear_exp(uuid)
-        if exp.use_train == "true":
-            print(exp)
-            cache.clear_exp(uuid)
+        # if exp.use_train == "true":
+        #     cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result
         if results is None: # check if no result
             exp.uuid = uuid

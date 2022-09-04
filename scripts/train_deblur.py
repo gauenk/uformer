@@ -59,6 +59,10 @@ def launch_training(_cfg):
     log_dir = root / "output/log/" / str(cfg.uuid)
     if not log_dir.exists():
         log_dir.mkdir(parents=True)
+    log_subdirs = ["train"]
+    for sub in log_subdir:
+        log_subdir = log_dir / sub
+        if not log_subdir.exists(): log_subdir.mkdir()
 
     # -- prepare save directory for pickles --
     save_dir = root / "output/training/" / cfg.uuid
@@ -205,7 +209,7 @@ def main():
     cache_dir = ".cache_io"
     cache_name = "train_gopro"
     cache = cache_io.ExpCache(cache_dir,cache_name)
-    # cache.clear()
+    cache.clear()
 
     # -- search info --
     attn_mode = ["product_dnls"]
@@ -265,7 +269,7 @@ def main():
     cfg.lr_init = 0.0002/1.
     cfg.weight_decay = 0.02
     cfg.nepochs = 250
-    cfg.warmup_epochs = 0
+    cfg.warmup_epochs = 5
 
     # -- mix --
     cache_io.append_configs(exps,cfg) # merge the two
