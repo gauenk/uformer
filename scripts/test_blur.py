@@ -205,7 +205,7 @@ def main():
     exp_lists['stride'] = [1]
     exp_lists['attn_mode'] = ['original']
     exps_b = cache_io.mesh_pydicts(exp_lists) # create mesh
-    exps = exps_b + exps_a + exps_c
+    exps = exps_b + exps_a# + exps_c
 
     # -- group with default --
     cfg = configs.default_cfg()

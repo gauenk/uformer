@@ -218,6 +218,8 @@ def load_checkpoint(model,use_train,substr="",croot="output/checkpoints/"):
 
 def load_recent(root,substr):
     root = Path(root)
+    if not root.exists():
+        raise ValueError(f"Load directory [{root}] does not exist.")
     files = []
     for fn in root.iterdir():
         fn = str(fn)
