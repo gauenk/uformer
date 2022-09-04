@@ -46,7 +46,7 @@ def launch_training(_cfg):
     #
     # -=-=-=-=-=-=-=-=-
 
-    # -- set seed --
+    # -- set-up --
     cfg = copy.deepcopy(_cfg)
     cache_io.exp_strings2bools(cfg)
     configs.set_seed(cfg.seed)

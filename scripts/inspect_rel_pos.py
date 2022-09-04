@@ -1,5 +1,5 @@
 # -- misc --
-import os
+import os,copy
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -32,16 +32,19 @@ from uformer.utils.misc import optional,rslice_pair
 from uformer.utils.metrics import compute_psnrs,compute_ssims
 from uformer.utils.model_utils import temporal_chop,expand2square,load_checkpoint
 
-def run_exp(cfg):
+def run_exp(_cfg):
 
     # -- init --
+    cfg = copy.deepcopy(_cfg)
+    cache_io.exp_strings2bools(cfg)
+    configs.set_seed(cfg.seed)
     th.cuda.set_device(int(cfg.device.split(":")[1]))
     configs.set_seed(cfg.seed)
 
     # -- load model --
     model_cfg = uformer.extract_search(cfg)
     model = uformer.load_model(**model_cfg)
-    load_checkpoint(model,cfg.use_train,"")
+    load_checkpoint(model,cfg.use_train,cfg.chkpt_fn)
     imax = 255.
 
     # -- data --
@@ -57,7 +60,6 @@ def run_exp(cfg):
         indices = [i for i in indices if fbnds(data[cfg.dset].paths['fnums'][groups[i]],
                                                cfg.frame_start,cfg.frame_end)]
 
-    print(indices)
     # -- unpack --
     index = indices[0]
     sample = data[cfg.dset][index]
@@ -66,11 +68,26 @@ def run_exp(cfg):
     vid_frames,region = sample['fnums'],optional(sample,'region',None)
     fstart = min(vid_frames)
     noisy,clean = rslice_pair(noisy,clean,region)
+    tsize,vshape = 2,noisy.shape
+
+    # -- denoise --
+    with th.no_grad():
+        noisy_sq,mask = expand2square(noisy)
+        deno = temporal_chop(noisy_sq/imax,tsize,model)
+        deno = th.masked_select(deno,mask.bool()).reshape(*vshape)
+        deno = th.clamp(deno,0.,1.)*imax
 
     # -- psnr --
     noisy_psnrs = compute_psnrs(clean,noisy,div=imax)
     psnrs = compute_psnrs(clean,deno,div=imax)
+    print(noisy_psnrs)
+    print(psnrs)
 
+    # -- return --
+    results = edict()
+    results.psnrs = psnrs
+    results.noisy_psnrs = psnrs
+    return results
 
 def main():
 
@@ -90,25 +107,41 @@ def main():
     dset = ["te"]
     vid_names = ["%02d" % x for x in np.arange(0,40)]
     vid_names = vid_names[1:2]
+    chkpt_fn = [""]
 
     flow = ["false"]
     ws,wt = [8],[0]
     isizes = ["none"]
     stride = [1]
     use_train = ["false"]
-    attn_mode = ["window_refactored","window_dnls","product_dnls"]
-    exp_lists = {"dname":dnames,"vid_name":vid_names,"dset":dset,
-                 "flow":flow,"ws":ws,"wt":wt,"attn_mode":attn_mode,
-                 "isize":isizes,"stride":stride,"use_train":use_train}
+    attn_mode = ["window_dnls","window_refactored","window_default","product_dnls"]
+    exp_lists = {"dname":dnames,"vid_name":vid_names,"dset":dset,"flow":flow,
+                 "ws":ws,"wt":wt,"attn_mode":attn_mode,"isize":isizes,
+                 "stride":stride,"use_train":use_train,"chkpt_fn":chkpt_fn}
     exps_a = cache_io.mesh_pydicts(exp_lists) # create mesh
 
+    # -- test trained --
+    chkpt_fns = ["993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e-epoch=13",
+                 "993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e-epoch",
+                 "7815163b-842f-4edb-9cf5-21ee7abb1dd6-epoch=34",
+                 "7815163b-842f-4edb-9cf5-21ee7abb1dd6",
+                 ]
     exp_lists['use_train'] = ['true']
     exp_lists['attn_mode'] = ['product_dnls']
+    exp_lists['chkpt_fn'] = chkpt_fns
     exps_b = cache_io.mesh_pydicts(exp_lists) # create mesh
     exps = exps_a + exps_b
 
-
-
+    # -- group with default --
+    cfg = configs.default_cfg()
+    cfg.seed = 123
+    # cfg.isize = "256_256"
+    cfg.nframes = 1
+    cfg.frame_start = 0
+    cfg.frame_end = cfg.frame_start + cfg.nframes - 1
+    # cfg.isize = "256_256"
+    cfg.noise_version = "blur"
+    cache_io.append_configs(exps,cfg) # merge the two
 
 
     # -- run experiment --
@@ -127,14 +160,13 @@ def main():
         # cache.clear_exp(uuid)
         # if exp.attn_mode == "original":
         #     cache.clear_exp(uuid)
-        # if exp.attn_mode == "aug_refactored":
+        # if exp.attn_mode == "window_default":
         #     cache.clear_exp(uuid)
-        # if exp.attn_mode == "aug_dnls":
+        # if exp.attn_mode == "window_refactored":
         #     cache.clear_exp(uuid)
         # if exp.attn_mode == "product_dnls":
         #     cache.clear_exp(uuid)
         if exp.use_train == "true":
-            print(exp)
             cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result
         if results is None: # check if no result
@@ -144,6 +176,7 @@ def main():
 
     # -- load results --
     records = cache.load_flat_records(exps)
+    print(records[['attn_mode','chkpt_fn','psnrs']])
 
 if __name__ == "__main__":
     main()

@@ -14,7 +14,7 @@ from .model import Uformer,Downsample,Upsample
 
 # -- misc imports --
 from ..common import optional,select_sigma
-from ..utils.model_utils import load_checkpoint
+from ..utils.model_utils import load_checkpoint_module
 
 
 def load_model(*args,**kwargs):
@@ -70,7 +70,7 @@ def load_model(*args,**kwargs):
     # model_state = th.load(str(state_fn))
 
     # -- fill weights --
-    load_checkpoint(model,state_fn)
+    load_checkpoint_module(model,state_fn)
 
     # -- eval mode as default --
     model.eval()

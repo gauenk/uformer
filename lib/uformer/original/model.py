@@ -476,14 +476,14 @@ class WindowAttention(nn.Module):
         relative_position_index = relative_coords.sum(-1)  # Wh*Ww, Wh*Ww
         self.register_buffer("relative_position_index", relative_position_index)
         trunc_normal_(self.relative_position_bias_table, std=.02)
-            
+
         if token_projection =='conv':
             self.qkv = ConvProjection(dim,num_heads,dim//num_heads,bias=qkv_bias)
         elif token_projection =='linear':
             self.qkv = LinearProjection(dim,num_heads,dim//num_heads,bias=qkv_bias)
         else:
-            raise Exception("Projection error!") 
-        
+            raise Exception("Projection error!")
+
         self.token_projection = token_projection
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(dim, dim)

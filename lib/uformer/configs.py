@@ -14,6 +14,7 @@ from easydict import EasyDict as edict
 def default_cfg():
     # -- config --
     cfg = edict()
+    cfg.seed = 123
     cfg.nframes = 0
     cfg.frame_start = -1
     cfg.frame_end = -1

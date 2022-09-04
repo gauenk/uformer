@@ -191,38 +191,12 @@ class LeWinTransformerBlockRefactored(nn.Module):
         return x
 
     def run_attn(self,shifted_x,attn_mask):
-        main,sub = self.attn_mode.split("_")
-        if main == "window":
-            return self.run_window_attn(shifted_x,attn_mask)
-        elif main == "product":
-            return self.run_product_attn(shifted_x,attn_mask)
+        if self.attn_mode == "window_default":
+            return self.run_partition_attn(shifted_x,attn_mask)
         else:
-            raise ValueError(f"Uknown attn type [{main}]")
+            return self.run_video_attn(shifted_x,attn_mask)
 
-    def run_product_attn(self,shifted_x,attn_mask,wsize=8):
-        # -- unpack --
-        B,H,W,C = shifted_x.shape
-
-        # with_modulator
-        wmsa_in = self.apply_modulator(shifted_x,wsize)
-
-        # W-MSA/SW-MSA
-        attn_windows = self.attn(wmsa_in, mask=attn_mask)  # nW*B, win_size*win_size, C
-
-        return attn_windows
-
-    def run_window_attn(self,shifted_x,attn_mask):
-        main,sub = self.attn_mode.split("_")
-        if sub == "default":
-            return self.run_default_window_attn(shifted_x,attn_mask)
-        elif sub == "refactored":
-            return self.run_refactored_window_attn(shifted_x,attn_mask)
-        elif sub == "dnls":
-            return self.run_refactored_window_attn(shifted_x,attn_mask)
-        else:
-            raise ValueError(f"Uknown attn type [{sub}]")
-
-    def run_refactored_window_attn(self,shifted_x,attn_mask,wsize=8):
+    def run_video_attn(self,shifted_x,attn_mask,wsize=8):
 
         # -- unpack --
         B,H,W,C = shifted_x.shape
@@ -235,8 +209,7 @@ class LeWinTransformerBlockRefactored(nn.Module):
 
         return attn_windows
 
-
-    def run_default_window_attn(self,shifted_x,attn_mask):
+    def run_partition_attn(self,shifted_x,attn_mask):
         # -- unpack --
         B,H,W,C = shifted_x.shape
 

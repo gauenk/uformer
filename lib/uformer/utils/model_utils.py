@@ -76,7 +76,7 @@ def load_checkpoint_qkv(model, weights):
 
     model.load_state_dict(new_state_dict)
 
-def load_checkpoint(model, weights):
+def load_checkpoint_module(model, weights):
     checkpoint = th.load(weights)
     try:
         # model.load_state_dict(checkpoint["state_dict"])
@@ -197,11 +197,7 @@ def extract_search(cfg):
 
 def load_checkpoint(model,use_train,substr="",croot="output/checkpoints/"):
     # -- do we load --
-    load = use_train == "true"
-
-    # -- get path --
-    substr = "993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e"
-    #substr = "993b7b7f-0cbd-48ac-b92a-0dddc3b4ce0e-epoch=38.ckpt"
+    load = use_train == "true" or use_train is True
 
     # -- load to model --
     if load:
@@ -228,6 +224,12 @@ def load_recent(root,substr):
         if substr == "" or substr in fn:
             files.append(fn)
     files = sorted(files,key=os.path.getmtime)
+    files = [f for f in reversed(files)]
+
+    # -- error --
+    if len(files) == 0:
+        raise ValueError(f"Unable to file any files with substr [{substr}]")
+
     return str(files[0])
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

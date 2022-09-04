@@ -122,16 +122,8 @@ class WindowAttentionDnls(nn.Module):
         only_full = False
         exact = True
         stype = "window"
-        # stype = "prod_with_heads"
-
-        # -- switching input params --
-        if stype == "window":
-            use_adj = False
-            full_ws = True
-        else:
-            use_adj = False
-            full_ws = True
-
+        use_adj = False
+        full_ws = True
         search = dnls.search.init(stype,fflow, bflow, k,
                                   ps_search, pt, ws, wt, nheads,
                                   chnls=-1,dilation=dil,

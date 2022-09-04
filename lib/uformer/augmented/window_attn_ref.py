@@ -11,6 +11,7 @@ from .proj import ConvProjection,LinearProjection,ConvProjectionNoReshape
 
 # -- dnls --
 import dnls
+from dnls.utils.inds import get_nums_hw
 
 class WindowAttentionRefactored(nn.Module):
     def __init__(self, dim, win_size,num_heads, token_projection='linear',
@@ -47,6 +48,8 @@ class WindowAttentionRefactored(nn.Module):
             self.qkv = LinearProjection(dim,num_heads,dim//num_heads,bias=qkv_bias)
         else:
             raise Exception("Projection error!")
+        # self.qkv = ConvProjectionNoReshape(dim,num_heads,dim//num_heads,bias=qkv_bias)
+
 
         self.token_projection = token_projection
         self.attn_drop = nn.Dropout(attn_drop)
@@ -67,6 +70,8 @@ class WindowAttentionRefactored(nn.Module):
 
         # -- qkv --
         q_vid, k_vid, v_vid = self.qkv_videos(vid,attn_kv)
+        # q_vid, k_vid, v_vid = self.qkv(vid,attn_kv)
+        # q_vid = q_vid * self.scale
 
         # -- attn map --
         ntotal = T*H*W
@@ -170,19 +175,20 @@ class WindowAttentionRefactored(nn.Module):
         # -- init --
         t,c,h,w = x.shape
         ps = 8
+        dil = 1
         adj = ps//2
         stride = 8
         vshape = x.shape
         only_full = True
-        unfold = dnls.iUnfold(ps,None,stride=stride,dilation=1,
+        unfold = dnls.iUnfold(ps,None,stride=stride,dilation=dil,
                               adj=adj,only_full=only_full,border="reflect")
-        qfold = dnls.iFold(vshape,None,stride=stride,dilation=1,
+        qfold = dnls.iFold(vshape,None,stride=stride,dilation=dil,
                            adj=adj,only_full=only_full,
                            use_reflect=True,device=x.device)
-        kfold = dnls.iFold(vshape,None,stride=stride,dilation=1,
+        kfold = dnls.iFold(vshape,None,stride=stride,dilation=dil,
                            adj=adj,only_full=only_full,
                            use_reflect=True,device=x.device)
-        vfold = dnls.iFold(vshape,None,stride=stride,dilation=1,
+        vfold = dnls.iFold(vshape,None,stride=stride,dilation=dil,
                            adj=adj,only_full=only_full,
                            use_reflect=True,device=x.device)
         # -- unfold --
