@@ -218,7 +218,6 @@ def main():
     # attn_mode = ["wd-wd-wd-wd-wd"]
     # attn_mode = ["window_default"]
     # attn_mode = ["w-w-w-w-w"]
-
     attn_mode = ["pd-w-w-w-w"]
     ws = [8]
     wt = [0]
@@ -236,7 +235,7 @@ def main():
     # -- net info --
     flow = ['false']
     isize = ["128_128"]
-    load_pretrained = ["false"]
+    load_pretrained = ["true"]
 
     # -- grid --
     exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,
@@ -272,7 +271,7 @@ def main():
     cfg.nframes = 5
 
     # -- trainig --
-    cfg.batch_size_tr = 3
+    cfg.batch_size_tr = 4
     cfg.lr_init = 0.0002/1.
     cfg.weight_decay = 0.02
     cfg.nepochs = 250
