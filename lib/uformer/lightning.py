@@ -31,7 +31,7 @@ import uformer.utils.gpu_mem as gpu_mem
 from uformer.utils.timer import ExpTimer
 from uformer.utils.metrics import compute_psnrs,compute_ssims
 from uformer.utils.misc import rslice,write_pickle,read_pickle
-from uformer.utils.model_utils import filter_product_attn_mods
+from uformer.utils.model_utils import filter_rel_pos
 from uformer.utils.model_utils import reset_product_attn_mods
 
 # -- learning --
@@ -89,19 +89,25 @@ class UformerLit(pl.LightningModule):
         self.attn_mode = attn_mode
 
         # -- modify parameters for product_dnls learning --
-        if self.attn_mode == "product_dnls":
-            reset_product_attn_mods(self.net)
-            # filter_product_attn_mods(self.net)
+        filter_rel_pos(self.net,self.attn_mode)
+        # filter_product_attn_mods(self.net,"") # rm any rel pos from prod attn
+        # if self.attn_mode == "product_dnls":
+        #     # reset_product_attn_mods(self.net)
+        #     # filter_product_attn_mods(self.net,"")
 
     def forward(self,vid,clamp=False):
-        main,sub = self.attn_mode.split("_")
-        if main == "window":
-            return self.forward_default(vid,clamp=clamp)
-        elif main == "product":
+
+        # -- pick if prod --
+        use_prod = not("_" in self.attn_mode)
+        if not(use_prod):
+            main,sub = self.attn_mode.split("_")
+            use_prod = main == "product"
+
+        # -- fwd pass --
+        if use_prod:
             return self.forward_product(vid,clamp=clamp)
         else:
-            msg = f"Uknown ca forward type [{self.attn_mode}]"
-            raise ValueError(msg)
+            return self.forward_default(vid,clamp=clamp)
 
     def forward_product(self,vid,clamp=False):
         flows = self._get_flow(vid)
@@ -138,14 +144,6 @@ class UformerLit(pl.LightningModule):
         return flows
 
     def configure_optimizers(self):
-        # pdict = net.decoderlayer_3.blocks.0.attn.qkv.to_k.bias
-        # print(list(zip(self.named_parameters())))
-        key = "net.decoderlayer_3.blocks.0.attn.qkv.to_k.bias"
-        key = "net.decoderlayer_3.blocks.0.attn.relative_position_bias_table"
-        nparams = dict(self.named_parameters())
-        print(nparams[key][:10])
-        print(nparams[key].shape)
-        exit(0)
         optim = th.optim.AdamW(self.parameters(),
                                lr=self.lr_init, betas=(0.9, 0.999),
                                eps=1e-8, weight_decay=self.weight_decay)
@@ -335,7 +333,6 @@ class MetricsCallback(Callback):
     def on_test_batch_end(self, trainer, pl_module, outs,
                           batch, batch_idx, dl_idx):
         self._accumulate_results(outs)
-
 
 
 def remove_lightning_load_state(state):

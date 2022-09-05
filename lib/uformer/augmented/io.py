@@ -15,6 +15,7 @@ from .uformer import Uformer
 # -- misc imports --
 from ..common import optional,select_sigma
 from ..utils.model_utils import load_checkpoint_module,load_checkpoint_qkv
+from ..utils.model_utils import load_checkpoint_mix_qkv
 from ..utils.model_utils import remove_lightning_load_state
 
 def load_model(*args,**kwargs):
@@ -88,12 +89,14 @@ def load_model(*args,**kwargs):
 
     load_pretrained = optional(kwargs,"load_pretrained",True)
     if load_pretrained:
-        main_mode,sub_mode = attn_mode.split("_")
-        if attn_mode in ["window_default","window_refactored"]:
-            load_checkpoint_module(model,state_fn)
-        else:
-            load_checkpoint_qkv(model,state_fn)
-
+        if "_" in attn_mode:
+            main_mode,sub_mode = attn_mode.split("_")
+            if attn_mode in ["window_default","window_refactored"]:
+                load_checkpoint_module(model,state_fn)
+            else:
+                load_checkpoint_qkv(model,state_fn)
+        elif "-" in attn_mode:
+            load_checkpoint_mix_qkv(model,state_fn,attn_mode)
     # -- eval mode as default --
     model.eval()
 

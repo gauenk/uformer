@@ -8,6 +8,8 @@ ccopy = copy.copy
 from einops import repeat
 from pathlib import Path
 
+from .model_keys import translate_attn_mode,expand_attn_mode
+
 def freeze(model):
     for p in model.parameters():
         p.requires_grad=False
@@ -73,6 +75,79 @@ def load_checkpoint_qkv(model, weights):
             else:
                 print("What??")
                 print(name)
+
+    model.load_state_dict(new_state_dict)
+
+def block_name2num(name):
+    use_split = name != "conv"
+    if use_split:
+        encdec,encdec_id = name.split("_")
+        if encdec == "encoderlayer":
+            return int(encdec_id)
+        elif encdec == "decoderlayer":
+            return 3 - int(encdec_id)
+        else:
+            raise ValueError(f"Uknown name [{name}]")
+    elif name == "conv":
+        return 4
+    else:
+        raise ValueError(f"Uknown name [{name}]")
+
+def load_checkpoint_mix_qkv(model, weights, in_attn_modes):
+    attn_modes = in_attn_modes.split("-")
+    attn_modes = [translate_attn_mode(a) for a in attn_modes]
+    checkpoint = th.load(weights)
+    state_dict = checkpoint["state_dict"]
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        # -- standard mod --
+        name = k[7:] if 'module.' in k else k
+        if not("attn.qkv" in name):
+            new_state_dict[name] = v
+
+        # -- mod qkv --
+        if "attn.qkv" in name:
+            block_name = name.split(".")[0]
+            l = block_name2num(block_name)
+            if attn_modes[l] in ["window_refactored"]:
+                new_state_dict[name] = v
+            else:
+                if "to_q" in name:
+                    if "weight" in name:
+                        new_state_dict[name] = v.data[:,:,None,None]
+                    elif "bias" in name:
+                        new_state_dict[name] = v.data
+                elif "to_kv" in name:
+                    if "weight" in name:
+                        # -- shapes --
+                        half = v.shape[0]//2
+
+                        # -- create v --
+                        name_v = ccopy(name)
+                        name_v = name_v.replace("to_kv","to_k")
+                        new_state_dict[name_v] = v[:half,:,None,None]
+
+                        # -- create k --
+                        name_k = ccopy(name)
+                        name_k = name_k.replace("to_kv","to_v")
+                        new_state_dict[name_k] = v[half:,:,None,None]
+
+                    if "bias" in name:
+                        # -- shapes --
+                        half = v.shape[0]//2
+
+                        # -- create v --
+                        name_v = ccopy(name)
+                        name_v = name_v.replace("to_kv","to_k")
+                        new_state_dict[name_v] = v[:half,...]
+
+                        # -- create k --
+                        name_k = ccopy(name)
+                        name_k = name_k.replace("to_kv","to_v")
+                        new_state_dict[name_k] = v[half:,...]
+                else:
+                    print("What??")
+                    print(name)
 
     model.load_state_dict(new_state_dict)
 
@@ -249,14 +324,19 @@ def reset_product_attn_mods(model):
                 submod = getattr(submod,submod_i)
             submod.data = th.randn_like(submod.data).clamp(-1,1)/100.
 
-def filter_product_attn_mods(model):
+def filter_rel_pos(model,in_attn_mode):
+    attn_modes = expand_attn_mode(in_attn_mode)
     for name,param in model.named_parameters():
         if "relative_position_bias_table" in name:
-            submod = model
-            submods = name.split(".")
-            for submod_i in submods[:-1]:
-                submod = getattr(submod,submod_i)
-            setattr(submod,submods[-1],None)
+            bname = name.split(".")[0]
+            bnum = block_name2num(bname)
+            attn_mode_b = attn_modes[bnum]
+            if attn_mode_b == "product_dnls":
+                submod = model
+                submods = name.split(".")
+                for submod_i in submods[:-1]:
+                    submod = getattr(submod,submod_i)
+                setattr(submod,submods[-1],None)
 
 def get_product_attn_params(model):
     params = []

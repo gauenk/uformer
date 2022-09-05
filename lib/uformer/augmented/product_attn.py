@@ -78,6 +78,7 @@ class ProductAttention(nn.Module):
         # -- init --
         # mask = None
         rel_pos = self.get_rel_pos()
+        print("[prod] rel_pos: ",rel_pos)
         search,wpsum,fold = self.init_dnls(vid.shape,vid.device,self.num_heads)
 
         # -- qkv --

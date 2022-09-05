@@ -59,7 +59,8 @@ def run_exp(cfg):
     # -- load model --
     model_cfg = uformer.extract_search(cfg)
     model = uformer.load_model(**model_cfg)
-    load_checkpoint(model,cfg.use_train,"")
+    substr = ""
+    load_checkpoint(model,cfg.use_train,substr)
     imax = 255.
 
     # -- data --
@@ -195,7 +196,8 @@ def main():
     isizes = ["none"]
     stride = [1]
     use_train = ["false"]
-    attn_mode = ["window_refactored","window_dnls","product_dnls"]
+    attn_mode_mix = ["pd-wd-wd-wd-wd","wd-wd-wd-wd-wd"]
+    attn_mode = ["window_refactored","window_dnls","product_dnls"]+attn_mode_mix
     exp_lists = {"dname":dnames,"vid_name":vid_names,"dset":dset,
                  "flow":flow,"ws":ws,"wt":wt,"attn_mode":attn_mode,
                  "isize":isizes,"stride":stride,"use_train":use_train,"k":k}
@@ -254,7 +256,7 @@ def main():
         #     cache.clear_exp(uuid)
         # if exp.attn_mode == "product_dnls":
         #     cache.clear_exp(uuid)
-        if exp.use_train == "true":
+        if exp.use_train == "true" and exp.attn_mode == "product_dnls":
             cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result
         if results is None: # check if no result

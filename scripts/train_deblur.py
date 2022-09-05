@@ -212,7 +212,8 @@ def main():
     cache.clear()
 
     # -- search info --
-    attn_mode = ["product_dnls"]
+    # attn_mode = ["wd-wd-wd-wd-wd"]
+    attn_mode = ["pd-wd-wd-wd-wd"]
     ws = [8]
     wt = [0]
     k = [-1]
@@ -229,7 +230,7 @@ def main():
     # -- net info --
     flow = ['false']
     isize = ["128_128"]
-    load_pretrained = ["true"]
+    load_pretrained = ["false"]
 
     # -- grid --
     exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,

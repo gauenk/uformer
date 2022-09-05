@@ -11,6 +11,7 @@ from timm.models.layers import trunc_normal_
 from .proj import InputProj,OutputProj
 from .basic_uformer import BasicUformerLayer
 from .scaling import Downsample,Upsample
+from .parse import fields2blocks
 
 class Uformer(nn.Module):
     def __init__(self, img_size=256, in_chans=3, dd_in=3,
@@ -52,6 +53,12 @@ class Uformer(nn.Module):
         self.nbwd = nbwd
         self.exact = exact
 
+        # -- unroll for each module --
+        out = fields2blocks(attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
+                            nbwd,rbwd,exact,bs)
+        attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,nbwd,rbwd,exact,bs = out
+
+
         # stochastic depth
         enc_dpr = [x.item() for x in th.linspace(0, drop_path_rate,
                                                     sum(depths[:self.num_enc_layers]))]
@@ -67,6 +74,7 @@ class Uformer(nn.Module):
                                       out_channel=in_chans, kernel_size=3, stride=1)
 
         # Encoder
+        l = 0
         self.encoderlayer_0 = BasicUformerLayer(dim=embed_dim,
                             output_dim=embed_dim,
                             input_resolution=(img_size,
@@ -82,10 +90,13 @@ class Uformer(nn.Module):
                             use_checkpoint=use_checkpoint,
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
-                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
-                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
-                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
+                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+                            ws=ws[l], wt=wt[l], dil=dil[l],
+                            stride0=stride0[l], stride1=stride1[l],
+                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
         self.dowsample_0 = dowsample(embed_dim, embed_dim*2)
+
+        l = 1
         self.encoderlayer_1 = BasicUformerLayer(dim=embed_dim*2,
                             output_dim=embed_dim*2,
                             input_resolution=(img_size // 2,
@@ -101,10 +112,13 @@ class Uformer(nn.Module):
                             use_checkpoint=use_checkpoint,
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
-                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
-                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
-                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
+                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+                            ws=ws[l], wt=wt[l], dil=dil[l],
+                            stride0=stride0[l], stride1=stride1[l],
+                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
         self.dowsample_1 = dowsample(embed_dim*2, embed_dim*4)
+
+        l = 2
         self.encoderlayer_2 = BasicUformerLayer(dim=embed_dim*4,
                             output_dim=embed_dim*4,
                             input_resolution=(img_size // (2 ** 2),
@@ -120,10 +134,13 @@ class Uformer(nn.Module):
                             use_checkpoint=use_checkpoint,
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
-                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
-                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
-                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
+                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+                            ws=ws[l], wt=wt[l], dil=dil[l],
+                            stride0=stride0[l], stride1=stride1[l],
+                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
         self.dowsample_2 = dowsample(embed_dim*4, embed_dim*8)
+
+        l = 3
         self.encoderlayer_3 = BasicUformerLayer(dim=embed_dim*8,
                             output_dim=embed_dim*8,
                             input_resolution=(img_size // (2 ** 3),
@@ -139,12 +156,14 @@ class Uformer(nn.Module):
                             use_checkpoint=use_checkpoint,
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
-                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
-                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
-                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
+                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+                            ws=ws[l], wt=wt[l], dil=dil[l],
+                            stride0=stride0[l], stride1=stride1[l],
+                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
         self.dowsample_3 = dowsample(embed_dim*8, embed_dim*16)
 
         # Bottleneck
+        l = 4
         self.conv = BasicUformerLayer(dim=embed_dim*16,
                             output_dim=embed_dim*16,
                             input_resolution=(img_size // (2 ** 4),
@@ -160,11 +179,13 @@ class Uformer(nn.Module):
                             use_checkpoint=use_checkpoint,
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
-                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
-                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
-                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
+                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+                            ws=ws[l], wt=wt[l], dil=dil[l],
+                            stride0=stride0[l], stride1=stride1[l],
+                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
 
         # Decoder
+        l = 3
         self.upsample_0 = upsample(embed_dim*16, embed_dim*8)
         self.decoderlayer_0 = BasicUformerLayer(dim=embed_dim*16,
                             output_dim=embed_dim*16,
@@ -182,10 +203,13 @@ class Uformer(nn.Module):
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
                             modulator=modulator,cross_modulator=cross_modulator,
-                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
-                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
-                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
+                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+                            ws=ws[l], wt=wt[l], dil=dil[l],
+                            stride0=stride0[l], stride1=stride1[l],
+                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
         self.upsample_1 = upsample(embed_dim*16, embed_dim*4)
+
+        l = 2
         self.decoderlayer_1 = BasicUformerLayer(dim=embed_dim*8,
                             output_dim=embed_dim*8,
                             input_resolution=(img_size // (2 ** 2),
@@ -202,10 +226,13 @@ class Uformer(nn.Module):
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
                             modulator=modulator,cross_modulator=cross_modulator,
-                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
-                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
-                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
+                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+                            ws=ws[l], wt=wt[l], dil=dil[l],
+                            stride0=stride0[l], stride1=stride1[l],
+                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
         self.upsample_2 = upsample(embed_dim*8, embed_dim*2)
+
+        l = 1
         self.decoderlayer_2 = BasicUformerLayer(dim=embed_dim*4,
                             output_dim=embed_dim*4,
                             input_resolution=(img_size // 2,
@@ -222,10 +249,13 @@ class Uformer(nn.Module):
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
                             modulator=modulator,cross_modulator=cross_modulator,
-                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
-                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
-                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
+                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+                            ws=ws[l], wt=wt[l], dil=dil[l],
+                            stride0=stride0[l], stride1=stride1[l],
+                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
         self.upsample_3 = upsample(embed_dim*4, embed_dim)
+
+        l = 0
         self.decoderlayer_3 = BasicUformerLayer(dim=embed_dim*2,
                             output_dim=embed_dim*2,
                             input_resolution=(img_size,
@@ -242,9 +272,10 @@ class Uformer(nn.Module):
                             token_projection=token_projection,
                             token_mlp=token_mlp,shift_flag=shift_flag,
                             modulator=modulator,cross_modulator=cross_modulator,
-                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
-                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
-                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
+                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+                            ws=ws[l], wt=wt[l], dil=dil[l],
+                            stride0=stride0[l], stride1=stride1[l],
+                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
 
         self.apply(self._init_weights)
 
