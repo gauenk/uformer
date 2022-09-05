@@ -56,6 +56,7 @@ class ProductAttention(nn.Module):
         relative_coords[:, :, 1] += self.win_size[1] - 1
         relative_coords[:, :, 0] *= 2 * self.win_size[1] - 1
         relative_position_index = relative_coords.sum(-1)  # Wh*Ww, Wh*Ww
+        # print(self.relative_position_bias_table.shape,relative_position_index.shape)
         self.register_buffer("relative_position_index", relative_position_index)
         trunc_normal_(self.relative_position_bias_table, std=.02)
         self.qkv = ConvProjectionNoReshape(dim,num_heads,dim//num_heads,bias=qkv_bias)

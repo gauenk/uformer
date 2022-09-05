@@ -209,7 +209,7 @@ def main():
     exp_lists['k'] = [64]
     exp_lists['attn_mode'] = ['product_dnls','window_dnls']
     exps_c1 = cache_io.mesh_pydicts(exp_lists) # create mesh
-    exps_c = exps_c0 + exps_c1
+    exps_c = exps_c0# + exps_c1
 
     # -- exps version 2 --
     exp_lists['ws'] = [-1]
@@ -254,8 +254,8 @@ def main():
         #     cache.clear_exp(uuid)
         # if exp.attn_mode == "product_dnls":
         #     cache.clear_exp(uuid)
-        # if exp.use_train == "true":
-        #     cache.clear_exp(uuid)
+        if exp.use_train == "true":
+            cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result
         if results is None: # check if no result
             exp.uuid = uuid

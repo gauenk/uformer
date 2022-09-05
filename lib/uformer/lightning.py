@@ -138,6 +138,14 @@ class UformerLit(pl.LightningModule):
         return flows
 
     def configure_optimizers(self):
+        # pdict = net.decoderlayer_3.blocks.0.attn.qkv.to_k.bias
+        # print(list(zip(self.named_parameters())))
+        key = "net.decoderlayer_3.blocks.0.attn.qkv.to_k.bias"
+        key = "net.decoderlayer_3.blocks.0.attn.relative_position_bias_table"
+        nparams = dict(self.named_parameters())
+        print(nparams[key][:10])
+        print(nparams[key].shape)
+        exit(0)
         optim = th.optim.AdamW(self.parameters(),
                                lr=self.lr_init, betas=(0.9, 0.999),
                                eps=1e-8, weight_decay=self.weight_decay)

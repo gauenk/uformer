@@ -50,7 +50,7 @@ def launch_training(_cfg):
     cfg = copy.deepcopy(_cfg)
     cache_io.exp_strings2bools(cfg)
     configs.set_seed(cfg.seed)
-    root = Path(__file__).absolute()
+    root = Path(__file__).parents[0].absolute()
 
     # -- create timer --
     timer = ExpTimer()
@@ -60,7 +60,7 @@ def launch_training(_cfg):
     if not log_dir.exists():
         log_dir.mkdir(parents=True)
     log_subdirs = ["train"]
-    for sub in log_subdir:
+    for sub in log_subdirs:
         log_subdir = log_dir / sub
         if not log_subdir.exists(): log_subdir.mkdir()
 
@@ -129,7 +129,7 @@ def launch_training(_cfg):
     cc_recent = ModelCheckpoint(monitor="epoch",save_top_k=10,mode="max",
                                 dirpath=cfg.checkpoint_dir,filename=chkpt_fn)
     # swa_callback = StochasticWeightAveraging(swa_lrs=1e-4)
-    trainer = pl.Trainer(accelerator="gpu",devices=2,precision=32,
+    trainer = pl.Trainer(accelerator="gpu",devices=1,precision=32,
                          limit_train_batches=250,limit_val_batches=5,
                          max_epochs=cfg.nepochs-1,log_every_n_steps=1,
                          logger=logger,gradient_clip_val=0.0,
@@ -229,7 +229,7 @@ def main():
     # -- net info --
     flow = ['false']
     isize = ["128_128"]
-    load_pretrained = ["false"]
+    load_pretrained = ["true"]
 
     # -- grid --
     exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,
