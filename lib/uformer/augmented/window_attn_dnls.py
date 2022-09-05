@@ -58,7 +58,6 @@ class WindowAttentionDnls(nn.Module):
 
         # -- init --
         rel_pos = self.get_rel_pos()
-        print("[window] rel_pos: ",rel_pos is None)
         search,wpsum,fold = self.init_dnls(vid.shape,vid.device,self.num_heads)
 
         # -- qkv --

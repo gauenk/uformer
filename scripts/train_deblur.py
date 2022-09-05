@@ -129,7 +129,7 @@ def launch_training(_cfg):
     cc_recent = ModelCheckpoint(monitor="epoch",save_top_k=10,mode="max",
                                 dirpath=cfg.checkpoint_dir,filename=chkpt_fn)
     # swa_callback = StochasticWeightAveraging(swa_lrs=1e-4)
-    trainer = pl.Trainer(accelerator="gpu",devices=1,precision=32,
+    trainer = pl.Trainer(accelerator="gpu",devices=2,precision=32,
                          limit_train_batches=250,limit_val_batches=5,
                          max_epochs=cfg.nepochs-1,log_every_n_steps=1,
                          logger=logger,gradient_clip_val=0.0,
