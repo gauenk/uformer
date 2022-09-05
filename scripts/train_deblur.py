@@ -212,8 +212,14 @@ def main():
     cache.clear()
 
     # -- search info --
+    # attn_mode = ["product_dnls"]
+    # attn_mode = ["pd-pd-pd-pd-pd"]
+    # attn_mode = ["window_dnls"]
     # attn_mode = ["wd-wd-wd-wd-wd"]
-    attn_mode = ["pd-wd-wd-wd-wd"]
+    # attn_mode = ["window_default"]
+    # attn_mode = ["w-w-w-w-w"]
+
+    attn_mode = ["pd-w-w-w-w"]
     ws = [8]
     wt = [0]
     k = [-1]

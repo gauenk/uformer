@@ -109,7 +109,7 @@ def load_checkpoint_mix_qkv(model, weights, in_attn_modes):
         if "attn.qkv" in name:
             block_name = name.split(".")[0]
             l = block_name2num(block_name)
-            if attn_modes[l] in ["window_refactored"]:
+            if attn_modes[l] in ["window_default","window_refactored"]:
                 new_state_dict[name] = v
             else:
                 if "to_q" in name:

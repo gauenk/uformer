@@ -58,7 +58,6 @@ class Uformer(nn.Module):
                             nbwd,rbwd,exact,bs)
         attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,nbwd,rbwd,exact,bs = out
 
-
         # stochastic depth
         enc_dpr = [x.item() for x in th.linspace(0, drop_path_rate,
                                                     sum(depths[:self.num_enc_layers]))]
