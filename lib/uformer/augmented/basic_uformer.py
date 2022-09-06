@@ -24,6 +24,7 @@ class BasicUformerLayer(nn.Module):
         self.use_checkpoint = use_checkpoint
         self.attn_mode = attn_mode
         lewin_block = LeWinTransformerBlockRefactored
+        shift_flag = shift_flag if self.attn_mode != "product_dnls" else False
         if shift_flag:
             self.blocks = nn.ModuleList([
                 lewin_block(dim=dim, input_resolution=input_resolution,

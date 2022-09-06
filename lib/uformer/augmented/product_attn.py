@@ -76,7 +76,7 @@ class ProductAttention(nn.Module):
         # print("vid.shape: ",vid.shape)
 
         # -- init --
-        # mask = None
+        mask = None
         rel_pos = self.get_rel_pos()
         search,wpsum,fold = self.init_dnls(vid.shape,vid.device,self.num_heads)
 
