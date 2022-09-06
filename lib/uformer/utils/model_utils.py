@@ -79,19 +79,32 @@ def load_checkpoint_qkv(model, weights):
     model.load_state_dict(new_state_dict)
 
 def block_name2num(name):
-    use_split = name != "conv"
+
+    # -- how to compute id --
+    fields = ["encoderlayer","decoderlayer",
+              "dowsample","upsample"]
+    use_split = False
+    for field in fields:
+        use_split = use_split or field in name
+
+    # -- compute id --
     if use_split:
         encdec,encdec_id = name.split("_")
         if encdec == "encoderlayer":
             return int(encdec_id)
         elif encdec == "decoderlayer":
             return 3 - int(encdec_id)
+        elif encdec == "dowsample":
+            return int(encdec_id)
+        elif encdec == "upsample":
+            return int(encdec_id)
         else:
             raise ValueError(f"Uknown name [{name}]")
     elif name == "conv":
         return 4
     else:
-        raise ValueError(f"Uknown name [{name}]")
+        return -1
+        # raise ValueError(f"Uknown name [{name}]")
 
 def load_checkpoint_mix_qkv(model, weights, in_attn_modes):
     attn_modes = in_attn_modes.split("-")
@@ -331,3 +344,14 @@ def get_product_attn_params(model):
         params.append(param)
     return params
 
+def apply_freeze(model,freeze):
+    if freeze is False: return
+    unset_names = []
+    for name,param in model.named_parameters():
+        bname = name.split(".")[0]
+        bnum = block_name2num(bname)
+        if bnum == -1: unset_names.append(name)
+        freeze_b = freeze[bnum]
+        if freeze_b is True:
+            param.requires_grad_(False)
+    # print(unset_names)

@@ -216,6 +216,7 @@ def main():
     # attn_mode = ["window_default"]
     # attn_mode = ["w-w-w-w-w"]
     attn_mode = ["pd-w-w-w-w"]
+    freeze = ["f-f-t-t-t"]
     ws = [8]
     wt = [0]
     k = [-1]
@@ -224,7 +225,7 @@ def main():
     stride0 = [1]
     stride1 = [1]
     dil = [1]
-    nbwd = [5]
+    nbwd = [1]
     rbwd = ["true"]
     exact = ["false"]
     bs = [-1]
@@ -240,7 +241,7 @@ def main():
                  "pt":pt,"stride0":stride0,"stride1":stride1,"dil":dil,
                  "nbwd":nbwd,"rbwd":rbwd,"exact":exact,"bs":bs,'flow':flow,
                  "isize":isize,"load_pretrained":load_pretrained,
-                 "filter_by_attn_post":filter_by_attn_post}
+                 "filter_by_attn_post":filter_by_attn_post,"freeze":freeze}
     exps = cache_io.mesh_pydicts(exp_lists) # create mesh
     nexps = len(exps)
 
@@ -254,7 +255,7 @@ def main():
     cfg.nframes = 1
 
     # -- trainig --
-    cfg.batch_size_tr = 20
+    cfg.batch_size_tr = 25
     cfg.lr_init = 0.0002/100.
     cfg.weight_decay = 0.02
     cfg.nepochs = 250

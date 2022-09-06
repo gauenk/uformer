@@ -75,6 +75,7 @@ def load_model(*args,**kwargs):
     rbwd = optional(kwargs,'rbwd',False,init)
     exact = optional(kwargs,'exact',False,init)
     bs = optional(kwargs,'bs',-1,init)
+    freeze = optional(kwargs,'freeze',False,init)
 
     # -- modify network after load --
     filter_by_attn_pre = optional(kwargs,"filter_by_attn_pre",False,init)
@@ -92,7 +93,7 @@ def load_model(*args,**kwargs):
                     cross_modulator=cross_modulator,dd_in=dd_in,
                     attn_mode=attn_mode,ps=ps,pt=pt,ws=ws,wt=wt,k=k,
                     stride0=stride0,stride1=stride1,
-                    nbwd=nbwd,rbwd=rbwd,exact=exact,bs=bs)
+                    nbwd=nbwd,rbwd=rbwd,exact=exact,bs=bs,freeze=freeze)
     model = model.to(device)
 
     # -- apply network filters [before load] --

@@ -12,6 +12,8 @@ from .proj import InputProj,OutputProj
 from .basic_uformer import BasicUformerLayer
 from .scaling import Downsample,Upsample
 from .parse import fields2blocks
+from ..utils.model_utils import apply_freeze
+
 
 class Uformer(nn.Module):
     def __init__(self, img_size=256, in_chans=3, dd_in=3,
@@ -25,7 +27,7 @@ class Uformer(nn.Module):
                  modulator=False, cross_modulator=False,
                  attn_mode="default", k=-1, ps=1, pt=1, ws=8,
                  wt=0, dil=1, stride0=1, stride1=1, nbwd=1, rbwd=False,
-                 exact=False, bs=-1, **kwargs):
+                 exact=False, bs=-1, freeze=False, **kwargs):
         super().__init__()
 
         self.num_enc_layers = len(depths)//2
@@ -56,8 +58,10 @@ class Uformer(nn.Module):
 
         # -- unroll for each module --
         out = fields2blocks(attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
-                            nbwd,rbwd,exact,bs)
-        attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,nbwd,rbwd,exact,bs = out
+                            nbwd,rbwd,exact,bs,freeze)
+        attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1 = out[:9]
+        nbwd,rbwd,exact,bs,freeze = out[9:]
+        self.freeze = freeze
 
         # stochastic depth
         enc_dpr = [x.item() for x in th.linspace(0, drop_path_rate,
@@ -278,6 +282,9 @@ class Uformer(nn.Module):
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
 
         self.apply(self._init_weights)
+
+    def _apply_freeze(self):
+        apply_freeze(self,self.freeze)
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):

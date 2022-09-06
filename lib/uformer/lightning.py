@@ -77,6 +77,8 @@ class UformerLit(pl.LightningModule):
 
         # -- load model --
         self.net = uformer.load_model(**model_cfg)
+        self.net.train()
+        self.net._apply_freeze()
 
         # -- set logger --
         self.gen_loger = logging.getLogger('lightning')
@@ -176,6 +178,10 @@ class UformerLit(pl.LightningModule):
         self.log("train_psnr", psnr, on_step=True,
                  on_epoch=False, batch_size=self.batch_size)
 
+        # -- scheduler step --
+        # sch = self.lr_schedulers()
+        # sch.step()
+
         return loss
 
     def training_step_i(self, batch, i):
@@ -203,7 +209,9 @@ class UformerLit(pl.LightningModule):
         eps = 1e-3
         diff = th.sqrt((clean - deno)**2 + eps**2)
         loss = th.mean(diff)
+
         return deno.detach(),clean,loss
+
 
     def validation_step(self, batch, batch_idx):
 

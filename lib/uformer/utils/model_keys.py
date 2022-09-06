@@ -6,9 +6,17 @@ def translate_values(field,in_values):
         for _v in in_values:
             v = translate_attn_mode(_v)
             out_values.append(v)
+    elif field == "freeze":
+        out_values = []
+        for _v in in_values:
+            v = translate_freeze(_v)
+            out_values.append(v)
     else:
         out_value = [int(v) for v in in_values]
     return out_values
+
+def translate_freeze(_v):
+    return _v == "t"
 
 def translate_attn_mode(_v):
     if _v == "pd":
