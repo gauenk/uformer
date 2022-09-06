@@ -202,13 +202,14 @@ def main():
     use_train = ["false"]
     attn_mode_mix = ["pd-w-w-w-w","w-w-w-w-w"]
     attn_mode = ["window_refactored","window_dnls","product_dnls"]+attn_mode_mix
-    filter_by_attn = ["false"]
+    filter_by_attn_pre = ["false"]
     load_pretrained = ["true"]
     chkpt = [""]
     exp_lists = {"dname":dnames,"vid_name":vid_names,"dset":dset,"flow":flow,
                  "ws":ws,"wt":wt,"attn_mode":attn_mode,"isize":isizes,
                  "stride":stride,"use_train":use_train,"k":k,"chkpt":chkpt,
-                 "filter_by_attn":filter_by_attn,"load_pretrained":load_pretrained}
+                 "filter_by_attn_pre":filter_by_attn_pre,
+                 "load_pretrained":load_pretrained}
     exps_a = cache_io.mesh_pydicts(exp_lists) # create mesh
 
     # -- version 3 --
@@ -217,11 +218,11 @@ def main():
     exp_lists['attn_mode'] = ["pd-w-w-w-w"]
     exp_lists['chkpt'] = ["c3d30"]
     # ['window_dnls','product_dnls',"pd-w-w-w-w"]
-    exp_lists['filter_by_attn'] = ['true']
+    exp_lists['filter_by_attn_pre'] = ['true']
     exps_c0 = cache_io.mesh_pydicts(exp_lists) # create mesh
     exp_lists['attn_mode'] = ["w-w-w-w-w"]
     exp_lists['load_pretrained'] = ['false']
-    exp_lists['filter_by_attn'] = ['false']
+    exp_lists['filter_by_attn_pre'] = ['false']
     exp_lists['chkpt'] = ["32887b"]
     exps_c1 = cache_io.mesh_pydicts(exp_lists) # create mesh
     exps_c = exps_c0 + exps_c1
@@ -234,7 +235,7 @@ def main():
     exp_lists['use_train'] = ["false"]
     exp_lists['stride'] = [1]
     exp_lists['attn_mode'] = ['original']
-    exp_lists['filter_by_attn'] = ['false']
+    exp_lists['filter_by_attn_pre'] = ['false']
     exp_lists['load_pretrained'] = ['true']
     exp_lists['chkpt'] = [""]
     exps_b = cache_io.mesh_pydicts(exp_lists) # create mesh

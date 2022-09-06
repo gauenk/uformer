@@ -77,9 +77,9 @@ def load_model(*args,**kwargs):
     bs = optional(kwargs,'bs',-1,init)
 
     # -- modify network after load --
-    filter_by_attn = optional(kwargs,"filter_by_attn",False,init)
+    filter_by_attn_pre = optional(kwargs,"filter_by_attn_pre",False,init)
+    filter_by_attn_post = optional(kwargs,"filter_by_attn_post",False,init)
     load_pretrained = optional(kwargs,"load_pretrained",True,init)
-    print("load_pretrained: ",load_pretrained)
 
     # -- break here if init --
     if init: return
@@ -95,8 +95,8 @@ def load_model(*args,**kwargs):
                     nbwd=nbwd,rbwd=rbwd,exact=exact,bs=bs)
     model = model.to(device)
 
-    # -- apply network filters --
-    if filter_by_attn:
+    # -- apply network filters [before load] --
+    if filter_by_attn_pre:
         filter_rel_pos(model,attn_mode)
 
     # -- path to weights --
@@ -121,6 +121,10 @@ def load_model(*args,**kwargs):
                 load_checkpoint_qkv(model,state_fn)
         elif "-" in attn_mode:
             load_checkpoint_mix_qkv(model,state_fn,attn_mode)
+
+    # -- apply network filters [before load] --
+    if filter_by_attn_post:
+        filter_rel_pos(model,attn_mode)
 
     # -- eval mode as default --
     model.eval()

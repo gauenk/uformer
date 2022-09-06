@@ -49,6 +49,9 @@ from pytorch_lightning.loggers import CSVLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.utilities.distributed import rank_zero_only
 
+# -- local --
+from .common import optional
+
 def grab_grad(model):
     for param in model.parameters():
         if hasattr(param,'weight'):
@@ -57,17 +60,13 @@ def grab_grad(model):
 
 class UformerLit(pl.LightningModule):
 
-    def __init__(self,flow=True,isize=None,batch_size=32,lr_init=0.0002,
-                 weight_decay=0.02,nepochs=250,warmup_epochs=3,
-                 attn_mode="product_dnls",ps=1,pt=1,k=-1,
-                 ws=8,wt=0,stride0=1,stride1=1,dil=1,
-                 nbwd=1,rbwd=False,exact=False,bs=-1,load_pretrained=False):
+    def __init__(self,model_cfg,flow=True,isize=None,batch_size=32,lr_init=0.0002,
+                 weight_decay=0.02,nepochs=250,warmup_epochs=3):
         super().__init__()
 
         # -- meta params --
         self.flow = flow
         self.isize = isize
-        noise_version="blur" # fixed.
 
         # -- learning --
         self.batch_size = batch_size
@@ -77,23 +76,12 @@ class UformerLit(pl.LightningModule):
         self.warmup_epochs = warmup_epochs
 
         # -- load model --
-        model_cfg = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,
-                     "pt":pt,"stride0":stride0,"stride1":stride1,"dil":dil,
-                     "nbwd":nbwd,"rbwd":rbwd,"exact":exact,"bs":bs,
-                     "noise_version":noise_version,"load_pretrained":load_pretrained}
         self.net = uformer.load_model(**model_cfg)
 
         # -- set logger --
         self.gen_loger = logging.getLogger('lightning')
         self.gen_loger.setLevel("NOTSET")
-        self.attn_mode = attn_mode
-
-        # -- modify parameters for product_dnls learning --
-        filter_rel_pos(self.net,self.attn_mode)
-        # filter_product_attn_mods(self.net,"") # rm any rel pos from prod attn
-        # if self.attn_mode == "product_dnls":
-        #     # reset_product_attn_mods(self.net)
-        #     # filter_product_attn_mods(self.net,"")
+        self.attn_mode = model_cfg['attn_mode']
 
     def forward(self,vid,clamp=False):
 

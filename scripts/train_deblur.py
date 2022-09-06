@@ -71,15 +71,12 @@ def launch_training(_cfg):
 
     # -- network --
     print(cfg)
-    model = UformerLit(flow=cfg.flow,isize=cfg.isize,
+    model_cfg = uformer.extract_model_io(cfg)
+    print(model_cfg)
+    model = UformerLit(model_cfg,flow=cfg.flow,isize=cfg.isize,
                        batch_size=cfg.batch_size_tr,lr_init=cfg.lr_init,
                        weight_decay=cfg.weight_decay,nepochs=cfg.nepochs,
-                       warmup_epochs=cfg.warmup_epochs,
-                       attn_mode=cfg.attn_mode,
-                       ps=cfg.ps,pt=cfg.pt,k=cfg.k,ws=cfg.ws,
-                       wt=cfg.wt,stride0=cfg.stride0,stride1=cfg.stride1,
-                       dil=cfg.dil,nbwd=cfg.nbwd,rbwd=cfg.rbwd,
-                       exact=cfg.exact,bs=cfg.bs,load_pretrained=cfg.load_pretrained)
+                       warmup_epochs=cfg.warmup_epochs)
 
     # -- load dataset with testing mods isizes --
     # model.isize = None
@@ -227,7 +224,7 @@ def main():
     stride0 = [1]
     stride1 = [1]
     dil = [1]
-    nbwd = [1]
+    nbwd = [5]
     rbwd = ["true"]
     exact = ["false"]
     bs = [-1]
@@ -236,29 +233,15 @@ def main():
     flow = ['false']
     isize = ["128_128"]
     load_pretrained = ["true"]
+    filter_by_attn_post = ["true"]
 
     # -- grid --
     exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,
                  "pt":pt,"stride0":stride0,"stride1":stride1,"dil":dil,
                  "nbwd":nbwd,"rbwd":rbwd,"exact":exact,"bs":bs,'flow':flow,
-                 "isize":isize,"load_pretrained":load_pretrained}
-    exps_a = cache_io.mesh_pydicts(exp_lists) # create mesh
-
-    # -- default --
-    attn_mode = ["window_dnls"]
-    ws,wt = [8],[0]
-    k,ps,pt = [-1],[1],[0]
-    stride0,stride1 = [1],[1]
-    dil,nbwd,rbwd = [1],[1],['false']
-    exact,bs = ["false"],[-1]
-    exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,
-                 "pt":pt,"stride0":stride0,"stride1":stride1,"dil":dil,
-                 "nbwd":nbwd,"rbwd":rbwd,"exact":exact,"bs":bs,'flow':flow,
-                 "isize":isize,"load_pretrained":load_pretrained}
-    exps_b = cache_io.mesh_pydicts(exp_lists) # create mesh
-
-    # -- agg --
-    exps = exps_a# + exps_b
+                 "isize":isize,"load_pretrained":load_pretrained,
+                 "filter_by_attn_post":filter_by_attn_post}
+    exps = cache_io.mesh_pydicts(exp_lists) # create mesh
     nexps = len(exps)
 
     # -- group with default --
@@ -268,14 +251,15 @@ def main():
     # -- num to train --
     cfg.nsamples_tr = 0
     cfg.nsamples_val = 0
-    cfg.nframes = 5
+    cfg.nframes = 1
 
     # -- trainig --
-    cfg.batch_size_tr = 4
-    cfg.lr_init = 0.0002/1.
+    cfg.batch_size_tr = 20
+    cfg.lr_init = 0.0002/100.
     cfg.weight_decay = 0.02
     cfg.nepochs = 250
-    cfg.warmup_epochs = 5
+    cfg.warmup_epochs = 0
+    cfg.noise_version="blur" # fixed.
 
     # -- mix --
     cache_io.append_configs(exps,cfg) # merge the two
