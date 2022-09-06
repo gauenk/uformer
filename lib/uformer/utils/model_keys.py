@@ -21,6 +21,8 @@ def translate_freeze(_v):
 def translate_attn_mode(_v):
     if _v == "pd":
         v = "product_dnls"
+    elif _v == "ld":
+        v = "l2_dnls"
     elif _v == "wd":
         v = "window_dnls"
     elif _v == "wr":

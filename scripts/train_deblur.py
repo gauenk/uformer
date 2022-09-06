@@ -215,11 +215,12 @@ def main():
     # attn_mode = ["wd-wd-wd-wd-wd"]
     # attn_mode = ["window_default"]
     # attn_mode = ["w-w-w-w-w"]
+    # attn_mode = ["ld-w-w-w-w"]
     attn_mode = ["pd-w-w-w-w"]
     freeze = ["f-f-t-t-t"]
-    ws = [29]
+    ws = [8]
     wt = [0]
-    k = [64]
+    k = [-1]
     ps = [1]
     pt = [1]
     stride0 = [1]
@@ -234,7 +235,7 @@ def main():
     flow = ['false']
     isize = ["128_128"]
     load_pretrained = ["true"]
-    filter_by_attn_post = ["true"]
+    filter_by_attn_post = ["false"] # do we remove rel_pos?
 
     # -- grid --
     exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,

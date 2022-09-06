@@ -275,8 +275,8 @@ def main():
         #     cache.clear_exp(uuid)
         # if exp.use_train == "true" and exp.attn_mode == "product_dnls":
         #     cache.clear_exp(uuid)
-        if exp.use_train == "true" and exp.attn_mode == "pd-w-w-w-w":
-            cache.clear_exp(uuid)
+        # if exp.use_train == "true" and exp.attn_mode == "pd-w-w-w-w":
+        #     cache.clear_exp(uuid)
         if exp.use_train == "true" and exp.attn_mode == "w-w-w-w-w":
             cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result

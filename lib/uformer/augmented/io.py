@@ -100,20 +100,10 @@ def load_model(*args,**kwargs):
     if filter_by_attn_pre:
         filter_rel_pos(model,attn_mode)
 
-    # -- path to weights --
-    fdir = Path(__file__).absolute().parents[0] / "../../../" # parent of "./lib"
-    lit = False
-    if noise_version == "noise":
-        state_fn = fdir / "weights/Uformer_sidd_B.pth"
-        lit = False
-    elif noise_version == "blur":
-        state_fn = fdir / "weights/Uformer_gopro_B.pth"
-    else:
-        raise ValueError(f"Uknown noise_version [{noise_version}]")
-    assert os.path.isfile(str(state_fn))
 
     # -- load weight --
     if load_pretrained:
+        state_fn = pretrained_path(noise_version)
         if "_" in attn_mode:
             main_mode,sub_mode = attn_mode.split("_")
             if attn_mode in ["window_default","window_refactored"]:
@@ -135,6 +125,19 @@ def load_model(*args,**kwargs):
 # -- run to populate "_fields" --
 load_model(__init=True)
 
+
+def pretrained_path(noise_version):
+    fdir = Path(__file__).absolute().parents[0] / "../../../" # parent of "./lib"
+    lit = False
+    if noise_version == "noise":
+        state_fn = fdir / "weights/Uformer_sidd_B.pth"
+        lit = False
+    elif noise_version == "blur":
+        state_fn = fdir / "weights/Uformer_gopro_B.pth"
+    else:
+        raise ValueError(f"Uknown noise_version [{noise_version}]")
+    assert os.path.isfile(str(state_fn))
+    return state_fn
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #

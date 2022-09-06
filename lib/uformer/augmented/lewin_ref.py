@@ -17,17 +17,23 @@ from .window_attn_ref import WindowAttentionRefactored
 from .window_attn_dnls import WindowAttentionDnls
 from .window_utils import window_partition,window_reverse
 from .product_attn import ProductAttention
+from .l2_attn import L2Attention
 
 def select_attn(attn_mode,sub_attn_mode):
     if attn_mode == "window":
         return select_window_attn(sub_attn_mode)
     elif attn_mode == "product":
         return select_prod_attn(sub_attn_mode)
+    elif attn_mode == "l2":
+        return select_l2_attn(sub_attn_mode)
     else:
         raise ValueError(f"Uknown window attn type [{attn_mode}]")
 
 def select_prod_attn(attn_mode):
     return ProductAttention
+
+def select_l2_attn(sub_attn_mode):
+    return L2Attention
 
 def select_window_attn(attn_mode):
     if attn_mode == "default":
@@ -84,7 +90,7 @@ class LeWinTransformerBlockRefactored(nn.Module):
                 dim, win_size=to_2tuple(self.win_size), num_heads=num_heads,
                 qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop,
                 proj_drop=drop, token_projection=token_projection)
-        elif main_attn_mode == "product":
+        elif main_attn_mode in ["product","l2"]:
             self.attn = attn_block(
                 dim, win_size=to_2tuple(self.win_size), num_heads=num_heads,
                 qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop,

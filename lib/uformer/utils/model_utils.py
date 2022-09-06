@@ -24,7 +24,8 @@ def is_frozen(model):
 
 def save_checkpoint(model_dir, state, session):
     epoch = state['epoch']
-    model_out_path = os.path.join(model_dir,"model_epoch_{}_{}.pth".format(epoch,session))
+    mpath = "model_epoch_{}_{}.pth".format(epoch,session)
+    model_out_path = os.path.join(model_dir,mpath)
     th.save(state, model_out_path)
 
 def load_checkpoint_qkv(model, weights):
