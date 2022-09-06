@@ -215,10 +215,9 @@ def main():
     # -- version 3 --
     exp_lists['use_train'] = ['true']
     exp_lists['load_pretrained'] = ['false']
+    exp_lists['filter_by_attn_pre'] = ['false']
     exp_lists['attn_mode'] = ["pd-w-w-w-w"]
-    exp_lists['chkpt'] = ["c3d30"]
-    # ['window_dnls','product_dnls',"pd-w-w-w-w"]
-    exp_lists['filter_by_attn_pre'] = ['true']
+    exp_lists['chkpt'] = ["ff05e9"]
     exps_c0 = cache_io.mesh_pydicts(exp_lists) # create mesh
     exp_lists['attn_mode'] = ["w-w-w-w-w"]
     exp_lists['load_pretrained'] = ['false']
@@ -275,8 +274,8 @@ def main():
         #     cache.clear_exp(uuid)
         # if exp.use_train == "true" and exp.attn_mode == "product_dnls":
         #     cache.clear_exp(uuid)
-        # if exp.use_train == "true" and exp.attn_mode == "pd-w-w-w-w":
-        #     cache.clear_exp(uuid)
+        if exp.use_train == "true" and exp.attn_mode == "pd-w-w-w-w":
+            cache.clear_exp(uuid)
         if exp.use_train == "true" and exp.attn_mode == "w-w-w-w-w":
             cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result
