@@ -37,12 +37,13 @@ def run_exp(_cfg):
     # -- init --
     cfg = copy.deepcopy(_cfg)
     cache_io.exp_strings2bools(cfg)
-    configs.set_seed(cfg.seed)
+
+    # -- init seed/device --
     th.cuda.set_device(int(cfg.device.split(":")[1]))
     configs.set_seed(cfg.seed)
 
     # -- load model --
-    model_cfg = uformer.extract_search(cfg)
+    model_cfg = uformer.extract_model_io(cfg)
     model = uformer.load_model(**model_cfg)
     load_checkpoint(model,cfg.use_train,cfg.chkpt_fn)
     imax = 255.

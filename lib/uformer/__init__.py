@@ -8,7 +8,8 @@ from . import configs
 
 # -- for loading model --
 from .utils.misc import optional
-from .utils.model_utils import extract_search # set input params
+# from .utils.model_utils import extract_model_io # set input params
+from .augmented import extract_model_io # set input params
 
 def load_model(*args,**kwargs):
     attn_mode = optional(kwargs,"attn_mode","product_dnls")

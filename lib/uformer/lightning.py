@@ -89,7 +89,7 @@ class UformerLit(pl.LightningModule):
         self.attn_mode = attn_mode
 
         # -- modify parameters for product_dnls learning --
-        # filter_rel_pos(self.net,self.attn_mode)
+        filter_rel_pos(self.net,self.attn_mode)
         # filter_product_attn_mods(self.net,"") # rm any rel pos from prod attn
         # if self.attn_mode == "product_dnls":
         #     # reset_product_attn_mods(self.net)

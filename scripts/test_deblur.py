@@ -1,6 +1,6 @@
 
 # -- misc --
-import os
+import os,copy
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -34,13 +34,17 @@ from uformer.utils.misc import optional,rslice_pair
 from uformer.utils.metrics import compute_psnrs,compute_ssims
 from uformer.utils.model_utils import temporal_chop,expand2square,load_checkpoint
 
-def run_exp(cfg):
+def run_exp(_cfg):
 
     # -- total time --
     timer0 = uformer.utils.timer.ExpTimer()
     timer0.start("total")
 
-    # -- set device --
+    # -- init --
+    cfg = copy.deepcopy(_cfg)
+    cache_io.exp_strings2bools(cfg)
+
+    # -- init seed/device --
     th.cuda.set_device(int(cfg.device.split(":")[1]))
     configs.set_seed(cfg.seed)
 
@@ -57,9 +61,9 @@ def run_exp(cfg):
     results.timer_deno = []
 
     # -- load model --
-    model_cfg = uformer.extract_search(cfg)
+    model_cfg = uformer.extract_model_io(cfg)
     model = uformer.load_model(**model_cfg)
-    substr = ""
+    substr = cfg.chkpt # note "" == most recent
     load_checkpoint(model,cfg.use_train,substr)
     imax = 255.
 
@@ -185,7 +189,7 @@ def main():
     dnames = ["gopro"]
     dset = ["te"]
     vid_names = ["%02d" % x for x in np.arange(0,40)]
-    vid_names = vid_names[1:2]
+    vid_names = vid_names[2:3]
 
     # dnames = ["set8"]
     # vid_names = ["park_joy"]
@@ -196,22 +200,31 @@ def main():
     isizes = ["none"]
     stride = [1]
     use_train = ["false"]
-    attn_mode_mix = ["pd-wd-wd-wd-wd","wd-wd-wd-wd-wd"]
+    attn_mode_mix = ["pd-w-w-w-w","w-w-w-w-w"]
     attn_mode = ["window_refactored","window_dnls","product_dnls"]+attn_mode_mix
-    exp_lists = {"dname":dnames,"vid_name":vid_names,"dset":dset,
-                 "flow":flow,"ws":ws,"wt":wt,"attn_mode":attn_mode,
-                 "isize":isizes,"stride":stride,"use_train":use_train,"k":k}
+    filter_by_attn = ["false"]
+    load_pretrained = ["true"]
+    chkpt = [""]
+    exp_lists = {"dname":dnames,"vid_name":vid_names,"dset":dset,"flow":flow,
+                 "ws":ws,"wt":wt,"attn_mode":attn_mode,"isize":isizes,
+                 "stride":stride,"use_train":use_train,"k":k,"chkpt":chkpt,
+                 "filter_by_attn":filter_by_attn,"load_pretrained":load_pretrained}
     exps_a = cache_io.mesh_pydicts(exp_lists) # create mesh
 
     # -- version 3 --
     exp_lists['use_train'] = ['true']
-    exp_lists['attn_mode'] = ['window_dnls','product_dnls']
+    exp_lists['load_pretrained'] = ['false']
+    exp_lists['attn_mode'] = ["pd-w-w-w-w"]
+    exp_lists['chkpt'] = ["c3d30"]
+    # ['window_dnls','product_dnls',"pd-w-w-w-w"]
+    exp_lists['filter_by_attn'] = ['true']
     exps_c0 = cache_io.mesh_pydicts(exp_lists) # create mesh
-    exp_lists['ws'] = [8]
-    exp_lists['k'] = [64]
-    exp_lists['attn_mode'] = ['product_dnls','window_dnls']
+    exp_lists['attn_mode'] = ["w-w-w-w-w"]
+    exp_lists['load_pretrained'] = ['false']
+    exp_lists['filter_by_attn'] = ['false']
+    exp_lists['chkpt'] = ["32887b"]
     exps_c1 = cache_io.mesh_pydicts(exp_lists) # create mesh
-    exps_c = exps_c0# + exps_c1
+    exps_c = exps_c0 + exps_c1
 
     # -- exps version 2 --
     exp_lists['ws'] = [-1]
@@ -221,6 +234,9 @@ def main():
     exp_lists['use_train'] = ["false"]
     exp_lists['stride'] = [1]
     exp_lists['attn_mode'] = ['original']
+    exp_lists['filter_by_attn'] = ['false']
+    exp_lists['load_pretrained'] = ['true']
+    exp_lists['chkpt'] = [""]
     exps_b = cache_io.mesh_pydicts(exp_lists) # create mesh
     exps = exps_b + exps_a + exps_c
 
@@ -256,7 +272,11 @@ def main():
         #     cache.clear_exp(uuid)
         # if exp.attn_mode == "product_dnls":
         #     cache.clear_exp(uuid)
-        if exp.use_train == "true" and exp.attn_mode == "product_dnls":
+        # if exp.use_train == "true" and exp.attn_mode == "product_dnls":
+        #     cache.clear_exp(uuid)
+        if exp.use_train == "true" and exp.attn_mode == "pd-w-w-w-w":
+            cache.clear_exp(uuid)
+        if exp.use_train == "true" and exp.attn_mode == "w-w-w-w-w":
             cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result
         if results is None: # check if no result

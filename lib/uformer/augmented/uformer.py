@@ -52,6 +52,7 @@ class Uformer(nn.Module):
         self.stride1 = stride1
         self.nbwd = nbwd
         self.exact = exact
+        self.bs = bs
 
         # -- unroll for each module --
         out = fields2blocks(attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
