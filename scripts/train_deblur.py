@@ -209,7 +209,7 @@ def main():
     cache_dir = ".cache_io"
     cache_name = "train_gopro"
     cache = cache_io.ExpCache(cache_dir,cache_name)
-    cache.clear()
+    # cache.clear()
 
     # -- search info --
     # exps = exps_menu.get_exp_mesh()
@@ -225,10 +225,10 @@ def main():
     # -- num to train --
     cfg.nsamples_tr = 0
     cfg.nsamples_val = 0
-    cfg.nframes = 1
+    cfg.nframes = 5
 
     # -- trainig --
-    cfg.batch_size_tr = 1
+    cfg.batch_size_tr = 3
     cfg.lr_init = 0.0002/100.
     cfg.weight_decay = 0.02
     cfg.nepochs = 250
