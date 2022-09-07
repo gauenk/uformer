@@ -13,21 +13,21 @@ from pathlib import Path
 from easydict import EasyDict as edict
 
 def dcat(dict1,dict2):
+    if dict2 is None: return
     for key,val in dict2.items():
         dict1[key] = val
 
 def exp_init(iexps = None, mode = "train"):
     if mode == "train":
-        return exps_train_init(iexps,mode)
+        return exp_train_init(iexps)
     elif mode == "test":
-        return exps_test_init(iexps,mode)
+        return exp_test_init(iexps)
     else:
         raise ValueError(f"Uknown mode [{mode}]")
 
 def exp_train_init(iexps = None):
     isize = ["128_128"]
-    expl = dcat(expl,iexps)
-
+    expl = {"isize":isize}
     dcat(expl,iexps)
     expl = exp_default_init(expl)
     return expl

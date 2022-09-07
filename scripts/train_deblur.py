@@ -103,6 +103,7 @@ def launch_training(_cfg):
     init_val_res_fn = save_dir / "init_val.pkl"
     write_pickle(init_val_res_fn,init_val_results)
     print(timer)
+    exit(0)
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     #
@@ -215,7 +216,7 @@ def main():
     # exps = exps_menu.get_exp_mesh()
     # exps = exps_menu.exps_motivate_paper()
     exps = exps_menu.exps_verify_new_code(mode="train")
-    exps = [exps[1]]
+    exps = [exps[0]]
     nexps = len(exps)
 
     # -- group with default --
