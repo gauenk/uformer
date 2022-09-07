@@ -279,6 +279,7 @@ def exps_motivate_paper():
     expl['ps'] = [1]
     expl['flow'] = ['false']
     expl['attn_mode'] = ['window_default']
+    expl['filter_by_attn_post'] = ["false"]
     exps = cache_io.mesh_pydicts(exp_lists)
 
     # -- ours [shifted search space] --
@@ -287,6 +288,7 @@ def exps_motivate_paper():
     expl['ps'] = [1]
     expl['flow'] = ['false']
     expl['attn_mode'] = ['product_dnls']
+    expl['filter_by_attn_post'] = ["false"]
     exps += cache_io.mesh_pydicts(exp_lists)
 
     # -- ours [fully non-local search] --
@@ -295,18 +297,16 @@ def exps_motivate_paper():
     expl['ps'] = [7]
     expl['flow'] = ['false']
     expl['attn_mode'] = ['product_dnls']
-    expl['filter_by_attn_post'] = ["false"]
+    expl['filter_by_attn_post'] = ["true"]
     exps += cache_io.mesh_pydicts(exp_lists)
 
     return exps
 
 def get_exp_mesh():
-
     exps = exps_impact_of_replacing_layers()
-    exps = exps_compare_attn_modes()
-    exps = exps_impact_of_time_search()
-    exps = exps_motivate_paper()
-
+    exps += exps_compare_attn_modes()
+    exps += exps_impact_of_time_search()
+    exps += exps_motivate_paper()
     return exps
 
 def main():
@@ -322,51 +322,9 @@ def main():
     cache.clear()
 
     # -- search info --
-    # attn_mode = ["product_dnls"]
-    # attn_mode = ["pd-pd-pd-pd-pd"]
-    # attn_mode = ["window_dnls"]
-    # attn_mode = ["wd-wd-wd-wd-wd"]
-    # attn_mode = ["window_default"]
-    # attn_mode = ["w-w-w-w-w"]
-    # attn_mode = ["ld-w-w-w-w"]
-
-    attn_mode = ["pd-w-w-w-w"]
-    freeze = ["f-f-t-t-t"]
-
-    # -- version 1 --
-    k = [-1]
-    ws = [8]
-    filter_by_attn_post = ["false"]
-
-    # -- version 2 --
-    # k = [64]
-    # ws = [29]
-    # filter_by_attn_post = ["false"]
-
-    # -- fixed mostly --
-    wt = [0]
-    ps = [1]
-    pt = [1]
-    stride0 = [1]
-    stride1 = [1]
-    dil = [1]
-    nbwd = [1]
-    rbwd = ["true"]
-    exact = ["false"]
-    bs = [-1]
-
-    # -- net info --
-    flow = ['false']
-    isize = ["128_128"]
-    load_pretrained = ["true"]
-
-    # -- grid --
-    exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,
-                 "pt":pt,"stride0":stride0,"stride1":stride1,"dil":dil,
-                 "nbwd":nbwd,"rbwd":rbwd,"exact":exact,"bs":bs,'flow':flow,
-                 "isize":isize,"load_pretrained":load_pretrained,
-                 "filter_by_attn_post":filter_by_attn_post,"freeze":freeze}
-    exps = cache_io.mesh_pydicts(exp_lists) # create mesh
+    # exps = get_exp_mesh()
+    exps = exps_motivate_paper()
+    exps = [exps[1]]
     nexps = len(exps)
 
     # -- group with default --
