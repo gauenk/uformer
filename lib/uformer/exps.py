@@ -1,0 +1,210 @@
+"""
+
+The experimental meshgrids used
+for training and testing in our project.
+
+"""
+
+# -- cache_io for meshgrid --
+import cache_io
+
+# -- data mngmnt --
+from pathlib import Path
+from easydict import EasyDict as edict
+
+def dcat(dict1,dict2):
+    for key,val in dict2.items():
+        dict1[key] = val
+
+def exps_train_init(iexps = None):
+    isize = ["128_128"]
+    expl = dcat(expl,iexps)
+
+    dcat(expl,iexps)
+    expl = exp_lists_init(expl)
+    return expl
+
+
+def exps_test_init(iexps = None):
+    chkpt = [""]
+    use_train = ['false']
+    expl = {"chkpt":chkpt,"use_train":use_train}
+
+    dcat(expl,iexps)
+    expl = exp_lists_init(expl)
+    return expl
+
+def exp_lists_init(iexps = None):
+    # -- input checking --
+    if iexps is None: iexps = {}
+    assert isinstance(iexps,dict),"Must be dict"
+
+    # -- defaults --
+    k,ws,ps,wt = [-1],[8],[1],[0]
+    filter_by_attn_pre = ["false"]
+    filter_by_attn_post = ["false"]
+    attn_mode = ["product_dnls"]
+    pt,stride0,stride1 = [1],[1],[1]
+    dil,nbwd = [1],[1]
+    rbwd,exact = ["true"],["false"]
+    bs,flow = [-1],['false']
+    load_pretrained = ["true"]
+    freeze = ["false"]
+
+    # -- grid --
+    exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,
+                 "pt":pt,"stride0":stride0,"stride1":stride1,"dil":dil,
+                 "nbwd":nbwd,"rbwd":rbwd,"exact":exact,"bs":bs,'flow':flow,
+                 "load_pretrained":load_pretrained,"freeze":freeze,
+                 "filter_by_attn_pre":filter_by_attn_pre,
+                 "filter_by_attn_post":filter_by_attn_post}
+    # -- apped new values --
+    dcat(exp_lists,iexps) # input overwrites defaults
+    return exp_lists
+
+def exps_impact_of_replacing_layers(iexps=None):
+    expl = exp_lists_init(iexps)
+    expl['attn_mode'] = ["pd-w-w-w-w"]
+    expl['freeze'] = ["f-f-t-t-t"]
+    exps = cache_io.mesh_pydicts(expl)
+    expl['attn_mode'] = ["w-w-w-w-pd"]
+    expl['freeze'] = ["t-t-t-f-f"]
+    exps += cache_io.mesh_pydicts(expl)
+    expl['attn_mode'] = ["pd-w-w-w-pd"]
+    expl['freeze'] = ["f-f-t-f-f"]
+    exps += cache_io.mesh_pydicts(expl)
+    expl['attn_mode'] = ["pd-pd-w-pd-pd"]
+    expl['freeze'] = ["f-f-f-f-f"]
+    exps += cache_io.mesh_pydicts(expl)
+    return exps
+
+def exps_compare_attn_modes(iexps=None):
+    expl = exp_lists_init(iexps)
+    expl['ws'] = [29]
+    expl['wt'] = [3]
+    expl['ps'] = [7]
+    expl['flow'] = ['true']
+    expl['attn_mode'] = ['product_dnls','l2_dnls'] # todo: "ca_squeeze" and "channel"
+    expl['load_pretrained'] = ['true']
+    expl['filter_by_attn_post'] = ['true']
+    exps = cache_io.mesh_pydicts(expl)
+    return exps
+
+def exps_impact_of_time_search(iexps=None):
+    expl = exp_lists_init(iexps)
+    expl['filter_by_attn_post'] = ['true']
+    expl['ws'] = [29]
+    expl['wt'] = [0,1,2,3]
+    expl['ps'] = [7]
+    expl['flow'] = ['true']
+    expl['attn_mode'] = ['product_dnls']
+    exps = cache_io.mesh_pydicts(expl)
+    expl['wt'] = [1,2,3]
+    expl['flow'] = ['false']
+    exps += cache_io.mesh_pydicts(expl)
+    return exps
+
+def exps_motivate_paper(iexps=None):
+    expl = exp_lists_init(iexps)
+
+    # -- standard --
+    expl['ws'] = [8]
+    expl['wt'] = [0]
+    expl['ps'] = [1]
+    expl['k'] = [-1]
+    expl['flow'] = ['false']
+    expl['attn_mode'] = ['window_default']
+    expl['filter_by_attn_post'] = ["false"]
+    exps = cache_io.mesh_pydicts(expl)
+
+    # -- ours [shifted search space] --
+    expl['ws'] = [8]
+    expl['wt'] = [0]
+    expl['ps'] = [1]
+    expl['k'] = [-1]
+    expl['flow'] = ['false']
+    expl['attn_mode'] = ['product_dnls']
+    # expl['attn_mode'] = ['pd-w-w-w-w']
+    expl['freeze'] = ["false"]
+    expl['filter_by_attn_post'] = ["false"]
+    exps += cache_io.mesh_pydicts(expl)
+
+    # -- ours [fully non-local search] --
+    expl['ws'] = [29]
+    expl['wt'] = [3]
+    expl['ps'] = [7]
+    expl['k'] = [64]
+    expl['flow'] = ['false']
+    expl['stride0'] = ["4-1-1-1-1"]
+    expl['stride1'] = ["4-1-1-1-1"]
+    # expl['stride0'] = [4]
+    # expl['stride1'] = [4]
+    # expl['attn_mode'] = ['product_dnls'] # too slow
+    expl['attn_mode'] = ['pd-w-w-w-w']
+    expl['freeze'] = ["f-f-t-t-t"]
+    expl['filter_by_attn_post'] = ["true"]
+    expl['dims_post'] = ["true"]
+    exps += cache_io.mesh_pydicts(expl)
+
+    return exps
+
+def exps_train_with_flow(iexps=None):
+    # -- ours [fully non-local search] --
+    expl = exp_lists_init(iexps)
+    expl['k'] = [64]
+    expl['ws'] = [29]
+    expl['wt'] = [0]
+    expl['ps'] = [7]
+    expl['flow'] = ['true','false']
+    expl['stride0'] = ["4-4-4-1-1"]
+    expl['stride1'] = ["4-4-4-1-1"]
+    expl['attn_mode'] = ['product_dnls']
+    expl['filter_by_attn_post'] = ["true"]
+    exps = cache_io.mesh_pydicts(expl)
+    return exps
+
+def exps_verify_new_code(iexps=None):
+
+    # -- init --
+    expl = exps_test_init(iexps)
+    # expl = exp_lists_init(iexps)
+
+    # -- check different attn modes --
+    expl['use_train'] = ['false']
+    expl['attn_mode'] = ["pd-w-w-w-w","w-w-w-w-w"]
+    expl['attn_mode'] += ["window_refactored"]
+    expl['attn_mode'] += ["product_dnls","window_dnls"]
+    exps = cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- load trained --
+    expl['use_train'] = ['true']
+
+    # -- version 1 --
+    expl['attn_mode'] = ["product_dnls"]
+    expl['chkpt'] = ["",
+                     "7a4b2288-99e4-4d0d-8c45-fa9e8de7d683-epoch=31.ckpt",
+                     "7a4b2288-99e4-4d0d-8c45-fa9e8de7d683-epoch=22.ckpt"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- version 1 --
+    expl['use_train'] = ['true']
+    expl['attn_mode'] = ["pd-w-w-w-w"]
+    expl['chkpt'] = ["ff05e9"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- verify they don't work on standard attn --
+    expl['use_train'] = ['true']
+    expl['attn_mode'] = ["w-w-w-w-w"]
+    expl['chkpt'] = ["32887b"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    return exps
+
+def get_exp_mesh(iexps=None):
+    exps = exps_impact_of_replacing_layers(iexps)
+    exps += exps_compare_attn_modes(iexps)
+    exps += exps_impact_of_time_search(iexps)
+    exps += exps_motivate_paper(iexps)
+    return exps
+
+
