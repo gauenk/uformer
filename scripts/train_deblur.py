@@ -103,7 +103,6 @@ def launch_training(_cfg):
     init_val_res_fn = save_dir / "init_val.pkl"
     write_pickle(init_val_res_fn,init_val_results)
     print(timer)
-    exit(0)
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     #
@@ -226,10 +225,10 @@ def main():
     # -- num to train --
     cfg.nsamples_tr = 0
     cfg.nsamples_val = 0
-    cfg.nframes = 5
+    cfg.nframes = 1
 
     # -- trainig --
-    cfg.batch_size_tr = 3
+    cfg.batch_size_tr = 1
     cfg.lr_init = 0.0002/100.
     cfg.weight_decay = 0.02
     cfg.nepochs = 250
