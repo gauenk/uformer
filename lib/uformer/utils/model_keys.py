@@ -12,7 +12,7 @@ def translate_values(field,in_values):
             v = translate_freeze(_v)
             out_values.append(v)
     else:
-        out_value = [int(v) for v in in_values]
+        out_values = [int(v) for v in in_values]
     return out_values
 
 def translate_freeze(_v):

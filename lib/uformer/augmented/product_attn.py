@@ -88,27 +88,30 @@ class ProductAttention(nn.Module):
         # -- attn map --
         ntotal = T*H*W
         dists,inds = search(q_vid,0,ntotal,k_vid)
-        # print("dists.shape: ",dists.shape)
-        dists = search.window_attn_mod(dists,rel_pos,mask,vid.shape)
+        if search.ws != 8: # don't match
+            dists = self.softmax(dists)
+        else:
+            dists = search.window_attn_mod(dists,rel_pos,mask,vid.shape)
         dists = self.attn_drop(dists)
 
         # -- prod with "v" --
         x = wpsum(v_vid,dists,inds)
-        x = rearrange(x,'(o n) h c 1 1 -> o n (h c)',o=ntotal)
+        ps = x.shape[-1]
+        x = rearrange(x,'(o n) h c ph pw -> (o ph pw) n (h c)',o=ntotal)
 
         # -- proj --
         x = self.proj(x)
         x = self.proj_drop(x)
 
         # -- prepare for folding --
-        x = rearrange(x,'o n c -> (o n) 1 1 c 1 1')
+        x = rearrange(x,'(o ph pw) n c -> (o n) 1 1 c ph pw',ph=ps,pw=ps)
         x = x.contiguous()
 
         # -- fold --
         fold(x,0)
 
         # -- unpack --
-        vid = fold.vid
+        vid = fold.vid / fold.zvid
         vid = rearrange(vid,'t c h w -> t h w c')
 
         return vid

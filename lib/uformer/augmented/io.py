@@ -113,9 +113,13 @@ def load_model(*args,**kwargs):
         elif "-" in attn_mode:
             load_checkpoint_mix_qkv(model,state_fn,attn_mode)
 
-    # -- apply network filters [before load] --
+    # -- apply network filters [after load] --
     if filter_by_attn_post:
         filter_rel_pos(model,attn_mode)
+
+    # -- apply dimensions [after load] --
+    # if dims_post:
+    #     filter_rel_pos(model,attn_mode)
 
     # -- eval mode as default --
     model.eval()

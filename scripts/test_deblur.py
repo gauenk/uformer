@@ -28,6 +28,7 @@ import cache_io
 
 # -- network --
 import uformer
+import uformer.exps as exps_menu
 from uformer import configs
 from uformer import lightning
 from uformer.utils.misc import optional,rslice_pair
@@ -62,6 +63,7 @@ def run_exp(_cfg):
 
     # -- load model --
     model_cfg = uformer.extract_model_io(cfg)
+    print(model_cfg)
     model = uformer.load_model(**model_cfg)
     substr = cfg.chkpt # note "" == most recent
     load_checkpoint(model,cfg.use_train,substr)
@@ -185,60 +187,13 @@ def main():
     cache = cache_io.ExpCache(cache_dir,cache_name)
     # cache.clear()
 
-    # -- get mesh --
-    dnames = ["gopro"]
-    dset = ["te"]
+    # -- get data mesh --
+    dname,dset = ["gopro"],["te"]
     vid_names = ["%02d" % x for x in np.arange(0,40)]
     vid_names = vid_names[2:3]
-
-    # dnames = ["set8"]
-    # vid_names = ["park_joy"]
-    # dset = ["te"]
-
-    flow = ["false"]
-    ws,wt,k = [8],[0],[-1]
-    isizes = ["none"]
-    stride = [1]
-    use_train = ["false"]
-    attn_mode_mix = ["pd-w-w-w-w","w-w-w-w-w"]
-    attn_mode = ["window_refactored","window_dnls","product_dnls"]+attn_mode_mix
-    filter_by_attn_pre = ["false"]
-    load_pretrained = ["true"]
-    chkpt = [""]
-    exp_lists = {"dname":dnames,"vid_name":vid_names,"dset":dset,"flow":flow,
-                 "ws":ws,"wt":wt,"attn_mode":attn_mode,"isize":isizes,
-                 "stride":stride,"use_train":use_train,"k":k,"chkpt":chkpt,
-                 "filter_by_attn_pre":filter_by_attn_pre,
-                 "load_pretrained":load_pretrained}
-    exps_a = cache_io.mesh_pydicts(exp_lists) # create mesh
-
-    # -- version 3 --
-    exp_lists['use_train'] = ['true']
-    exp_lists['load_pretrained'] = ['false']
-    exp_lists['filter_by_attn_pre'] = ['false']
-    exp_lists['attn_mode'] = ["pd-w-w-w-w"]
-    exp_lists['chkpt'] = ["ff05e9"]
-    exps_c0 = cache_io.mesh_pydicts(exp_lists) # create mesh
-    exp_lists['attn_mode'] = ["w-w-w-w-w"]
-    exp_lists['load_pretrained'] = ['false']
-    exp_lists['filter_by_attn_pre'] = ['false']
-    exp_lists['chkpt'] = ["32887b"]
-    exps_c1 = cache_io.mesh_pydicts(exp_lists) # create mesh
-    exps_c = exps_c0 + exps_c1
-
-    # -- exps version 2 --
-    exp_lists['ws'] = [-1]
-    exp_lists['wt'] = [-1]
-    exp_lists['k'] = [-1]
-    exp_lists['flow'] = ["false"]
-    exp_lists['use_train'] = ["false"]
-    exp_lists['stride'] = [1]
-    exp_lists['attn_mode'] = ['original']
-    exp_lists['filter_by_attn_pre'] = ['false']
-    exp_lists['load_pretrained'] = ['true']
-    exp_lists['chkpt'] = [""]
-    exps_b = cache_io.mesh_pydicts(exp_lists) # create mesh
-    exps = exps_b + exps_a + exps_c
+    iexps = {"dname":dname,"vid_name":vid_names,"dset":dset}
+    # exps = exps_menu.exps_motivate_paper(iexps)
+    exps = exps_menu.exps_verify_new_code(iexps)
 
     # -- group with default --
     cfg = configs.default_cfg()
@@ -272,8 +227,8 @@ def main():
         #     cache.clear_exp(uuid)
         # if exp.attn_mode == "product_dnls":
         #     cache.clear_exp(uuid)
-        # if exp.use_train == "true" and exp.attn_mode == "product_dnls":
-        #     cache.clear_exp(uuid)
+        if exp.use_train == "true" and exp.attn_mode == "product_dnls":
+            cache.clear_exp(uuid)
         if exp.use_train == "true" and exp.attn_mode == "pd-w-w-w-w":
             cache.clear_exp(uuid)
         if exp.use_train == "true" and exp.attn_mode == "w-w-w-w-w":
@@ -290,15 +245,14 @@ def main():
 
     for attn_mode,mdf in records.groupby("attn_mode"):
         for use_tr,tdf in mdf.groupby("use_train"):
-            for stride,sdf in tdf.groupby("stride"):
-                for vname,vdf in sdf.groupby("vid_name"):
-                    ssims = np.stack(np.array(vdf['ssims'])).ravel()
-                    psnrs = np.stack(np.array(vdf['psnrs'])).ravel()
-                    dtimes = np.stack(np.array(vdf['timer_deno'])).ravel()
-                    ssims_m = ssims.mean()
-                    psnrs_m = psnrs.mean()
-                    dtimes_m = dtimes.mean()
-                    print(attn_mode,use_tr,vname,stride,psnrs_m,ssims_m,dtimes)
+            for vname,vdf in tdf.groupby("vid_name"):
+                ssims = np.stack(np.array(vdf['ssims'])).ravel()
+                psnrs = np.stack(np.array(vdf['psnrs'])).ravel()
+                dtimes = np.stack(np.array(vdf['timer_deno'])).ravel()
+                ssims_m = ssims.mean()
+                psnrs_m = psnrs.mean()
+                dtimes_m = dtimes.mean()
+                print(attn_mode,use_tr,vname,psnrs_m,ssims_m,dtimes)
 
     exit(0)
 
