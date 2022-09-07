@@ -16,25 +16,32 @@ def dcat(dict1,dict2):
     for key,val in dict2.items():
         dict1[key] = val
 
-def exps_train_init(iexps = None):
+def exp_init(iexps = None, mode = "train"):
+    if mode == "train":
+        return exps_train_init(iexps,mode)
+    elif mode == "test":
+        return exps_test_init(iexps,mode)
+    else:
+        raise ValueError(f"Uknown mode [{mode}]")
+
+def exp_train_init(iexps = None):
     isize = ["128_128"]
     expl = dcat(expl,iexps)
 
     dcat(expl,iexps)
-    expl = exp_lists_init(expl)
+    expl = exp_default_init(expl)
     return expl
 
-
-def exps_test_init(iexps = None):
+def exp_test_init(iexps = None):
     chkpt = [""]
     use_train = ['false']
     expl = {"chkpt":chkpt,"use_train":use_train}
 
     dcat(expl,iexps)
-    expl = exp_lists_init(expl)
+    expl = exp_default_init(expl)
     return expl
 
-def exp_lists_init(iexps = None):
+def exp_default_init(iexps = None):
     # -- input checking --
     if iexps is None: iexps = {}
     assert isinstance(iexps,dict),"Must be dict"
@@ -63,7 +70,7 @@ def exp_lists_init(iexps = None):
     return exp_lists
 
 def exps_impact_of_replacing_layers(iexps=None):
-    expl = exp_lists_init(iexps)
+    expl = exp_init(iexps)
     expl['attn_mode'] = ["pd-w-w-w-w"]
     expl['freeze'] = ["f-f-t-t-t"]
     exps = cache_io.mesh_pydicts(expl)
@@ -79,7 +86,7 @@ def exps_impact_of_replacing_layers(iexps=None):
     return exps
 
 def exps_compare_attn_modes(iexps=None):
-    expl = exp_lists_init(iexps)
+    expl = exp_init(iexps)
     expl['ws'] = [29]
     expl['wt'] = [3]
     expl['ps'] = [7]
@@ -91,7 +98,7 @@ def exps_compare_attn_modes(iexps=None):
     return exps
 
 def exps_impact_of_time_search(iexps=None):
-    expl = exp_lists_init(iexps)
+    expl = exp_init(iexps)
     expl['filter_by_attn_post'] = ['true']
     expl['ws'] = [29]
     expl['wt'] = [0,1,2,3]
@@ -105,7 +112,7 @@ def exps_impact_of_time_search(iexps=None):
     return exps
 
 def exps_motivate_paper(iexps=None):
-    expl = exp_lists_init(iexps)
+    expl = exp_init(iexps)
 
     # -- standard --
     expl['ws'] = [8]
@@ -150,7 +157,7 @@ def exps_motivate_paper(iexps=None):
 
 def exps_train_with_flow(iexps=None):
     # -- ours [fully non-local search] --
-    expl = exp_lists_init(iexps)
+    expl = exp_init(iexps)
     expl['k'] = [64]
     expl['ws'] = [29]
     expl['wt'] = [0]
@@ -163,11 +170,24 @@ def exps_train_with_flow(iexps=None):
     exps = cache_io.mesh_pydicts(expl)
     return exps
 
-def exps_verify_new_code(iexps=None):
+def exps_verify_new_code(iexps=None,mode="train"):
+    if mode == "train":
+        return exps_verify_new_code_train(iexps)
+    elif mode == "test":
+        return exps_verify_new_code_test(iexps)
+    else:
+        raise ValueError("Unable to verify new code.")
+
+def exps_verify_new_code_train(iexps=None):
+    expl = exp_init(iexps,"train")
+    expl['attn_mode'] = ["product_dnls","pd-w-w-w-w"]
+    exps = cache_io.mesh_pydicts(expl) # create mesh
+    return exps
+
+def exps_verify_new_code_test(iexps=None):
 
     # -- init --
-    expl = exps_test_init(iexps)
-    # expl = exp_lists_init(iexps)
+    expl = exp_init(iexps,"test")
 
     # -- check different attn modes --
     expl['use_train'] = ['false']

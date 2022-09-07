@@ -213,7 +213,8 @@ def main():
 
     # -- search info --
     # exps = exps_menu.get_exp_mesh()
-    exps = exps_menu.exps_motivate_paper()
+    # exps = exps_menu.exps_motivate_paper()
+    exps = exps_menu.exps_verify_new_code(mode="train")
     exps = [exps[1]]
     nexps = len(exps)
 
