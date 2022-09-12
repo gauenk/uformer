@@ -180,8 +180,11 @@ def exps_verify_new_code(iexps=None,mode="train"):
 
 def exps_verify_new_code_train(iexps=None):
     expl = exp_init(iexps,"train")
-    expl['attn_mode'] = ["product_dnls","pd-w-w-w-w"]
+    expl['attn_mode'] = ["product_dnls"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
+    expl['attn_mode'] = ["pd-w-w-w-w"]
+    expl['freeze'] = ["false"]#t-t-f-f-f"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
     return exps
 
 def exps_verify_new_code_test(iexps=None):
@@ -204,17 +207,20 @@ def exps_verify_new_code_test(iexps=None):
     expl['chkpt'] = ["",
                      "7a4b2288-99e4-4d0d-8c45-fa9e8de7d683-epoch=31.ckpt",
                      "7a4b2288-99e4-4d0d-8c45-fa9e8de7d683-epoch=22.ckpt"]
+    expl['freeze'] = ["false"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
     # -- version 1 --
     expl['use_train'] = ['true']
     expl['attn_mode'] = ["pd-w-w-w-w"]
+    expl['freeze'] = ["f-f-t-t-t"]
     expl['chkpt'] = ["ff05e9"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
     # -- verify they don't work on standard attn --
     expl['use_train'] = ['true']
     expl['attn_mode'] = ["w-w-w-w-w"]
+    expl['freeze'] = ["false"]
     expl['chkpt'] = ["32887b"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
