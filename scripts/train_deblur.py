@@ -136,8 +136,8 @@ def launch_training(_cfg):
                          callbacks=[checkpoint_callback,cc_recent],
                          strategy="ddp_find_unused_parameters_false")
     timer.start("train")
-    ckpt_path=None
-    #ckpt_path="./output/checkpoints/00532928-a996-4f5f-8ccd-1c613e864060-epoch=00.ckpt"
+    # ckpt_path=None
+    ckpt_path="./output/checkpoints/5ef8b26e-378e-489c-b36f-39aeab807150-epoch=98.ckpt"
     trainer.fit(model, loaders.tr, loaders.val, ckpt_path=ckpt_path)
     timer.stop("train")
     best_model_path = checkpoint_callback.best_model_path
@@ -228,7 +228,7 @@ def main():
     cfg.nframes = 1
 
     # -- trainig --
-    cfg.batch_size_tr = 1
+    cfg.batch_size_tr = 16
     cfg.lr_init = 0.0002/100.
     cfg.weight_decay = 0.02
     cfg.nepochs = 250
