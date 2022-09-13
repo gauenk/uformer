@@ -15,7 +15,7 @@ from .uformer import Uformer
 # -- misc imports --
 from ..common import optional as _optional
 from ..utils.model_utils import load_checkpoint_module,load_checkpoint_qkv
-from ..utils.model_utils import load_checkpoint_mix_qkv
+# from ..utils.model_utils import load_checkpoint_mix_qkv
 from ..utils.model_utils import remove_lightning_load_state
 from ..utils.model_utils import filter_rel_pos
 
@@ -64,6 +64,7 @@ def load_model(*args,**kwargs):
 
     # -- relevant configs --
     attn_mode = optional(kwargs,'attn_mode',"window_dnls",init)
+    in_attn_mode = optional(kwargs,'in_attn_mode',"window_dnls",init)
     k = optional(kwargs,'k',-1,init)
     ps = optional(kwargs,'ps',1,init)
     pt = optional(kwargs,'pt',1,init)
@@ -81,6 +82,10 @@ def load_model(*args,**kwargs):
     filter_by_attn_pre = optional(kwargs,"filter_by_attn_pre",False,init)
     filter_by_attn_post = optional(kwargs,"filter_by_attn_post",False,init)
     load_pretrained = optional(kwargs,"load_pretrained",True,init)
+    pretrained_path = optional(kwargs,"pretrained_path","",init)
+    pretrained_prefix = optional(kwargs,"pretrained_prefix","module.",init)
+    pretrained_qkv = optional(kwargs,"pretrained_qkv","lin2conv",init)
+    reset_qkv = optional(kwargs,"reset_qkv",False,init)
 
     # -- break here if init --
     if init: return
@@ -100,18 +105,14 @@ def load_model(*args,**kwargs):
     if filter_by_attn_pre:
         filter_rel_pos(model,attn_mode)
 
-
     # -- load weight --
     if load_pretrained:
-        state_fn = pretrained_path(noise_version)
-        if "_" in attn_mode:
-            main_mode,sub_mode = attn_mode.split("_")
-            if attn_mode in ["window_default","window_refactored"]:
-                load_checkpoint_module(model,state_fn)
-            else:
-                load_checkpoint_qkv(model,state_fn)
-        elif "-" in attn_mode:
-            load_checkpoint_mix_qkv(model,state_fn,attn_mode)
+        prefix = pretrained_prefix
+        state_fn = get_pretrained_path(noise_version,pretrained_path)
+        out_attn_mode = attn_mode
+        print("Loading pretrained file: %s" % str(state_fn))
+        load_checkpoint_qkv(model,state_fn,in_attn_mode,
+                            out_attn_mode,prefix=prefix,reset=reset_qkv)
 
     # -- apply network filters [after load] --
     if filter_by_attn_post:
@@ -130,7 +131,8 @@ def load_model(*args,**kwargs):
 load_model(__init=True)
 
 
-def pretrained_path(noise_version):
+def get_pretrained_path(noise_version,optional_path):
+    if optional_path != "": return optional_path
     fdir = Path(__file__).absolute().parents[0] / "../../../" # parent of "./lib"
     lit = False
     if noise_version == "noise":

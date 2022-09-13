@@ -136,8 +136,7 @@ def launch_training(_cfg):
                          callbacks=[checkpoint_callback,cc_recent],
                          strategy="ddp_find_unused_parameters_false")
     timer.start("train")
-    # ckpt_path=None
-    ckpt_path="./output/checkpoints/5ef8b26e-378e-489c-b36f-39aeab807150-epoch=98.ckpt"
+    ckpt_path=None
     trainer.fit(model, loaders.tr, loaders.val, ckpt_path=ckpt_path)
     timer.stop("train")
     best_model_path = checkpoint_callback.best_model_path
@@ -215,7 +214,7 @@ def main():
     # exps = exps_menu.get_exp_mesh()
     # exps = exps_menu.exps_motivate_paper()
     exps = exps_menu.exps_verify_new_code(mode="train")
-    exps = [exps[0]]
+    exps = [exps[3]]
     nexps = len(exps)
 
     # -- group with default --
@@ -229,11 +228,16 @@ def main():
 
     # -- trainig --
     cfg.batch_size_tr = 16
-    cfg.lr_init = 0.0002/100.
+    cfg.lr_init = 0.0002/10.
     cfg.weight_decay = 0.02
     cfg.nepochs = 250
     cfg.warmup_epochs = 0
     cfg.noise_version="blur" # fixed.
+    cfg.pretrained_path = "./output/checkpoints/0dffce4c-326a-4152-a2de-5517c53d0ac8-epoch=87.ckpt"
+    cfg.pretrained_prefix = "net."
+    cfg.in_attn_mode = "pd-pd-w-w-w" # the loaded attn mode
+    cfg.reset_qkv = True
+    # cfg.load_pretrained = "false"
 
     # -- mix --
     cache_io.append_configs(exps,cfg) # merge the two

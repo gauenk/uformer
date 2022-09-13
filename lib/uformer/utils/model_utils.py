@@ -2,13 +2,14 @@ import math
 import torch as th
 import torch.nn as nn
 import os
-from collections import OrderedDict
 import copy
 ccopy = copy.copy
 from einops import repeat
 from pathlib import Path
+from collections import OrderedDict
 
 from .model_keys import translate_attn_mode,expand_attn_mode
+from .qkv_convert import qkv_convert_state,block_name2num
 
 def freeze(model):
     for p in model.parameters():
@@ -28,141 +29,14 @@ def save_checkpoint(model_dir, state, session):
     model_out_path = os.path.join(model_dir,mpath)
     th.save(state, model_out_path)
 
-def load_checkpoint_qkv(model, weights):
+
+def load_checkpoint_qkv(model, weights,in_attn_modes, out_attn_modes,
+                        prefix="module.",reset=False):
     checkpoint = th.load(weights)
     state_dict = checkpoint["state_dict"]
-    new_state_dict = OrderedDict()
-    for k, v in state_dict.items():
-        # -- standard mod --
-        name = k[7:] if 'module.' in k else k
-        if not("attn.qkv" in name):
-            new_state_dict[name] = v
-
-        # -- mod qkv --
-        if "attn.qkv" in name:
-            if "to_q" in name:
-                if "weight" in name:
-                    new_state_dict[name] = v.data[:,:,None,None]
-                elif "bias" in name:
-                    new_state_dict[name] = v.data
-            elif "to_kv" in name:
-                if "weight" in name:
-                    # -- shapes --
-                    half = v.shape[0]//2
-
-                    # -- create v --
-                    name_v = ccopy(name)
-                    name_v = name_v.replace("to_kv","to_k")
-                    new_state_dict[name_v] = v[:half,:,None,None]
-
-                    # -- create k --
-                    name_k = ccopy(name)
-                    name_k = name_k.replace("to_kv","to_v")
-                    new_state_dict[name_k] = v[half:,:,None,None]
-
-                if "bias" in name:
-                    # -- shapes --
-                    half = v.shape[0]//2
-
-                    # -- create v --
-                    name_v = ccopy(name)
-                    name_v = name_v.replace("to_kv","to_k")
-                    new_state_dict[name_v] = v[:half,...]
-
-                    # -- create k --
-                    name_k = ccopy(name)
-                    name_k = name_k.replace("to_kv","to_v")
-                    new_state_dict[name_k] = v[half:,...]
-            else:
-                print("What??")
-                print(name)
-
-    model.load_state_dict(new_state_dict)
-
-def block_name2num(name):
-
-    # -- how to compute id --
-    fields = ["encoderlayer","decoderlayer",
-              "dowsample","upsample"]
-    use_split = False
-    for field in fields:
-        use_split = use_split or field in name
-
-    # -- compute id --
-    if use_split:
-        encdec,encdec_id = name.split("_")
-        if encdec == "encoderlayer":
-            return int(encdec_id)
-        elif encdec == "decoderlayer":
-            return 3 - int(encdec_id)
-        elif encdec == "dowsample":
-            return int(encdec_id)
-        elif encdec == "upsample":
-            return int(encdec_id)
-        else:
-            raise ValueError(f"Uknown name [{name}]")
-    elif name == "conv":
-        return 4
-    else:
-        return -1
-        # raise ValueError(f"Uknown name [{name}]")
-
-def load_checkpoint_mix_qkv(model, weights, in_attn_modes):
-    attn_modes = in_attn_modes.split("-")
-    attn_modes = [translate_attn_mode(a) for a in attn_modes]
-    checkpoint = th.load(weights)
-    state_dict = checkpoint["state_dict"]
-    new_state_dict = OrderedDict()
-    for k, v in state_dict.items():
-        # -- standard mod --
-        name = k[7:] if 'module.' in k else k
-        if not("attn.qkv" in name):
-            new_state_dict[name] = v
-
-        # -- mod qkv --
-        if "attn.qkv" in name:
-            block_name = name.split(".")[0]
-            l = block_name2num(block_name)
-            if attn_modes[l] in ["window_default","window_refactored"]:
-                new_state_dict[name] = v
-            else:
-                if "to_q" in name:
-                    if "weight" in name:
-                        new_state_dict[name] = v.data[:,:,None,None]
-                    elif "bias" in name:
-                        new_state_dict[name] = v.data
-                elif "to_kv" in name:
-                    if "weight" in name:
-                        # -- shapes --
-                        half = v.shape[0]//2
-
-                        # -- create v --
-                        name_v = ccopy(name)
-                        name_v = name_v.replace("to_kv","to_k")
-                        new_state_dict[name_v] = v[:half,:,None,None]
-
-                        # -- create k --
-                        name_k = ccopy(name)
-                        name_k = name_k.replace("to_kv","to_v")
-                        new_state_dict[name_k] = v[half:,:,None,None]
-
-                    if "bias" in name:
-                        # -- shapes --
-                        half = v.shape[0]//2
-
-                        # -- create v --
-                        name_v = ccopy(name)
-                        name_v = name_v.replace("to_kv","to_k")
-                        new_state_dict[name_v] = v[:half,...]
-
-                        # -- create k --
-                        name_k = ccopy(name)
-                        name_k = name_k.replace("to_kv","to_v")
-                        new_state_dict[name_k] = v[half:,...]
-                else:
-                    print("What??")
-                    print(name)
-
+    new_state_dict = qkv_convert_state(
+        state_dict,in_attn_modes,out_attn_modes,
+        prefix=prefix,reset=reset)
     model.load_state_dict(new_state_dict)
 
 def load_checkpoint_module(model, weights):
@@ -349,6 +223,7 @@ def apply_freeze(model,freeze):
     if freeze is False: return
     unset_names = []
     for name,param in model.named_parameters():
+        # print(name)
         bname = name.split(".")[0]
         bnum = block_name2num(bname)
         if bnum == -1: unset_names.append(name)

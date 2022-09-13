@@ -33,6 +33,7 @@ from uformer.utils.metrics import compute_psnrs,compute_ssims
 from uformer.utils.misc import rslice,write_pickle,read_pickle
 from uformer.utils.model_utils import filter_rel_pos
 from uformer.utils.model_utils import reset_product_attn_mods
+# from uformer.utils.model_utils import qkv_convert_state
 
 # -- learning --
 from uformer.warmup_scheduler import GradualWarmupScheduler
@@ -206,7 +207,7 @@ class UformerLit(pl.LightningModule):
         # exit(0)
 
         # -- report loss --
-        eps = 1e-3
+        eps = 0#1e-3
         diff = th.sqrt((clean - deno)**2 + eps**2)
         loss = th.mean(diff)
 

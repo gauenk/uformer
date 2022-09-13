@@ -18,7 +18,7 @@ def translate_values(field,in_values):
 def translate_freeze(_v):
     return _v == "t"
 
-def translate_attn_mode(_v):
+def translate_attn_mode(_v): # keys under "augmented/lewin_ref.py"
     if _v == "pd":
         v = "product_dnls"
     elif _v == "ld":

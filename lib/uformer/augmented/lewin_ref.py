@@ -36,7 +36,7 @@ def select_l2_attn(sub_attn_mode):
     return L2Attention
 
 def select_window_attn(attn_mode):
-    if attn_mode == "default":
+    if attn_mode == "default" or attn_mode == "original":
         return WindowAttention
     elif attn_mode == "refactored":
         return WindowAttentionRefactored

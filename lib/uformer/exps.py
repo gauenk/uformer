@@ -57,12 +57,19 @@ def exp_default_init(iexps = None):
     bs,flow = [-1],['false']
     load_pretrained = ["true"]
     freeze = ["false"]
+    pretrained_path = [""]
+    pretrained_prefix = ["module."]
+    in_attn_mode = ["window_default"] # original attn mode
 
     # -- grid --
     exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,
                  "pt":pt,"stride0":stride0,"stride1":stride1,"dil":dil,
                  "nbwd":nbwd,"rbwd":rbwd,"exact":exact,"bs":bs,'flow':flow,
-                 "load_pretrained":load_pretrained,"freeze":freeze,
+                 "load_pretrained":load_pretrained,
+                 "pretrained_path":pretrained_path,
+                 "pretrained_prefix":pretrained_prefix,
+                 "in_attn_mode":in_attn_mode,
+                 "freeze":freeze,
                  "filter_by_attn_pre":filter_by_attn_pre,
                  "filter_by_attn_post":filter_by_attn_post}
     # -- apped new values --
@@ -180,8 +187,21 @@ def exps_verify_new_code(iexps=None,mode="train"):
 
 def exps_verify_new_code_train(iexps=None):
     expl = exp_init(iexps,"train")
-    expl['attn_mode'] = ["product_dnls","pd-w-w-w-w"]
+    expl['attn_mode'] = ["product_dnls"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
+    expl['attn_mode'] = ["pd-w-w-w-w"]
+    expl['freeze'] = ["false"]#t-t-f-f-f"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+    expl['attn_mode'] = ["pd-pd-w-w-w"]
+    # expl['filter_by_attn_post'] = ["true"]
+    expl['load_pretrained'] = ["true"]
+    expl['freeze'] = ["false"]#t-t-f-f-f"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+    expl['attn_mode'] = ["w-w-w-w-w"]
+    # expl['filter_by_attn_post'] = ["true"]
+    expl['load_pretrained'] = ["true"]
+    expl['freeze'] = ["false"]#t-t-f-f-f"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
     return exps
 
 def exps_verify_new_code_test(iexps=None):
@@ -200,19 +220,30 @@ def exps_verify_new_code_test(iexps=None):
     expl['use_train'] = ['true']
 
     # -- version 1 --
-    expl['attn_mode'] = ["product_dnls"]
-    expl['chkpt'] = [""]
+    # expl['attn_mode'] = ["product_dnls"]
+    # expl['chkpt'] = ["",
+    #                  "7a4b2288-99e4-4d0d-8c45-fa9e8de7d683-epoch=31.ckpt",
+    #                  "7a4b2288-99e4-4d0d-8c45-fa9e8de7d683-epoch=22.ckpt"]
+    # expl['freeze'] = ["false"]
+    # exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- version 1 --
+    expl['attn_mode'] = ["pd-pd-w-w-w"]
+    expl['chkpt'] = ["53e93459"]
+    expl['freeze'] = ["false"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
     # -- version 1 --
     expl['use_train'] = ['true']
     expl['attn_mode'] = ["pd-w-w-w-w"]
-    expl['chkpt'] = ["b89bcb"]#,"c485a994"]#,"ff05e9"]
+    expl['freeze'] = ["false"]
+    expl['chkpt'] = ["af24a06e"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
     # -- verify they don't work on standard attn --
     # expl['use_train'] = ['true']
     # expl['attn_mode'] = ["w-w-w-w-w"]
+    # expl['freeze'] = ["false"]
     # expl['chkpt'] = ["32887b"]
     # exps += cache_io.mesh_pydicts(expl) # create mesh
 

@@ -190,10 +190,10 @@ def main():
     # -- get data mesh --
     dname,dset = ["gopro"],["te"]
     vid_names = ["%02d" % x for x in np.arange(0,40)]
-    vid_names = vid_names[2:3]
+    vid_names = vid_names[2:3]#5]
     iexps = {"dname":dname,"vid_name":vid_names,"dset":dset}
-    # exps = exps_menu.exps_motivate_paper(iexps)
-    exps = exps_menu.exps_verify_new_code(iexps)
+    # exps = exps_menu.exps_motivate_paper(iexps,mode="test")
+    exps = exps_menu.exps_verify_new_code(iexps,mode="test")
 
     # -- group with default --
     cfg = configs.default_cfg()
@@ -227,12 +227,14 @@ def main():
         #     cache.clear_exp(uuid)
         # if exp.attn_mode == "product_dnls":
         #     cache.clear_exp(uuid)
-        if exp.use_train == "true" and exp.attn_mode == "product_dnls":
+        # if exp.use_train == "true" and exp.attn_mode == "product_dnls":
+        #     cache.clear_exp(uuid)
+        # if exp.use_train == "true" and exp.attn_mode == "pd-w-w-w-w":
+        #     cache.clear_exp(uuid)
+        if exp.use_train == "true" and exp.attn_mode == "pd-pd-w-w-w":
             cache.clear_exp(uuid)
-        if exp.use_train == "true" and exp.attn_mode == "pd-w-w-w-w":
-            cache.clear_exp(uuid)
-        if exp.use_train == "true" and exp.attn_mode == "w-w-w-w-w":
-            cache.clear_exp(uuid)
+        # if exp.use_train == "true" and exp.attn_mode == "w-w-w-w-w":
+        #     cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result
         if results is None: # check if no result
             exp.uuid = uuid
