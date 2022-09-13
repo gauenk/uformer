@@ -240,12 +240,12 @@ def exps_verify_new_code_test(iexps=None):
     expl['chkpt'] = ["af24a06e"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
-    # -- verify they don't work on standard attn --
-    # expl['use_train'] = ['true']
-    # expl['attn_mode'] = ["w-w-w-w-w"]
-    # expl['freeze'] = ["false"]
-    # expl['chkpt'] = ["32887b"]
-    # exps += cache_io.mesh_pydicts(expl) # create mesh
+    # -- show weights on original --
+    expl['use_train'] = ['true']
+    expl['attn_mode'] = ["w-w-w-w-w"]
+    expl['freeze'] = ["false"]
+    expl['chkpt'] = [""]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
 
     return exps
 
