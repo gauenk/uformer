@@ -207,7 +207,7 @@ class UformerLit(pl.LightningModule):
         # exit(0)
 
         # -- report loss --
-        eps = 0#1e-3
+        eps = 1e-3
         diff = th.sqrt((clean - deno)**2 + eps**2)
         loss = th.mean(diff)
 

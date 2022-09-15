@@ -129,7 +129,7 @@ def launch_training(_cfg):
                                 dirpath=cfg.checkpoint_dir,filename=chkpt_fn)
     # swa_callback = StochasticWeightAveraging(swa_lrs=1e-4)
     trainer = pl.Trainer(accelerator="gpu",devices=2,precision=32,
-                         accumulate_grad_batches=1,
+                         accumulate_grad_batches=3,
                          limit_train_batches=250,limit_val_batches=5,
                          max_epochs=cfg.nepochs-1,log_every_n_steps=1,
                          logger=logger,gradient_clip_val=0.0,
@@ -214,7 +214,7 @@ def main():
     # exps = exps_menu.get_exp_mesh()
     # exps = exps_menu.exps_motivate_paper()
     exps = exps_menu.exps_verify_new_code(mode="train")
-    exps = [exps[3]]
+    exps = [exps[2]]
     nexps = len(exps)
 
     # -- group with default --
@@ -227,8 +227,8 @@ def main():
     cfg.nframes = 1
 
     # -- trainig --
-    cfg.batch_size_tr = 16
-    cfg.lr_init = 0.0002/10.
+    cfg.batch_size_tr = 5
+    cfg.lr_init = 0.0002/50.
     cfg.weight_decay = 0.02
     cfg.nepochs = 250
     cfg.warmup_epochs = 0
@@ -236,6 +236,8 @@ def main():
     cfg.pretrained_path = "./output/checkpoints/0dffce4c-326a-4152-a2de-5517c53d0ac8-epoch=87.ckpt"
     cfg.pretrained_prefix = "net."
     cfg.in_attn_mode = "pd-pd-w-w-w" # the loaded attn mode
+    cfg.attn_mode = "w-w-w-w-w"
+    # cfg.attn_mode = "pd-pd-w-w-w"
     cfg.reset_qkv = True
     # cfg.load_pretrained = "false"
 

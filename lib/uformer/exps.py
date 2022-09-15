@@ -26,7 +26,7 @@ def exp_init(iexps = None, mode = "train"):
         raise ValueError(f"Uknown mode [{mode}]")
 
 def exp_train_init(iexps = None):
-    isize = ["128_128"]
+    isize = ["256_256"]
     expl = {"isize":isize}
     dcat(expl,iexps)
     expl = exp_default_init(expl)
@@ -229,7 +229,7 @@ def exps_verify_new_code_test(iexps=None):
 
     # -- version 1 --
     expl['attn_mode'] = ["pd-pd-w-w-w"]
-    expl['chkpt'] = ["53e93459"]
+    expl['chkpt'] = [""]
     expl['freeze'] = ["false"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 

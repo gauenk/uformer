@@ -181,9 +181,10 @@ def qkv_convert_state(state_dict,in_attn_modes,out_attn_modes,
             in_mode = get_attn_mode_cat(in_attn_modes[l])
             out_mode = get_attn_mode_cat(out_attn_modes[l])
             # print(l,in_mode,out_mode)
+            no_match = in_mode != out_mode
 
-            # -- reset values --
-            if reset:
+            # -- reset values if not equal --
+            if reset and no_match:
                 val.data[...] = th.randn_like(val.data).clip(-1,1)
 
             # -- if matching --
