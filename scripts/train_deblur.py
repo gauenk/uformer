@@ -130,7 +130,7 @@ def launch_training(_cfg):
     # swa_callback = StochasticWeightAveraging(swa_lrs=1e-4)
     trainer = pl.Trainer(accelerator="gpu",devices=2,precision=32,
                          accumulate_grad_batches=3,
-                         limit_train_batches=250,limit_val_batches=5,
+                         limit_train_batches=.5,limit_val_batches=5,
                          max_epochs=cfg.nepochs-1,log_every_n_steps=1,
                          logger=logger,gradient_clip_val=0.0,
                          callbacks=[checkpoint_callback,cc_recent],
@@ -228,17 +228,20 @@ def main():
 
     # -- trainig --
     cfg.batch_size_tr = 5
-    cfg.lr_init = 0.0002/50.
+    cfg.lr_init = 0.0002/1.
     cfg.weight_decay = 0.02
     cfg.nepochs = 250
     cfg.warmup_epochs = 0
     cfg.noise_version="blur" # fixed.
-    cfg.pretrained_path = "./output/checkpoints/0dffce4c-326a-4152-a2de-5517c53d0ac8-epoch=87.ckpt"
+    # cfg.pretrained_path = "./output/checkpoints/0dffce4c-326a-4152-a2de-5517c53d0ac8-epoch=87.ckpt"
+    # cfg.pretrained_path = "./output/checkpoints/aeeaf451-53ae-4923-9dba-a93f6c12b6f3-epoch=33.ckpt"
+    cfg.pretrained_path = "./output/checkpoints/3b6d0601-2b39-41c5-b60c-49b9d75e5c6a-epoch=107.ckpt"
     cfg.pretrained_prefix = "net."
     cfg.in_attn_mode = "pd-pd-w-w-w" # the loaded attn mode
-    cfg.attn_mode = "w-w-w-w-w"
-    # cfg.attn_mode = "pd-pd-w-w-w"
-    cfg.reset_qkv = True
+    # cfg.attn_mode = "w-w-w-w-w"
+    cfg.attn_mode = "pd-pd-w-w-w"
+    cfg.reset_qkv = False
+    # cfg.reset_qkv = True
     # cfg.load_pretrained = "false"
 
     # -- mix --

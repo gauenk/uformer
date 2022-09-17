@@ -231,7 +231,7 @@ def main():
         #     cache.clear_exp(uuid)
         # if exp.use_train == "true" and exp.attn_mode == "pd-w-w-w-w":
         #     cache.clear_exp(uuid)
-        if exp.attn_mode == "pd-pd-w-w-w": continue
+        # if exp.attn_mode == "pd-pd-w-w-w": continue
         # if exp.use_train == "true" and exp.attn_mode == "pd-pd-w-w-w":
         #     cache.clear_exp(uuid)
         if exp.use_train == "true" and exp.attn_mode == "w-w-w-w-w":
