@@ -213,19 +213,23 @@ def exps_verify_new_code_test(iexps=None):
     expl['use_train'] = ['false']
     expl['attn_mode'] = ["pd-w-w-w-w","w-w-w-w-w"]
     expl['attn_mode'] += ["window_refactored"]
-    expl['attn_mode'] += ["product_dnls","window_dnls"]
+    # expl['attn_mode'] += ["product_dnls","window_dnls"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
 
     # -- load trained --
     expl['use_train'] = ['true']
 
     # -- version 1 --
-    # expl['attn_mode'] = ["product_dnls"]
+    expl['attn_mode'] = ["product_dnls"]
+    expl['use_train'] = ["false"]
+    expl['load_pretrained'] = ["false"]
     # expl['chkpt'] = ["",
     #                  "7a4b2288-99e4-4d0d-8c45-fa9e8de7d683-epoch=31.ckpt",
     #                  "7a4b2288-99e4-4d0d-8c45-fa9e8de7d683-epoch=22.ckpt"]
-    # expl['freeze'] = ["false"]
-    # exps += cache_io.mesh_pydicts(expl) # create mesh
+    expl['freeze'] = ["false"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+    expl['load_pretrained'] = ["true"]
+    expl['use_train'] = ["true"]
 
     # -- version 1 --
     expl['attn_mode'] = ["pd-pd-w-w-w"]

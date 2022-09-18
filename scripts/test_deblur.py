@@ -203,6 +203,10 @@ def main():
     cfg.frame_end = cfg.frame_start + cfg.nframes - 1
     # cfg.isize = "256_256"
     cfg.noise_version = "blur"
+    # cfg.chkpt = ""
+    # cfg.use_train = "false"
+    # cfg.load_pretrained = "false"
+    cfg.embed_dim_pd = 9
     cache_io.append_configs(exps,cfg) # merge the two
 
     # -- run exps --
@@ -232,8 +236,10 @@ def main():
         # if exp.use_train == "true" and exp.attn_mode == "pd-w-w-w-w":
         #     cache.clear_exp(uuid)
         # if exp.attn_mode == "pd-pd-w-w-w": continue
-        if exp.use_train == "true" and exp.attn_mode == "pd-pd-w-w-w":
-            cache.clear_exp(uuid)
+        # if exp.use_train == "false" and exp.attn_mode == "pd-pd-w-w-w":
+        #     cache.clear_exp(uuid)
+        # if exp.use_train == "true" and exp.attn_mode == "pd-pd-w-w-w":
+        #     cache.clear_exp(uuid)
         # if exp.use_train == "true" and exp.attn_mode == "w-w-w-w-w":
         #     cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result

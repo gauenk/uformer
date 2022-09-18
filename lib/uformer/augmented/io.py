@@ -52,7 +52,8 @@ def load_model(*args,**kwargs):
     device = optional(kwargs,'device','cuda:0',init)
 
     # -- other configs --
-    embed_dim = optional(kwargs,'embed_dim',32,init)
+    embed_dim_w = optional(kwargs,'embed_dim_w',32,init)
+    embed_dim_pd = optional(kwargs,'embed_dim_pd',9,init)
     win_size = optional(kwargs,'win_size',8,init)
     mlp_ratio = optional(kwargs,'mlp_ratio',4,init)
     qkv_bias = optional(kwargs,'qkv_bias',True,init)
@@ -91,14 +92,15 @@ def load_model(*args,**kwargs):
     if init: return
 
     # -- init model --
-    model = Uformer(img_size=input_size, in_chans=nchnls, embed_dim=embed_dim,
-                    depths=depths, win_size=win_size, mlp_ratio=mlp_ratio,
+    model = Uformer(img_size=input_size, in_chans=nchnls, depths=depths,
+                    win_size=win_size, mlp_ratio=mlp_ratio,
                     qkv_bias=qkv_bias, token_projection=token_projection,
                     token_mlp=token_mlp,modulator=modulator,
                     cross_modulator=cross_modulator,dd_in=dd_in,
                     attn_mode=attn_mode,ps=ps,pt=pt,ws=ws,wt=wt,k=k,
                     stride0=stride0,stride1=stride1,
-                    nbwd=nbwd,rbwd=rbwd,exact=exact,bs=bs,freeze=freeze)
+                    nbwd=nbwd,rbwd=rbwd,exact=exact,bs=bs,freeze=freeze,
+                    embed_dim_w=embed_dim_w,embed_dim_pd=embed_dim_pd)
     model = model.to(device)
 
     # -- apply network filters [before load] --

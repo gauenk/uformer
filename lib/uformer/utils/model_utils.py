@@ -231,3 +231,17 @@ def apply_freeze(model,freeze):
         if freeze_b is True:
             param.requires_grad_(False)
     # print(unset_names)
+
+# -- embed dims --
+def expand_embed_dims(attn_modes,embed_dim_w,embed_dim_pd):
+    exp_embed_dims = []
+    for attn_mode in attn_modes:
+        # print("attn_mode: ",attn_mode)
+        if "window" in attn_mode:
+            exp_embed_dims.append(embed_dim_w)
+        elif "product" in attn_mode:
+            exp_embed_dims.append(embed_dim_pd)
+        else:
+            raise ValueError(f"Uknown attn_mode [{attn_mode}]")
+    assert len(exp_embed_dims) == 5
+    return exp_embed_dims

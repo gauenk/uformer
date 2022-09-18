@@ -13,11 +13,11 @@ from .basic_uformer import BasicUformerLayer
 from .scaling import Downsample,Upsample
 from .parse import fields2blocks
 from ..utils.model_utils import apply_freeze
-
+from ..utils.model_utils import expand_embed_dims
 
 class Uformer(nn.Module):
     def __init__(self, img_size=256, in_chans=3, dd_in=3,
-                 embed_dim=32, depths=[2, 2, 2, 2, 2, 2, 2, 2, 2],
+                 depths=[2, 2, 2, 2, 2, 2, 2, 2, 2],
                  num_heads=[1, 2, 4, 8, 16, 16, 8, 4, 2],
                  win_size=8, mlp_ratio=4., qkv_bias=True, qk_scale=None,
                  drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1,
@@ -27,12 +27,13 @@ class Uformer(nn.Module):
                  modulator=False, cross_modulator=False,
                  attn_mode="default", k=-1, ps=1, pt=1, ws=8,
                  wt=0, dil=1, stride0=1, stride1=1, nbwd=1, rbwd=False,
-                 exact=False, bs=-1, freeze=False, **kwargs):
+                 exact=False, bs=-1, freeze=False,
+                 embed_dim_pd=32, embed_dim_w=32, **kwargs):
         super().__init__()
 
+        # -- init --
         self.num_enc_layers = len(depths)//2
         self.num_dec_layers = len(depths)//2
-        self.embed_dim = embed_dim
         self.patch_norm = patch_norm
         self.mlp_ratio = mlp_ratio
         self.token_projection = token_projection
@@ -63,6 +64,10 @@ class Uformer(nn.Module):
         nbwd,rbwd,exact,bs,freeze = out[9:]
         self.freeze = freeze
 
+        # -- expand embed dims --
+        edims = expand_embed_dims(attn_mode,embed_dim_w,embed_dim_pd)
+        # print(edims)
+
         # stochastic depth
         enc_dpr = [x.item() for x in th.linspace(0, drop_path_rate,
                                                     sum(depths[:self.num_enc_layers]))]
@@ -72,19 +77,19 @@ class Uformer(nn.Module):
         # build layers
 
         # Input/Output
-        self.input_proj = InputProj(in_channel=dd_in, out_channel=embed_dim,
+        self.input_proj = InputProj(in_channel=dd_in, out_channel=edims[0],
                                     kernel_size=3, stride=1, act_layer=nn.LeakyReLU)
-        self.output_proj = OutputProj(in_channel=2*embed_dim,
+        self.output_proj = OutputProj(in_channel=2*edims[0],
                                       out_channel=in_chans, kernel_size=3, stride=1)
 
         # Encoder
         l = 0
-        self.encoderlayer_0 = BasicUformerLayer(dim=embed_dim,
-                            output_dim=embed_dim,
+        self.encoderlayer_0 = BasicUformerLayer(dim=edims[l],
+                            output_dim=edims[l],
                             input_resolution=(img_size,
                                                 img_size),
-                            depth=depths[0],
-                            num_heads=num_heads[0],
+                            depth=depths[l],
+                            num_heads=num_heads[l],
                             win_size=win_size,
                             mlp_ratio=self.mlp_ratio,
                             qkv_bias=qkv_bias, qk_scale=qk_scale,
@@ -98,15 +103,15 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.dowsample_0 = dowsample(embed_dim, embed_dim*2)
+        self.dowsample_0 = dowsample(edims[l], edims[l+1]*2)
 
         l = 1
-        self.encoderlayer_1 = BasicUformerLayer(dim=embed_dim*2,
-                            output_dim=embed_dim*2,
+        self.encoderlayer_1 = BasicUformerLayer(dim=edims[l]*2,
+                            output_dim=edims[l]*2,
                             input_resolution=(img_size // 2,
                                                 img_size // 2),
-                            depth=depths[1],
-                            num_heads=num_heads[1],
+                            depth=depths[l],
+                            num_heads=num_heads[l],
                             win_size=win_size,
                             mlp_ratio=self.mlp_ratio,
                             qkv_bias=qkv_bias, qk_scale=qk_scale,
@@ -120,11 +125,11 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.dowsample_1 = dowsample(embed_dim*2, embed_dim*4)
+        self.dowsample_1 = dowsample(edims[l]*2, edims[l+1]*4)
 
         l = 2
-        self.encoderlayer_2 = BasicUformerLayer(dim=embed_dim*4,
-                            output_dim=embed_dim*4,
+        self.encoderlayer_2 = BasicUformerLayer(dim=edims[l]*4,
+                            output_dim=edims[l]*4,
                             input_resolution=(img_size // (2 ** 2),
                                                 img_size // (2 ** 2)),
                             depth=depths[2],
@@ -142,11 +147,11 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.dowsample_2 = dowsample(embed_dim*4, embed_dim*8)
+        self.dowsample_2 = dowsample(edims[l]*4, edims[l+1]*8)
 
         l = 3
-        self.encoderlayer_3 = BasicUformerLayer(dim=embed_dim*8,
-                            output_dim=embed_dim*8,
+        self.encoderlayer_3 = BasicUformerLayer(dim=edims[l]*8,
+                            output_dim=edims[l]*8,
                             input_resolution=(img_size // (2 ** 3),
                                                 img_size // (2 ** 3)),
                             depth=depths[3],
@@ -164,16 +169,16 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.dowsample_3 = dowsample(embed_dim*8, embed_dim*16)
+        self.dowsample_3 = dowsample(edims[l]*8, edims[l+1]*16)
 
         # Bottleneck
         l = 4
-        self.conv = BasicUformerLayer(dim=embed_dim*16,
-                            output_dim=embed_dim*16,
-                            input_resolution=(img_size // (2 ** 4),
-                                                img_size // (2 ** 4)),
-                            depth=depths[4],
-                            num_heads=num_heads[4],
+        self.conv = BasicUformerLayer(dim=edims[l]*16,
+                            output_dim=edims[l]*16,
+                            input_resolution=(img_size // (2 ** l),
+                                                img_size // (2 ** l)),
+                            depth=depths[l],
+                            num_heads=num_heads[l],
                             win_size=win_size,
                             mlp_ratio=self.mlp_ratio,
                             qkv_bias=qkv_bias, qk_scale=qk_scale,
@@ -187,12 +192,12 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
+        self.upsample_0 = upsample(edims[l]*16, edims[l-1]*8)
 
         # Decoder
         l = 3
-        self.upsample_0 = upsample(embed_dim*16, embed_dim*8)
-        self.decoderlayer_0 = BasicUformerLayer(dim=embed_dim*16,
-                            output_dim=embed_dim*16,
+        self.decoderlayer_0 = BasicUformerLayer(dim=edims[l]*16,
+                            output_dim=edims[l]*16,
                             input_resolution=(img_size // (2 ** 3),
                                                 img_size // (2 ** 3)),
                             depth=depths[5],
@@ -211,11 +216,11 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.upsample_1 = upsample(embed_dim*16, embed_dim*4)
+        self.upsample_1 = upsample(edims[l]*16, edims[l-1]*4)
 
         l = 2
-        self.decoderlayer_1 = BasicUformerLayer(dim=embed_dim*8,
-                            output_dim=embed_dim*8,
+        self.decoderlayer_1 = BasicUformerLayer(dim=edims[l]*8,
+                            output_dim=edims[l]*8,
                             input_resolution=(img_size // (2 ** 2),
                                                 img_size // (2 ** 2)),
                             depth=depths[6],
@@ -234,11 +239,11 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.upsample_2 = upsample(embed_dim*8, embed_dim*2)
+        self.upsample_2 = upsample(edims[l]*8, edims[l-1]*2)
 
         l = 1
-        self.decoderlayer_2 = BasicUformerLayer(dim=embed_dim*4,
-                            output_dim=embed_dim*4,
+        self.decoderlayer_2 = BasicUformerLayer(dim=edims[l]*4,
+                            output_dim=edims[l]*4,
                             input_resolution=(img_size // 2,
                                                 img_size // 2),
                             depth=depths[7],
@@ -257,11 +262,11 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.upsample_3 = upsample(embed_dim*4, embed_dim)
+        self.upsample_3 = upsample(edims[l]*4, edims[l-1])
 
         l = 0
-        self.decoderlayer_3 = BasicUformerLayer(dim=embed_dim*2,
-                            output_dim=embed_dim*2,
+        self.decoderlayer_3 = BasicUformerLayer(dim=edims[l]*2,
+                            output_dim=edims[l]*2,
                             input_resolution=(img_size,
                                                 img_size),
                             depth=depths[8],
@@ -314,46 +319,55 @@ class Uformer(nn.Module):
 
         #Encoder
         conv0 = self.encoderlayer_0(y,h,w,mask=mask)
+        # print(conv0.shape)
         pool0 = self.dowsample_0(conv0)
         _h,_w = h//2,w//2
         conv1 = self.encoderlayer_1(pool0,_h,_w,mask=mask)
+        # print(conv1.shape)
         pool1 = self.dowsample_1(conv1)
         _h,_w = h//(2**2),w//(2**2)
         conv2 = self.encoderlayer_2(pool1,_h,_w,mask=mask)
+        # print(conv2.shape)
         pool2 = self.dowsample_2(conv2)
         _h,_w = h//(2**3),w//(2**3)
         conv3 = self.encoderlayer_3(pool2,_h,_w,mask=mask)
+        # print(conv3.shape)
         pool3 = self.dowsample_3(conv3)
 
         # Bottleneck
         _h,_w = h//(2**4),w//(2**4)
         conv4 = self.conv(pool3, _h, _w, mask=mask)
+        # print(conv4.shape)
 
         #Decoder
         _h,_w = h//(2**3),w//(2**3)
         up0 = self.upsample_0(conv4)
         deconv0 = th.cat([up0,conv3],-1)
         deconv0 = self.decoderlayer_0(deconv0,_h,_w,mask=mask)
+        # print(deconv0.shape)
 
         _h,_w = h//(2**2),w//(2**2)
         up1 = self.upsample_1(deconv0)
         deconv1 = th.cat([up1,conv2],-1)
         deconv1 = self.decoderlayer_1(deconv1,_h,_w,mask=mask)
-        del deconv0
-        th.cuda.empty_cache()
+        # print(deconv1.shape)
+        # del deconv0
+        # th.cuda.empty_cache()
 
         _h,_w = h//(2**1),w//(2**1)
         up2 = self.upsample_2(deconv1)
         deconv2 = th.cat([up2,conv1],-1)
         deconv2 = self.decoderlayer_2(deconv2,_h,_w,mask=mask)
-        del deconv1
-        th.cuda.empty_cache()
+        # print(deconv2.shape)
+        # del deconv1
+        # th.cuda.empty_cache()
 
         up3 = self.upsample_3(deconv2)
         deconv3 = th.cat([up3,conv0],-1)
         deconv3 = self.decoderlayer_3(deconv3,h,w,mask=mask)
-        del deconv2
-        th.cuda.empty_cache()
+        # print(deconv3.shape)
+        # del deconv2
+        # th.cuda.empty_cache()
 
         # Output Projection
         y = self.output_proj(deconv3)
