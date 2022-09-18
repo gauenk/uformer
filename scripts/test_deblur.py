@@ -206,7 +206,7 @@ def main():
     # cfg.chkpt = ""
     # cfg.use_train = "false"
     # cfg.load_pretrained = "false"
-    cfg.embed_dim_pd = 9
+    # cfg.embed_dim_pd = 32
     cache_io.append_configs(exps,cfg) # merge the two
 
     # -- run exps --

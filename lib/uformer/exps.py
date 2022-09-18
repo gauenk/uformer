@@ -60,18 +60,16 @@ def exp_default_init(iexps = None):
     pretrained_path = [""]
     pretrained_prefix = ["module."]
     in_attn_mode = ["window_default"] # original attn mode
+    embed_dim = [32]
 
     # -- grid --
     exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,
                  "pt":pt,"stride0":stride0,"stride1":stride1,"dil":dil,
                  "nbwd":nbwd,"rbwd":rbwd,"exact":exact,"bs":bs,'flow':flow,
-                 "load_pretrained":load_pretrained,
-                 "pretrained_path":pretrained_path,
-                 "pretrained_prefix":pretrained_prefix,
-                 "in_attn_mode":in_attn_mode,
-                 "freeze":freeze,
-                 "filter_by_attn_pre":filter_by_attn_pre,
-                 "filter_by_attn_post":filter_by_attn_post}
+                 "load_pretrained":load_pretrained,"pretrained_path":pretrained_path,
+                 "pretrained_prefix":pretrained_prefix,"in_attn_mode":in_attn_mode,
+                 "freeze":freeze,"filter_by_attn_pre":filter_by_attn_pre,
+                 "filter_by_attn_post":filter_by_attn_post,"embed_dim":embed_dim}
     # -- apped new values --
     dcat(exp_lists,iexps) # input overwrites defaults
     return exp_lists
@@ -144,20 +142,36 @@ def exps_motivate_paper(iexps=None):
     exps += cache_io.mesh_pydicts(expl)
 
     # -- ours [fully non-local search] --
-    expl['ws'] = [29]
-    expl['wt'] = [3]
-    expl['ps'] = [7]
+    # expl['ws'] = [29]
+    # expl['wt'] = [3]
+    # expl['ps'] = [7]
+    # expl['k'] = [64]
+    # expl['flow'] = ['false']
+    # expl['stride0'] = ["4-1-1-1-1"]
+    # expl['stride1'] = ["4-1-1-1-1"]
+    # expl['embed_dim_pd'] = [32]
+    # expl['embed_dim_w'] = [32]
+    # # expl['stride0'] = [4]
+    # # expl['stride1'] = [4]
+    # # expl['attn_mode'] = ['product_dnls'] # too slow
+    # expl['attn_mode'] = ['pd-w-w-w-w']
+    # expl['freeze'] = ["f-f-t-t-t"]
+    # expl['filter_by_attn_post'] = ["true"]
+    # exps += cache_io.mesh_pydicts(expl)
+
+
+    # -- ours [fully non-local search on edges] --
+    expl['ws'] = ["29-29-8-8-8"]
+    expl['wt'] = ["3-3-0-0-0"]
+    expl['ps'] = ["7-7-1-1-1"]
     expl['k'] = [64]
     expl['flow'] = ['false']
-    expl['stride0'] = ["4-1-1-1-1"]
-    expl['stride1'] = ["4-1-1-1-1"]
-    # expl['stride0'] = [4]
-    # expl['stride1'] = [4]
-    # expl['attn_mode'] = ['product_dnls'] # too slow
-    expl['attn_mode'] = ['pd-w-w-w-w']
-    expl['freeze'] = ["f-f-t-t-t"]
+    expl['stride0'] = ["4-4-1-1-1"]
+    expl['stride1'] = ["4-4-1-1-1"]
+    expl['embed_dim'] = ["9-9-32-32-32"]
+    expl['attn_mode'] = ['pd-pd-pd-pd-pd']
+    expl['freeze'] = ["false"]
     expl['filter_by_attn_post'] = ["true"]
-    expl['dims_post'] = ["true"]
     exps += cache_io.mesh_pydicts(expl)
 
     return exps

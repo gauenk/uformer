@@ -52,8 +52,7 @@ def load_model(*args,**kwargs):
     device = optional(kwargs,'device','cuda:0',init)
 
     # -- other configs --
-    embed_dim_w = optional(kwargs,'embed_dim_w',32,init)
-    embed_dim_pd = optional(kwargs,'embed_dim_pd',9,init)
+    embed_dim = optional(kwargs,'embed_dim',32,init)
     win_size = optional(kwargs,'win_size',8,init)
     mlp_ratio = optional(kwargs,'mlp_ratio',4,init)
     qkv_bias = optional(kwargs,'qkv_bias',True,init)
@@ -100,7 +99,7 @@ def load_model(*args,**kwargs):
                     attn_mode=attn_mode,ps=ps,pt=pt,ws=ws,wt=wt,k=k,
                     stride0=stride0,stride1=stride1,
                     nbwd=nbwd,rbwd=rbwd,exact=exact,bs=bs,freeze=freeze,
-                    embed_dim_w=embed_dim_w,embed_dim_pd=embed_dim_pd)
+                    embed_dim=embed_dim)
     model = model.to(device)
 
     # -- apply network filters [before load] --
@@ -119,10 +118,6 @@ def load_model(*args,**kwargs):
     # -- apply network filters [after load] --
     if filter_by_attn_post:
         filter_rel_pos(model,attn_mode)
-
-    # -- apply dimensions [after load] --
-    # if dims_post:
-    #     filter_rel_pos(model,attn_mode)
 
     # -- eval mode as default --
     model.eval()

@@ -13,7 +13,7 @@ from .basic_uformer import BasicUformerLayer
 from .scaling import Downsample,Upsample
 from .parse import fields2blocks
 from ..utils.model_utils import apply_freeze
-from ..utils.model_utils import expand_embed_dims
+# from ..utils.model_utils import expand_embed_dims
 
 class Uformer(nn.Module):
     def __init__(self, img_size=256, in_chans=3, dd_in=3,
@@ -28,7 +28,7 @@ class Uformer(nn.Module):
                  attn_mode="default", k=-1, ps=1, pt=1, ws=8,
                  wt=0, dil=1, stride0=1, stride1=1, nbwd=1, rbwd=False,
                  exact=False, bs=-1, freeze=False,
-                 embed_dim_pd=32, embed_dim_w=32, **kwargs):
+                 embed_dim=32, **kwargs):
         super().__init__()
 
         # -- init --
@@ -59,14 +59,10 @@ class Uformer(nn.Module):
 
         # -- unroll for each module --
         out = fields2blocks(attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
-                            nbwd,rbwd,exact,bs,freeze)
+                            nbwd,rbwd,exact,bs,embed_dim,freeze)
         attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1 = out[:9]
-        nbwd,rbwd,exact,bs,freeze = out[9:]
+        nbwd,rbwd,exact,bs,embed_dim,freeze = out[9:]
         self.freeze = freeze
-
-        # -- expand embed dims --
-        edims = expand_embed_dims(attn_mode,embed_dim_w,embed_dim_pd)
-        # print(edims)
 
         # stochastic depth
         enc_dpr = [x.item() for x in th.linspace(0, drop_path_rate,
@@ -77,15 +73,15 @@ class Uformer(nn.Module):
         # build layers
 
         # Input/Output
-        self.input_proj = InputProj(in_channel=dd_in, out_channel=edims[0],
+        self.input_proj = InputProj(in_channel=dd_in, out_channel=embed_dim[0],
                                     kernel_size=3, stride=1, act_layer=nn.LeakyReLU)
-        self.output_proj = OutputProj(in_channel=2*edims[0],
+        self.output_proj = OutputProj(in_channel=2*embed_dim[0],
                                       out_channel=in_chans, kernel_size=3, stride=1)
 
         # Encoder
         l = 0
-        self.encoderlayer_0 = BasicUformerLayer(dim=edims[l],
-                            output_dim=edims[l],
+        self.encoderlayer_0 = BasicUformerLayer(dim=embed_dim[l],
+                            output_dim=embed_dim[l],
                             input_resolution=(img_size,
                                                 img_size),
                             depth=depths[l],
@@ -103,11 +99,11 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.dowsample_0 = dowsample(edims[l], edims[l+1]*2)
+        self.dowsample_0 = dowsample(embed_dim[l], embed_dim[l+1]*2)
 
         l = 1
-        self.encoderlayer_1 = BasicUformerLayer(dim=edims[l]*2,
-                            output_dim=edims[l]*2,
+        self.encoderlayer_1 = BasicUformerLayer(dim=embed_dim[l]*2,
+                            output_dim=embed_dim[l]*2,
                             input_resolution=(img_size // 2,
                                                 img_size // 2),
                             depth=depths[l],
@@ -125,11 +121,11 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.dowsample_1 = dowsample(edims[l]*2, edims[l+1]*4)
+        self.dowsample_1 = dowsample(embed_dim[l]*2, embed_dim[l+1]*4)
 
         l = 2
-        self.encoderlayer_2 = BasicUformerLayer(dim=edims[l]*4,
-                            output_dim=edims[l]*4,
+        self.encoderlayer_2 = BasicUformerLayer(dim=embed_dim[l]*4,
+                            output_dim=embed_dim[l]*4,
                             input_resolution=(img_size // (2 ** 2),
                                                 img_size // (2 ** 2)),
                             depth=depths[2],
@@ -147,11 +143,11 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.dowsample_2 = dowsample(edims[l]*4, edims[l+1]*8)
+        self.dowsample_2 = dowsample(embed_dim[l]*4, embed_dim[l+1]*8)
 
         l = 3
-        self.encoderlayer_3 = BasicUformerLayer(dim=edims[l]*8,
-                            output_dim=edims[l]*8,
+        self.encoderlayer_3 = BasicUformerLayer(dim=embed_dim[l]*8,
+                            output_dim=embed_dim[l]*8,
                             input_resolution=(img_size // (2 ** 3),
                                                 img_size // (2 ** 3)),
                             depth=depths[3],
@@ -169,12 +165,12 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.dowsample_3 = dowsample(edims[l]*8, edims[l+1]*16)
+        self.dowsample_3 = dowsample(embed_dim[l]*8, embed_dim[l+1]*16)
 
         # Bottleneck
         l = 4
-        self.conv = BasicUformerLayer(dim=edims[l]*16,
-                            output_dim=edims[l]*16,
+        self.conv = BasicUformerLayer(dim=embed_dim[l]*16,
+                            output_dim=embed_dim[l]*16,
                             input_resolution=(img_size // (2 ** l),
                                                 img_size // (2 ** l)),
                             depth=depths[l],
@@ -192,12 +188,12 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.upsample_0 = upsample(edims[l]*16, edims[l-1]*8)
+        self.upsample_0 = upsample(embed_dim[l]*16, embed_dim[l-1]*8)
 
         # Decoder
         l = 3
-        self.decoderlayer_0 = BasicUformerLayer(dim=edims[l]*16,
-                            output_dim=edims[l]*16,
+        self.decoderlayer_0 = BasicUformerLayer(dim=embed_dim[l]*16,
+                            output_dim=embed_dim[l]*16,
                             input_resolution=(img_size // (2 ** 3),
                                                 img_size // (2 ** 3)),
                             depth=depths[5],
@@ -216,11 +212,11 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.upsample_1 = upsample(edims[l]*16, edims[l-1]*4)
+        self.upsample_1 = upsample(embed_dim[l]*16, embed_dim[l-1]*4)
 
         l = 2
-        self.decoderlayer_1 = BasicUformerLayer(dim=edims[l]*8,
-                            output_dim=edims[l]*8,
+        self.decoderlayer_1 = BasicUformerLayer(dim=embed_dim[l]*8,
+                            output_dim=embed_dim[l]*8,
                             input_resolution=(img_size // (2 ** 2),
                                                 img_size // (2 ** 2)),
                             depth=depths[6],
@@ -239,11 +235,11 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.upsample_2 = upsample(edims[l]*8, edims[l-1]*2)
+        self.upsample_2 = upsample(embed_dim[l]*8, embed_dim[l-1]*2)
 
         l = 1
-        self.decoderlayer_2 = BasicUformerLayer(dim=edims[l]*4,
-                            output_dim=edims[l]*4,
+        self.decoderlayer_2 = BasicUformerLayer(dim=embed_dim[l]*4,
+                            output_dim=embed_dim[l]*4,
                             input_resolution=(img_size // 2,
                                                 img_size // 2),
                             depth=depths[7],
@@ -262,11 +258,11 @@ class Uformer(nn.Module):
                             ws=ws[l], wt=wt[l], dil=dil[l],
                             stride0=stride0[l], stride1=stride1[l],
                             nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.upsample_3 = upsample(edims[l]*4, edims[l-1])
+        self.upsample_3 = upsample(embed_dim[l]*4, embed_dim[l-1])
 
         l = 0
-        self.decoderlayer_3 = BasicUformerLayer(dim=edims[l]*2,
-                            output_dim=edims[l]*2,
+        self.decoderlayer_3 = BasicUformerLayer(dim=embed_dim[l]*2,
+                            output_dim=embed_dim[l]*2,
                             input_resolution=(img_size,
                                                 img_size),
                             depth=depths[8],
