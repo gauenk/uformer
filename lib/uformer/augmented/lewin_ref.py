@@ -171,7 +171,7 @@ class LeWinTransformerBlockRefactored(nn.Module):
             x = shortcut + x_cross
 
         shortcut = x
-        print("x.shape: ",x.shape)
+        # print("x.shape: ",x.shape)
         x = self.norm1(x)
         x = x.view(B, H, W, C)
 

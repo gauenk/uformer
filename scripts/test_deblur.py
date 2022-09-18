@@ -207,6 +207,7 @@ def main():
     # cfg.use_train = "false"
     # cfg.load_pretrained = "false"
     # cfg.embed_dim_pd = 32
+    cfg.embed_dim = 9
     cache_io.append_configs(exps,cfg) # merge the two
 
     # -- run exps --
@@ -229,8 +230,8 @@ def main():
         #     cache.clear_exp(uuid)
         # if exp.attn_mode == "aug_dnls":
         #     cache.clear_exp(uuid)
-        # if exp.attn_mode == "product_dnls":
-        #     cache.clear_exp(uuid)
+        if exp.attn_mode == "product_dnls":
+            cache.clear_exp(uuid)
         # if exp.use_train == "true" and exp.attn_mode == "product_dnls":
         #     cache.clear_exp(uuid)
         # if exp.use_train == "true" and exp.attn_mode == "pd-w-w-w-w":

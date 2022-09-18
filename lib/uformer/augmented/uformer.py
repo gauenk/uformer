@@ -63,6 +63,7 @@ class Uformer(nn.Module):
         attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1 = out[:9]
         nbwd,rbwd,exact,bs,embed_dim,freeze = out[9:]
         self.freeze = freeze
+        # print(embed_dim)
 
         # stochastic depth
         enc_dpr = [x.item() for x in th.linspace(0, drop_path_rate,
