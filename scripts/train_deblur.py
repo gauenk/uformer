@@ -214,8 +214,6 @@ def main():
     # exps = exps_menu.get_exp_mesh()
     # exps = exps_menu.exps_motivate_paper()
     exps = exps_menu.exps_verify_new_code(mode="train")
-    exps = [exps[2]]
-    nexps = len(exps)
 
     # -- group with default --
     cfg = configs.default_train_cfg()
@@ -235,12 +233,31 @@ def main():
     cfg.noise_version="blur" # fixed.
     # cfg.pretrained_path = "./output/checkpoints/0dffce4c-326a-4152-a2de-5517c53d0ac8-epoch=87.ckpt"
     # cfg.pretrained_path = "./output/checkpoints/aeeaf451-53ae-4923-9dba-a93f6c12b6f3-epoch=33.ckpt"
-    cfg.pretrained_path = "./output/checkpoints/3b6d0601-2b39-41c5-b60c-49b9d75e5c6a-epoch=107.ckpt"
-    cfg.pretrained_prefix = "net."
-    cfg.in_attn_mode = "pd-pd-w-w-w" # the loaded attn mode
-    # cfg.attn_mode = "w-w-w-w-w"
-    cfg.attn_mode = "pd-pd-w-w-w"
-    cfg.reset_qkv = False
+
+    # -- [running 0] --
+    run0 = False
+    if run0:
+        cfg.pretrained_path = "./output/checkpoints/3b6d0601-2b39-41c5-b60c-49b9d75e5c6a-epoch=107.ckpt"
+        cfg.pretrained_prefix = "net."
+        cfg.in_attn_mode = "pd-pd-w-w-w" # the loaded attn mode
+        cfg.attn_mode = "pd-pd-w-w-w"
+        cfg.reset_qkv = False
+
+    # -- [running 1] --
+    run1 = True
+    if run1:
+        cfg.load_pretrained = "false"
+        cfg.pretrained_path = "./output/checkpoints/3b6d0601-2b39-41c5-b60c-49b9d75e5c6a-epoch=107.ckpt"
+        cfg.pretrained_prefix = "net."
+        cfg.in_attn_mode = "pd-pd-pd-pd-pd" # the loaded attn mode
+        cfg.attn_mode = "pd-pd-pd-pd-pd"
+        cfg.reset_qkv = True
+
+    # -- pick an exp --
+    # exps = [exps[2]] # run0
+    exps = [exps[3]] # run1
+    nexps = len(exps)
+
     # cfg.reset_qkv = True
     # cfg.load_pretrained = "false"
 
