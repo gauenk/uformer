@@ -2,6 +2,7 @@
 # -- misc --
 import sys,os,copy
 from pathlib import Path
+from functools import partial
 
 # -- torch --
 import torch as th
@@ -21,7 +22,7 @@ from ..utils.model_utils import filter_rel_pos
 
 # -- auto populate fields to extract config --
 _fields = []
-def optional(pydict,field,default,init):
+def optional_full(init,pydict,field,default):
     if not(field in _fields) and init:
         _fields.append(field)
     return _optional(pydict,field,default)
@@ -31,6 +32,7 @@ def load_model(*args,**kwargs):
 
     # -- allows for all keys to be aggregated at init --
     init = _optional(kwargs,'__init',False) # purposefully weird key
+    optional = partial(optional_full,init)
 
     # -- defaults changed by noise version --
     noise_version = optional(kwargs,'noise_version',"noise",init)
@@ -46,46 +48,46 @@ def load_model(*args,**kwargs):
         raise ValueError(f"Uknown noise version [{noise_version}]")
 
     # -- get cfg --
-    nchnls = optional(kwargs,'nchnls',3,init)
-    input_size = optional(kwargs,'input_size',128,init)
-    depths = optional(kwargs,'input_depth',default_depth,init)
-    device = optional(kwargs,'device','cuda:0',init)
+    nchnls = optional(kwargs,'nchnls',3)
+    input_size = optional(kwargs,'input_size',128)
+    depths = optional(kwargs,'input_depth',default_depth)
+    device = optional(kwargs,'device','cuda:0')
 
     # -- other configs --
-    embed_dim = optional(kwargs,'embed_dim',32,init)
-    win_size = optional(kwargs,'win_size',8,init)
-    mlp_ratio = optional(kwargs,'mlp_ratio',4,init)
-    qkv_bias = optional(kwargs,'qkv_bias',True,init)
-    token_projection = optional(kwargs,'token_projection','linear',init)
-    token_mlp = optional(kwargs,'token_mlp','leff',init)
-    modulator = optional(kwargs,'modulator',default_modulator,init)
-    cross_modulator = optional(kwargs,'cross_modulator',False,init)
-    dd_in = optional(kwargs,'dd_in',3,init)
+    embed_dim = optional(kwargs,'embed_dim',32)
+    win_size = optional(kwargs,'win_size',8)
+    mlp_ratio = optional(kwargs,'mlp_ratio',4)
+    qkv_bias = optional(kwargs,'qkv_bias',True)
+    token_projection = optional(kwargs,'token_projection','linear')
+    token_mlp = optional(kwargs,'token_mlp','leff')
+    modulator = optional(kwargs,'modulator',default_modulator)
+    cross_modulator = optional(kwargs,'cross_modulator',False)
+    dd_in = optional(kwargs,'dd_in',3)
 
     # -- relevant configs --
-    attn_mode = optional(kwargs,'attn_mode',"window_dnls",init)
-    in_attn_mode = optional(kwargs,'in_attn_mode',"window_dnls",init)
-    k = optional(kwargs,'k',-1,init)
-    ps = optional(kwargs,'ps',1,init)
-    pt = optional(kwargs,'pt',1,init)
-    stride0 = optional(kwargs,'stride0',1,init)
-    stride1 = optional(kwargs,'stride1',1,init)
-    ws = optional(kwargs,'ws',8,init)
-    wt = optional(kwargs,'wt',0,init)
-    nbwd = optional(kwargs,'nbwd',1,init)
-    rbwd = optional(kwargs,'rbwd',False,init)
-    exact = optional(kwargs,'exact',False,init)
-    bs = optional(kwargs,'bs',-1,init)
-    freeze = optional(kwargs,'freeze',False,init)
+    attn_mode = optional(kwargs,'attn_mode',"window_dnls")
+    in_attn_mode = optional(kwargs,'in_attn_mode',"window_dnls")
+    k = optional(kwargs,'k',-1)
+    ps = optional(kwargs,'ps',1)
+    pt = optional(kwargs,'pt',1)
+    stride0 = optional(kwargs,'stride0',1)
+    stride1 = optional(kwargs,'stride1',1)
+    ws = optional(kwargs,'ws',8)
+    wt = optional(kwargs,'wt',0)
+    nbwd = optional(kwargs,'nbwd',1)
+    rbwd = optional(kwargs,'rbwd',False)
+    exact = optional(kwargs,'exact',False)
+    bs = optional(kwargs,'bs',-1)
+    freeze = optional(kwargs,'freeze',False)
 
     # -- modify network after load --
-    filter_by_attn_pre = optional(kwargs,"filter_by_attn_pre",False,init)
-    filter_by_attn_post = optional(kwargs,"filter_by_attn_post",False,init)
-    load_pretrained = optional(kwargs,"load_pretrained",True,init)
-    pretrained_path = optional(kwargs,"pretrained_path","",init)
-    pretrained_prefix = optional(kwargs,"pretrained_prefix","module.",init)
-    pretrained_qkv = optional(kwargs,"pretrained_qkv","lin2conv",init)
-    reset_qkv = optional(kwargs,"reset_qkv",False,init)
+    filter_by_attn_pre = optional(kwargs,"filter_by_attn_pre",False)
+    filter_by_attn_post = optional(kwargs,"filter_by_attn_post",False)
+    load_pretrained = optional(kwargs,"load_pretrained",True)
+    pretrained_path = optional(kwargs,"pretrained_path","")
+    pretrained_prefix = optional(kwargs,"pretrained_prefix","module.")
+    pretrained_qkv = optional(kwargs,"pretrained_qkv","lin2conv")
+    reset_qkv = optional(kwargs,"reset_qkv",False)
 
     # -- break here if init --
     if init: return

@@ -37,7 +37,6 @@ from uformer.utils.gpu_mem import print_gpu_stats,print_peak_gpu_stats
 from uformer.utils.misc import rslice_pair
 
 # -- check if reordered --
-from scipy import optimize
 MAX_NFRAMES = 85
 DATA_DIR = Path("./data/")
 SAVE_DIR = Path("./output/tests/test_denose_rgb/")

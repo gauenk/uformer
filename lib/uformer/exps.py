@@ -262,7 +262,8 @@ def exps_verify_new_code_test(iexps=None):
     expl['use_train'] = ['true']
     expl['attn_mode'] = ["w-w-w-w-w"]
     expl['freeze'] = ["false"]
-    expl['chkpt'] = ["6ad6a"]
+    expl['chkpt'] = ["248c7e67"]
+    # expl['chkpt'] = ["6ad6a"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
     return exps

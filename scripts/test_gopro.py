@@ -239,10 +239,10 @@ def main():
         # if exp.attn_mode == "pd-pd-w-w-w": continue
         # if exp.use_train == "false" and exp.attn_mode == "pd-pd-w-w-w":
         #     cache.clear_exp(uuid)
-        # if exp.use_train == "true" and exp.attn_mode == "pd-pd-w-w-w":
-        #     cache.clear_exp(uuid)
-        if exp.use_train == "true" and exp.attn_mode == "w-w-w-w-w":
+        if exp.use_train == "true" and exp.attn_mode == "pd-pd-w-w-w":
             cache.clear_exp(uuid)
+        # if exp.use_train == "true" and exp.attn_mode == "w-w-w-w-w":
+        #     cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result
         if results is None: # check if no result
             exp.uuid = uuid

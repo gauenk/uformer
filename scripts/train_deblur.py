@@ -136,7 +136,8 @@ def launch_training(_cfg):
                          callbacks=[checkpoint_callback,cc_recent],
                          strategy="ddp_find_unused_parameters_false")
     timer.start("train")
-    ckpt_path=None
+    # ckpt_path=None
+    ckpt_path = "output/checkpoints/6c0e6401-1dc2-49ff-a1f7-bb712eb55082-epoch=16.ckpt"
     trainer.fit(model, loaders.tr, loaders.val, ckpt_path=ckpt_path)
     timer.stop("train")
     best_model_path = checkpoint_callback.best_model_path
@@ -235,14 +236,14 @@ def main():
     cfg.noise_version="blur" # fixed.
     # cfg.pretrained_path = "./output/checkpoints/0dffce4c-326a-4152-a2de-5517c53d0ac8-epoch=87.ckpt"
     # cfg.pretrained_path = "./output/checkpoints/aeeaf451-53ae-4923-9dba-a93f6c12b6f3-epoch=33.ckpt"
-    cfg.pretrained_path = "./output/checkpoints/3b6d0601-2b39-41c5-b60c-49b9d75e5c6a-epoch=107.ckpt"
+    # cfg.pretrained_path = "./output/checkpoints/3b6d0601-2b39-41c5-b60c-49b9d75e5c6a-epoch=107.ckpt"
     cfg.pretrained_prefix = "net."
     cfg.in_attn_mode = "pd-pd-w-w-w" # the loaded attn mode
     # cfg.attn_mode = "w-w-w-w-w"
     cfg.attn_mode = "pd-pd-w-w-w"
     cfg.reset_qkv = False
     # cfg.reset_qkv = True
-    # cfg.load_pretrained = "false"
+    cfg.load_pretrained = "false"
 
     # -- mix --
     cache_io.append_configs(exps,cfg) # merge the two
