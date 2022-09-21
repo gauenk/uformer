@@ -62,7 +62,7 @@ def grab_grad(model):
 class UformerLit(pl.LightningModule):
 
     def __init__(self,model_cfg,flow=True,isize=None,batch_size=32,lr_init=0.0002,
-                 weight_decay=0.02,nepochs=250,warmup_epochs=3):
+                 weight_decay=0.02,nepochs=250,warmup_epochs=3,scheduler="default"):
         super().__init__()
 
         # -- meta params --
@@ -75,6 +75,7 @@ class UformerLit(pl.LightningModule):
         self.weight_decay = weight_decay
         self.nepochs = nepochs
         self.warmup_epochs = warmup_epochs
+        self.scheduler = scheduler
 
         # -- load model --
         self.net = uformer.load_model(**model_cfg)
@@ -134,7 +135,7 @@ class UformerLit(pl.LightningModule):
             flows.fflow,flows.bflow = zflows,zflows
         return flows
 
-    def configure_optimizers(self):
+    def get_default_optim(self):
         optim = th.optim.AdamW(self.parameters(),
                                lr=self.lr_init, betas=(0.9, 0.999),
                                eps=1e-8, weight_decay=self.weight_decay)
@@ -147,6 +148,24 @@ class UformerLit(pl.LightningModule):
                                                after_scheduler=scheduler_cosine)
         else:
             scheduler = scheduler_cosine
+        return optim, scheduler
+
+    def get_steplr_optim(self):
+        optim = th.optim.AdamW(self.parameters(),
+                               lr=self.lr_init, betas=(0.9, 0.999),
+                               eps=1e-8, weight_decay=self.weight_decay)
+        step_size = 5
+        scheduler = th.optim.lr_scheduler.StepLR(optim, step_size, gamma=0.5,
+                                                 last_epoch=-1)
+        return optim, scheduler
+
+    def configure_optimizers(self):
+        if self.scheduler == "default":
+            optim,scheduler = get_default_optim()
+        elif self.scheduler == "step_lr":
+            optim,scheduler = get_steplr_optim()
+        else:
+            raise ValueError("Uknown scheduler.")
         return [optim], [scheduler]
 
     def training_step(self, batch, batch_idx):

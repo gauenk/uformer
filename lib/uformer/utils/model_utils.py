@@ -31,12 +31,12 @@ def save_checkpoint(model_dir, state, session):
 
 
 def load_checkpoint_qkv(model, weights,in_attn_modes, out_attn_modes,
-                        prefix="module.",reset=False):
+                        prefix="module.",reset_new=False,attn_reset=False):
     checkpoint = th.load(weights)
     state_dict = checkpoint["state_dict"]
     new_state_dict = qkv_convert_state(
         state_dict,in_attn_modes,out_attn_modes,
-        prefix=prefix,reset=reset)
+        prefix=prefix,reset_new=reset_new,attn_reset=attn_reset)
     model.load_state_dict(new_state_dict)
 
 def load_checkpoint_module(model, weights):

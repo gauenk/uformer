@@ -88,6 +88,7 @@ def load_model(*args,**kwargs):
     pretrained_prefix = optional(kwargs,"pretrained_prefix","module.")
     pretrained_qkv = optional(kwargs,"pretrained_qkv","lin2conv")
     reset_qkv = optional(kwargs,"reset_qkv",False)
+    attn_reset = optional(kwargs,"attn_reset",'f-f-f-f-f')
 
     # -- break here if init --
     if init: return
@@ -115,7 +116,8 @@ def load_model(*args,**kwargs):
         out_attn_mode = attn_mode
         print("Loading pretrained file: %s" % str(state_fn))
         load_checkpoint_qkv(model,state_fn,in_attn_mode,
-                            out_attn_mode,prefix=prefix,reset=reset_qkv)
+                            out_attn_mode,prefix=prefix,
+                            reset_new=reset_qkv,attn_reset=attn_reset)
 
     # -- apply network filters [after load] --
     if filter_by_attn_post:

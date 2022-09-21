@@ -61,6 +61,8 @@ def exp_default_init(iexps = None):
     pretrained_prefix = ["module."]
     in_attn_mode = ["window_default"] # original attn mode
     embed_dim = [32]
+    attn_reset = ['f-f-f-f-f']
+    freeze = ['f-f-f-f-f']
 
     # -- grid --
     exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,
@@ -69,7 +71,9 @@ def exp_default_init(iexps = None):
                  "load_pretrained":load_pretrained,"pretrained_path":pretrained_path,
                  "pretrained_prefix":pretrained_prefix,"in_attn_mode":in_attn_mode,
                  "freeze":freeze,"filter_by_attn_pre":filter_by_attn_pre,
-                 "filter_by_attn_post":filter_by_attn_post,"embed_dim":embed_dim}
+                 "filter_by_attn_post":filter_by_attn_post,"embed_dim":embed_dim,
+                 "attn_reset":attn_reset,"in_attn_mode":in_attn_mode,
+                 "attn_mode":attn_mode,"attn_reset":attn_reset,"freeze":freeze}
     # -- apped new values --
     dcat(exp_lists,iexps) # input overwrites defaults
     return exp_lists
@@ -201,21 +205,21 @@ def exps_verify_new_code(iexps=None,mode="train"):
 
 def exps_verify_new_code_train(iexps=None):
     expl = exp_init(iexps,"train")
-    expl['attn_mode'] = ["product_dnls"]
-    exps = cache_io.mesh_pydicts(expl) # create mesh
-    expl['attn_mode'] = ["pd-w-w-w-w"]
-    expl['freeze'] = ["false"]#t-t-f-f-f"]
-    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp a] step 0 --
+    expl['in_attn_mode'] = ["w-w-w-w-w"]
     expl['attn_mode'] = ["pd-pd-w-w-w"]
-    # expl['filter_by_attn_post'] = ["true"]
-    expl['load_pretrained'] = ["true"]
-    expl['freeze'] = ["false"]#t-t-f-f-f"]
-    exps += cache_io.mesh_pydicts(expl) # create mesh
+    expl['freeze'] = ["f-f-f-t-t"]
+    expl['attn_reset'] = ["t-t-f-f-f"]
+    exps = cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp b] step 0 --
+    expl['in_attn_mode'] = ["w-w-w-w-w"]
     expl['attn_mode'] = ["w-w-w-w-w"]
-    # expl['filter_by_attn_post'] = ["true"]
-    expl['load_pretrained'] = ["true"]
-    expl['freeze'] = ["false"]#t-t-f-f-f"]
+    expl['freeze'] = ["f-f-f-t-t"]
+    expl['attn_reset'] = ["t-t-f-f-f"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
+
     return exps
 
 def exps_verify_new_code_test(iexps=None):

@@ -145,15 +145,13 @@ def get_attn_mode_cat(attn_mode):
         raise ValueError(f"Uknown attention mode [{attn_mode}]")
 
 def qkv_convert_state(state_dict,in_attn_modes,out_attn_modes,
-                      prefix="module.",keep=False,reset=False):
+                      prefix="module.",keep=False,reset_new=False,
+                      atnn_reset=False):
 
     # -- io attn modes --
     in_attn_modes = expand_attn_mode(in_attn_modes)
     out_attn_modes = expand_attn_mode(out_attn_modes)
-    # in_attn_modes = in_attn_modes.split("-")
-    # in_attn_modes = [translate_attn_mode(a) for a in in_attn_modes]
-    # out_attn_modes = out_attn_modes.split("-")
-    # out_attn_modes = [translate_attn_mode(a) for a in out_attn_modes]
+    attn_reset = expand_attn_reset(attn_reset)
 
     # -- init --
     nskip = len(prefix)
@@ -184,7 +182,11 @@ def qkv_convert_state(state_dict,in_attn_modes,out_attn_modes,
             no_match = in_mode != out_mode
 
             # -- reset values if not equal --
-            if reset and no_match:
+            if reset_new and no_match:
+                val.data[...] = th.randn_like(val.data).clip(-1,1)
+
+            # -- reset values if attn reset true --
+            if attn_reset[l]:
                 val.data[...] = th.randn_like(val.data).clip(-1,1)
 
             # -- if matching --

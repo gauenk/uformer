@@ -33,6 +33,23 @@ def translate_attn_mode(_v): # keys under "augmented/lewin_ref.py"
         raise ValueError(f"Uknown [attn_mode] type [{_v}]")
     return v
 
+def translate_attn_reset(_v):
+    if _v == "f":
+        return False
+    elif _v == "t":
+        return True
+    else:
+        raise ValueError(f"Uknown [attn_reset] type [{_v}]")
+
+def expand_attn_reset(attn_reset,nblocks=5):
+    if isinstance(attn_reset,bool):
+        exp_attn_reset = [attn_reset for _ in range(nblocks)]
+    else:
+        exp_attn_reset = attn_reset.split("-")
+        exp_attn_reset = [translate_attn_reset(v) for v in exp_attn_reset]
+    assert len(exp_attn_reset) == nblocks
+    return exp_attn_reset
+
 def expand_attn_mode(in_attn_mode,nblocks=5):
     if "_" in in_attn_mode:
         attn_modes = [in_attn_mode for _ in range(nblocks)]
