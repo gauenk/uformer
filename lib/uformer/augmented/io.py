@@ -35,7 +35,7 @@ def load_model(*args,**kwargs):
     optional = partial(optional_full,init)
 
     # -- defaults changed by noise version --
-    noise_version = optional(kwargs,'noise_version',"noise",init)
+    noise_version = optional(kwargs,'noise_version',"noise")
     if noise_version == "noise":
         default_modulator = True
         default_depth = [1, 2, 8, 8, 2, 8, 8, 2, 1]
