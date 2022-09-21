@@ -161,9 +161,9 @@ class UformerLit(pl.LightningModule):
 
     def configure_optimizers(self):
         if self.scheduler == "default":
-            optim,scheduler = get_default_optim()
+            optim,scheduler = self.get_default_optim()
         elif self.scheduler == "step_lr":
-            optim,scheduler = get_steplr_optim()
+            optim,scheduler = self.get_steplr_optim()
         else:
             raise ValueError("Uknown scheduler.")
         return [optim], [scheduler]

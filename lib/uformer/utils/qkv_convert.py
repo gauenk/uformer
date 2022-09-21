@@ -3,7 +3,7 @@ import torch as th
 import copy
 ccopy = copy.copy
 from collections import OrderedDict
-from .model_keys import translate_attn_mode,expand_attn_mode
+from .model_keys import translate_attn_mode,expand_attn_mode,expand_attn_reset
 
 def qkv_convert_lin2conv(new_state_dict,name,val):
     if "to_q" in name:
@@ -146,7 +146,7 @@ def get_attn_mode_cat(attn_mode):
 
 def qkv_convert_state(state_dict,in_attn_modes,out_attn_modes,
                       prefix="module.",keep=False,reset_new=False,
-                      atnn_reset=False):
+                      attn_reset=False):
 
     # -- io attn modes --
     in_attn_modes = expand_attn_mode(in_attn_modes)

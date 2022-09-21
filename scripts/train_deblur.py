@@ -136,8 +136,7 @@ def launch_training(_cfg):
                          callbacks=[checkpoint_callback,cc_recent],
                          strategy="ddp_find_unused_parameters_false")
     timer.start("train")
-    # ckpt_path=None
-    ckpt_path = "output/checkpoints/6c0e6401-1dc2-49ff-a1f7-bb712eb55082-epoch=16.ckpt"
+    ckpt_path=None
     trainer.fit(model, loaders.tr, loaders.val, ckpt_path=ckpt_path)
     timer.stop("train")
     best_model_path = checkpoint_callback.best_model_path
