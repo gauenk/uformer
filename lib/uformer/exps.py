@@ -240,7 +240,7 @@ def exps_verify_new_code_test(iexps=None):
     expl['use_train'] = ['false']
 
     # -- check different attn modes --
-    expl['attn_mode'] = ["window_refactored"]
+    expl['attn_mode'] = ["window_original"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
 
     # -- load trained --
