@@ -235,7 +235,7 @@ def main():
     cfg.pretrained_prefix = "module."
 
     # -- pick an exp --
-    exps = [exps[0]] # run0
+    exps = [exps[2]] # run0
     nexps = len(exps)
 
     # -- mix --
@@ -255,9 +255,6 @@ def main():
         uuid = cache.get_uuid(exp) # assing ID to each Dict in Meshgrid
         # cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result
-
-        # -- possibly continue from current epochs --
-        # todo:
 
         # -- run experiment --
         if results is None: # check if no result

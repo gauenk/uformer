@@ -147,7 +147,7 @@ def load_checkpoint(model,use_train,substr="",croot="output/checkpoints/"):
 
     # -- load to model --
     if load:
-        mpath = load_recent(croot,substr)
+        mpath = get_recent_filename(croot,substr)
         print("Loading Model Checkpoint: ",mpath)
         state = th.load(mpath)['state_dict']
         remove_lightning_load_state(state)
@@ -162,7 +162,7 @@ def load_checkpoint(model,use_train,substr="",croot="output/checkpoints/"):
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-def load_recent(root,substr):
+def get_recent_filename(root,substr):
     root = Path(root)
     if not root.exists():
         raise ValueError(f"Load directory [{root}] does not exist.")

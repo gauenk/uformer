@@ -203,11 +203,12 @@ def main():
     cfg.frame_end = cfg.frame_start + cfg.nframes - 1
     # cfg.isize = "256_256"
     cfg.noise_version = "blur"
-    # cfg.chkpt = ""
+    cfg.chkpt = ""
     # cfg.use_train = "false"
     # cfg.load_pretrained = "false"
     cfg.embed_dim_pd = 32
     # cfg.embed_dim = 9
+    print(cfg)
     cache_io.append_configs(exps,cfg) # merge the two
 
     # -- run exps --

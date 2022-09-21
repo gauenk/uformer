@@ -18,7 +18,7 @@ from ..common import optional as _optional
 from ..utils.model_utils import load_checkpoint_module,load_checkpoint_qkv
 # from ..utils.model_utils import load_checkpoint_mix_qkv
 from ..utils.model_utils import remove_lightning_load_state
-from ..utils.model_utils import filter_rel_pos
+from ..utils.model_utils import filter_rel_pos,get_recent_filename
 
 # -- auto populate fields to extract config --
 _fields = []
@@ -112,6 +112,7 @@ def load_model(*args,**kwargs):
     # -- load weight --
     if load_pretrained:
         prefix = pretrained_prefix
+        #load_checkpoint
         state_fn = get_pretrained_path(noise_version,pretrained_path)
         out_attn_mode = attn_mode
         print("Loading pretrained file: %s" % str(state_fn))
@@ -133,8 +134,11 @@ load_model(__init=True)
 
 
 def get_pretrained_path(noise_version,optional_path):
-    if optional_path != "": return optional_path
     fdir = Path(__file__).absolute().parents[0] / "../../../" # parent of "./lib"
+    if optional_path != "":
+        croot = fdir / "output/checkpoints/"
+        mpath = get_recent_filename(croot,optional_path)
+        return mpath
     lit = False
     if noise_version == "noise":
         state_fn = fdir / "weights/Uformer_sidd_B.pth"

@@ -136,6 +136,7 @@ class ProductAttention(nn.Module):
 
         # -- unpack params --
         k       = self.k
+        if k == 0: k = -1
         ps      = self.ps
         pt      = self.pt
         ws      = self.ws
