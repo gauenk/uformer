@@ -116,6 +116,7 @@ def load_model(*args,**kwargs):
         state_fn = get_pretrained_path(noise_version,pretrained_path)
         out_attn_mode = attn_mode
         print("Loading pretrained file: %s" % str(state_fn))
+        print(reset_qkv,attn_reset,in_attn_mode,attn_mode)
         load_checkpoint_qkv(model,state_fn,in_attn_mode,
                             out_attn_mode,prefix=prefix,
                             reset_new=reset_qkv,attn_reset=attn_reset)

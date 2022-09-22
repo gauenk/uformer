@@ -185,7 +185,7 @@ def main():
     # cache_name = "test_rgb_net"
     cache_name = "gopro_bench"
     cache = cache_io.ExpCache(cache_dir,cache_name)
-    # cache.clear()
+    cache.clear()
 
     # -- get data mesh --
     dname,dset = ["gopro"],["te"]

@@ -240,8 +240,8 @@ def exps_verify_new_code_test(iexps=None):
     expl['use_train'] = ['false']
 
     # -- check different attn modes --
-    expl['attn_mode'] = ["window_original"]
-    exps = cache_io.mesh_pydicts(expl) # create mesh
+    expl['attn_mode'] = ["window_default"]
+    # exps = cache_io.mesh_pydicts(expl) # create mesh
 
     # -- load trained --
     expl['load_pretrained'] = ["true"]
@@ -251,8 +251,8 @@ def exps_verify_new_code_test(iexps=None):
     expl['in_attn_mode'] = ["w-w-w-w-w"]
     expl['attn_mode'] = ["w-w-w-w-w"]
     expl['pretrained_prefix'] = ["net."]
-    expl['pretrained_path'] = ["bdafda0c"]
-    exps += cache_io.mesh_pydicts(expl) # create mesh
+    expl['pretrained_path'] = ["bdafda0c","2aa8a10a"]
+    exps = cache_io.mesh_pydicts(expl) # create mesh
 
     # -- [version 1] --
     expl['in_attn_mode'] = ["pd-pd-w-w-w"]
@@ -264,7 +264,10 @@ def exps_verify_new_code_test(iexps=None):
     # -- [version 2] --
     expl['in_attn_mode'] = ["pd-pd-w-w-w"]
     expl['attn_mode'] = ["pd-pd-w-w-w"]
-    expl['chkpt'] = ["ad209414"]
+    expl['embed_dim'] = ["9-9-32-32-32"]
+    expl['ws'] = ["29-29-8-8-8"]
+    expl['wt'] = ["2-2-0-0-0"]
+    expl['k'] = ["64-64-0-0-0"]
     # exps += cache_io.mesh_pydicts(expl) # create mesh
 
     return exps
