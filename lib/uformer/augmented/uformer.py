@@ -368,7 +368,13 @@ class Uformer(nn.Module):
 
         # Output Projection
         y = self.output_proj(deconv3)
-        return x + y if self.dd_in ==3 else y
+
+        # -- info --
+        # print("deconv3[min,max]: ",deconv3.min().item(),deconv3.max().item())
+        # print("y[min,max]: ",y.min().item(),y.max().item())
+        # print("x[min,max]: ",x.min().item(),x.max().item())
+
+        return x + y if self.dd_in == 3 else y
 
     def flops(self):
         flops = 0

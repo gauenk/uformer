@@ -3,6 +3,7 @@
 import os,copy
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
+from functools import partial
 
 # -- vision --
 import scipy.io
@@ -31,9 +32,10 @@ import uformer
 import uformer.exps as exps_menu
 from uformer import configs
 from uformer import lightning
-from uformer.utils.misc import optional,rslice_pair
+from uformer.utils.misc import optional,rslice_pair,task_keys
 from uformer.utils.metrics import compute_psnrs,compute_ssims
-from uformer.utils.model_utils import temporal_chop,expand2square,load_checkpoint
+from uformer.utils.model_utils import load_checkpoint
+from uformer.utils.proc_utils import spatial_chop,temporal_chop,expand2square
 
 def run_exp(_cfg):
 
@@ -65,7 +67,7 @@ def run_exp(_cfg):
     model_cfg = uformer.extract_model_io(cfg)
     print(model_cfg)
     model = uformer.load_model(**model_cfg)
-    substr = cfg.chkpt # note "" == most recent
+    substr = optional(cfg,"chkpt","")
     load_checkpoint(model,cfg.use_train,substr)
     imax = 255.
 
@@ -83,6 +85,7 @@ def run_exp(_cfg):
                                                cfg.frame_start,cfg.frame_end)]
 
     # -- each subsequence with video name --
+    print("indices: ",indices)
     for index in indices:
 
         # -- clean memory --
@@ -90,12 +93,12 @@ def run_exp(_cfg):
 
         # -- unpack --
         sample = data[cfg.dset][index]
-        noisy,clean = sample['blur'],sample['sharp']
+        nkey,ckey = task_keys(cfg.task)
+        noisy,clean = sample[nkey],sample[ckey]
         noisy,clean = noisy.to(cfg.device),clean.to(cfg.device)
         vid_frames,region = sample['fnums'],optional(sample,'region',None)
         fstart = min(vid_frames)
         noisy,clean = rslice_pair(noisy,clean,region)
-        print("[%d] noisy.shape: " % index,noisy.shape)
         print("[%d] noisy.shape: " % index,noisy.shape)
 
         # -- create timer --
@@ -111,18 +114,27 @@ def run_exp(_cfg):
             flows = None
         timer.stop("flow")
 
+        # -- get space-time chopping wrapper --
+        s_verbose = True
+        t_verbose = True
+        s_size = cfg.spatial_crop_size
+        s_overlap = cfg.spatial_crop_overlap
+        t_size = cfg.temporal_crop_size
+        t_overlap = cfg.temporal_crop_overlap
+        schop_p = partial(spatial_chop,s_size,s_overlap,model,verbose=s_verbose)
+        tchop_p = partial(temporal_chop,t_size,t_overlap,schop_p,verbose=t_verbose)
+        fwd_fxn = tchop_p # rename
+
         # -- denoise --
         timer.start("deno")
         with th.no_grad():
 
             vshape = noisy.shape
             print("noisy.shape: ",noisy.shape)
-            noisy_sq,mask = expand2square(noisy)
+            noisy_sq,mask = expand2square(noisy,1024.)
             print("noisy_sq.shape: ",noisy_sq.shape)
-
-            tsize = 2
-            deno = temporal_chop(noisy_sq/imax,tsize,model)
-
+            deno = fwd_fxn(noisy_sq/imax)
+            # deno = tchop_p(noisy_sq/imax)
             print("deno.shape: ",deno.shape)
             deno = th.masked_select(deno,mask.bool()).reshape(*vshape)
             print("deno.shape: ",deno.shape)
@@ -183,29 +195,29 @@ def main():
     # -- get cache --
     cache_dir = ".cache_io"
     # cache_name = "test_rgb_net"
-    cache_name = "gopro_bench"
+    cache_name = "davis_bench"
     cache = cache_io.ExpCache(cache_dir,cache_name)
-    cache.clear()
+    # cache.clear()
 
     # -- get data mesh --
-    dname,dset = ["gopro"],["te"]
-    vid_names = ["%02d" % x for x in np.arange(0,40)]
-    vid_names = vid_names[2:3]#5]
+    dname,dset = ["davis"],["val"]
+    vid_names = ["bike-packing"]#,"blackswan","bmx-trees"]
     iexps = {"dname":dname,"vid_name":vid_names,"dset":dset}
-    # exps = exps_menu.exps_motivate_paper(iexps,mode="test")
-    exps = exps_menu.exps_verify_new_code(iexps,mode="test")
+    exps = exps_menu.exps_rgb_denoising(iexps,mode="test")
+    exps = [exps[0],exps[-1]]
 
     # -- group with default --
     cfg = configs.default_cfg()
     # cfg.isize = "256_256"
-    cfg.nframes = 1
+    cfg.task = "rgb_denoise"
+    cfg.nframes = 10
     cfg.frame_start = 0
     cfg.frame_end = cfg.frame_start + cfg.nframes - 1
-    # cfg.isize = "256_256"
-    cfg.noise_version = "blur"
-    cfg.chkpt = ""
-    # cfg.use_train = "false"
-    # cfg.load_pretrained = "false"
+    cfg.noise_version = "rgb_noise"
+    cfg.spatial_crop_size = 512
+    cfg.spatial_crop_overlap = 0.0
+    cfg.temporal_crop_size = 5
+    cfg.temporal_crop_overlap = 0/5. # 3 of 5 frames
     print(cfg)
     cache_io.append_configs(exps,cfg) # merge the two
 
@@ -223,25 +235,6 @@ def main():
         # -- logic --
         uuid = cache.get_uuid(exp) # assing ID to each Dict in Meshgrid
         # cache.clear_exp(uuid)
-        # if exp.attn_mode == "original":
-        #     cache.clear_exp(uuid)
-        # if exp.attn_mode == "aug_refactored":
-        #     cache.clear_exp(uuid)
-        # if exp.attn_mode == "aug_dnls":
-        #     cache.clear_exp(uuid)
-        # if exp.attn_mode == "product_dnls":
-        #     cache.clear_exp(uuid)
-        # if exp.use_train == "true" and exp.attn_mode == "product_dnls":
-        #     cache.clear_exp(uuid)
-        # if exp.use_train == "true" and exp.attn_mode == "pd-w-w-w-w":
-        #     cache.clear_exp(uuid)
-        # if exp.attn_mode == "pd-pd-w-w-w": continue
-        # if exp.use_train == "false" and exp.attn_mode == "pd-pd-w-w-w":
-        #     cache.clear_exp(uuid)
-        # if exp.use_train == "true" and exp.attn_mode == "pd-pd-w-w-w":
-        #     cache.clear_exp(uuid)
-        if exp.use_train == "true" and exp.attn_mode == "w-w-w-w-w":
-            cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result
         if results is None: # check if no result
             exp.uuid = uuid
@@ -251,6 +244,7 @@ def main():
     # -- load results --
     records = cache.load_flat_records(exps)
     print(records[['attn_mode','use_train','psnrs','timer_total']])
+    print(np.stack(records['psnrs'].to_numpy()).mean(1))
 
     for attn_mode,mdf in records.groupby("attn_mode"):
         for use_tr,tdf in mdf.groupby("use_train"):

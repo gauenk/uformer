@@ -30,14 +30,29 @@ def save_checkpoint(model_dir, state, session):
     th.save(state, model_out_path)
 
 
+def reset_mismatch(model,state_dict):
+    model_state_dict = model.state_dict()
+    for k in state_dict:
+        if k in model_state_dict:
+            s = model_state_dict[k]
+            # if s.dtype != th.long:
+            #     state_dict[k] = th.randn_like(s).clip(-1,1)
+            if state_dict[k].shape != model_state_dict[k].shape:
+                s = model_state_dict[k]
+                state_dict[k] = th.randn_like(s).clip(-1,1)
+
 def load_checkpoint_qkv(model, weights,in_attn_modes, out_attn_modes,
-                        prefix="module.",reset_new=False,attn_reset=False):
+                        embed_dim,prefix="module.",reset_new=False,
+                        attn_reset=False,strict=True,skip_mismatch_model_load=False):
+    if weights is None: return
     checkpoint = th.load(weights)
     state_dict = checkpoint["state_dict"]
     new_state_dict = qkv_convert_state(
-        state_dict,in_attn_modes,out_attn_modes,
+        state_dict,in_attn_modes,out_attn_modes,embed_dim,
         prefix=prefix,reset_new=reset_new,attn_reset=attn_reset)
-    model.load_state_dict(new_state_dict)
+    if skip_mismatch_model_load:
+        reset_mismatch(model,new_state_dict)
+    model.load_state_dict(new_state_dict,strict=strict)
 
 def load_checkpoint_module(model, weights):
     checkpoint = th.load(weights)
@@ -102,37 +117,6 @@ def remove_lightning_load_state(state):
         state[name_new] = state[name]
         del state[name]
 
-def temporal_chop(x,tsize,fwd_fxn,flows=None):
-    nframes = x.shape[0]
-    nslice = (nframes-1)//tsize+1
-    x_agg = []
-    for ti in range(nslice):
-        ts = ti*tsize
-        te = min((ti+1)*tsize,nframes)
-        tslice = slice(ts,te)
-        if flows:
-            x_t = fwd_fxn(x[tslice],flows)
-        else:
-            x_t = fwd_fxn(x[tslice])
-        x_agg.append(x_t)
-    x_agg = th.cat(x_agg)
-    return x_agg
-
-
-def expand2square(timg,factor=16.0):
-    t, _, h, w = timg.size()
-
-    X = int(math.ceil(max(h,w)/float(factor))*factor)
-
-    img = th.zeros(t,3,X,X).type_as(timg) # 3, h,w
-    mask = th.zeros(t,1,X,X).type_as(timg)
-
-    print(img.size(),mask.size())
-    # print((X - h)//2, (X - h)//2+h, (X - w)//2, (X - w)//2+w)
-    img[:,:, ((X - h)//2):((X - h)//2 + h),((X - w)//2):((X - w)//2 + w)] = timg
-    mask[:,:, ((X - h)//2):((X - h)//2 + h),((X - w)//2):((X - w)//2 + w)].fill_(1)
-
-    return img, mask
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #

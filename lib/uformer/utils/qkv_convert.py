@@ -3,7 +3,8 @@ import torch as th
 import copy
 ccopy = copy.copy
 from collections import OrderedDict
-from .model_keys import translate_attn_mode,expand_attn_mode,expand_attn_reset
+from .model_keys import translate_attn_mode,expand_attn_mode
+from .model_keys import expand_attn_reset,expand_embed_dim
 
 def qkv_convert_lin2conv(new_state_dict,name,val):
     if "to_q" in name:
@@ -145,13 +146,15 @@ def get_attn_mode_cat(attn_mode):
         raise ValueError(f"Uknown attention mode [{attn_mode}]")
 
 def qkv_convert_state(state_dict,in_attn_modes,out_attn_modes,
-                      prefix="module.",keep=False,reset_new=False,
-                      attn_reset=False):
+                      embed_dim,prefix="module.",keep=False,
+                      reset_new=False,attn_reset=False):
 
     # -- io attn modes --
     in_attn_modes = expand_attn_mode(in_attn_modes)
     out_attn_modes = expand_attn_mode(out_attn_modes)
     attn_reset = expand_attn_reset(attn_reset)
+    # embed_dim = expand_embed_dim(embed_dim)
+    # nheads = [2**l for l in range(5)]
 
     # -- init --
     nskip = len(prefix)
@@ -181,7 +184,19 @@ def qkv_convert_state(state_dict,in_attn_modes,out_attn_modes,
             # print(l,in_mode,out_mode)
             no_match = in_mode != out_mode
 
+            # # -- correct dimension --
+            mod_shape = False
+            # ndim = val.data.ndim
+            # if ndim == 2:
+            #     nftrs = val.data.shape[1]
+            #     nftrs_per_head = nftrs // nheads[l]
+            #     mod_shape = not(nftrs_per_head == embed_dim[l])
+            # if mod_shape:
+            #     new_size = embed_dim[l] * nheads[l]
+            #     val.data = val.data[:,:new_size]
+
             # -- reset values if not equal --
+            reset_it = reset_new and no_match or mod_shape
             if reset_new and no_match:
                 val.data[...] = th.randn_like(val.data).clip(-1,1)
 

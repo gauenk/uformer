@@ -130,7 +130,8 @@ def launch_training(_cfg):
     # swa_callback = StochasticWeightAveraging(swa_lrs=1e-4)
     trainer = pl.Trainer(accelerator="gpu",devices=cfg.ndevices,precision=32,
                          accumulate_grad_batches=cfg.accumulate_grad_batches,
-                         limit_train_batches=.5,limit_val_batches=5,
+                         limit_train_batches=cfg.limit_train_batches,
+                         limit_val_batches=5,
                          max_epochs=cfg.nepochs-1,log_every_n_steps=1,
                          logger=logger,gradient_clip_val=0.0,
                          callbacks=[checkpoint_callback,cc_recent])
@@ -206,39 +207,43 @@ def main():
     # -- init --
     verbose = True
     cache_dir = ".cache_io"
-    cache_name = "train_gopro"
+    cache_name = "train_davis"
     cache = cache_io.ExpCache(cache_dir,cache_name)
-    cache.clear()
+    # cache.clear()
 
     # -- search info --
-    # exps = exps_menu.get_exp_mesh()
-    # exps = exps_menu.exps_motivate_paper()
-    exps = exps_menu.exps_verify_new_code(mode="train")
+    exps = exps_menu.exps_rgb_denoising(mode="train")
 
     # -- group with default --
     cfg = configs.default_train_cfg()
     cfg.seed = 234
+    cfg.dname = "davis_cropped"
+    cfg.sigma = 50.
+    cfg.isize = "128_128"
 
     # -- num to train --
     cfg.nsamples_tr = 0
     cfg.nsamples_val = 0
-    cfg.nframes = 1
+    cfg.nframes = 5
 
     # -- trainig --
-    cfg.ndevices = 2
-    cfg.accumulate_grad_batches = 3
-    cfg.batch_size_tr = 5
+    cfg.ndevices = 1
+    cfg.accumulate_grad_batches = 1
+    cfg.batch_size_tr = 4
     cfg.lr_init = 2e-4
-    cfg.weight_decay = 2e-3
-    cfg.nepochs = 20
-    cfg.warmup_epochs = 0
-    cfg.task = "deblur" # fixed
-    cfg.noise_version = "blur" # fixed.
-    cfg.scheduler = "step_lr"
+    cfg.weight_decay = 2e-2
+    cfg.nepochs = 100
+    cfg.warmup_epochs = 5
+    cfg.task = "rgb_denoise" # fixed
+    cfg.noise_version = "rgb_noise" # fixed.
+    cfg.scheduler = "default"
     cfg.skip_mismatch_model_load = "true"
+    cfg.rbwd = "true"
+    # cfg.limit_train_batches = 0.25 # with w
+    cfg.limit_train_batches = 0.025 # with pd
 
     # -- pick an exp --
-    exps = [exps[2]] # run0
+    exps = [exps[-1]] # run0
     nexps = len(exps)
 
     # -- mix --
@@ -271,7 +276,7 @@ def main():
     print(records['uuid'])
     print(records['best_model_path'].iloc[0])
     print(records['best_model_path'].iloc[1])
-
+    exit(0)
 
     # -- load res --
     uuids = list(records['uuid'].to_numpy())
@@ -294,18 +299,6 @@ def main():
     print(res_a['test_index'])
     print(res_b['test_psnr'])
     print(res_b['test_index'])
-
-
-
-# def find_records(path,uuid):
-#     files = []
-#     for fn in path.iterdir():
-#         if uuid in fn:
-#             files.append(fn)
-#     for fn in files:
-#         fn.
-
-
 
 if __name__ == "__main__":
     main()

@@ -41,6 +41,15 @@ def translate_attn_reset(_v):
     else:
         raise ValueError(f"Uknown [attn_reset] type [{_v}]")
 
+def expand_embed_dim(embed_dim,nblocks=5):
+    if isinstance(embed_dim,int):
+        exp_embed_dim = [embed_dim for _ in range(nblocks)]
+    else:
+        exp_embed_dim = embed_dim.split("-")
+        exp_embed_dim = [int(v) for v in exp_embed_dim]
+    assert len(exp_embed_dim) == nblocks
+    return exp_embed_dim
+
 def expand_attn_reset(attn_reset,nblocks=5):
     if isinstance(attn_reset,bool):
         exp_attn_reset = [attn_reset for _ in range(nblocks)]

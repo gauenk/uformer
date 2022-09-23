@@ -68,12 +68,25 @@ class ProductAttention(nn.Module):
 
         self.softmax = nn.Softmax(dim=-1)
 
+    def get_weights(self,module):
+        weights = []
+        for name,mod in module.named_parameters():
+            flat = mod.data.ravel()
+            weights.append(flat)
+        weights = th.cat(weights,0)
+        return weights
+
     def forward(self, vid, attn_kv=None, mask=None):
 
         # -- unpack --
         vid = rearrange(vid,'t h w c -> t c h w')
         T, C, H, W = vid.shape
         # print("vid.shape: ",vid.shape)
+        # print("vid[min,max]: ",vid.min().item(),vid.max().item())
+        qkv_weights = self.get_weights(self.qkv)
+        # print("qkv_weights[min,max]: ",
+        #       qkv_weights.min().item(),qkv_weights.max().item())
+        # print("qkv_weights[nan]: ",th.any(th.isnan(qkv_weights)))
 
         # -- init --
         mask = None
@@ -86,18 +99,49 @@ class ProductAttention(nn.Module):
         #print("q_vid.shape:",q_vid.shape,q_vid.shape[1]//self.num_heads,self.num_heads)
 
         # -- attn map --
-        ntotal = T*H*W
+        stride0 = self.stride0
+        stride1 = self.stride1
+        ntotal = T*((H-1)//stride0+1)*((W-1)//stride0+1)
+        # print(ntotal,T,H,W,stride0)
+        # print("q_vid[min,max]: ",q_vid.min().item(),q_vid.max().item())
+        # print("k_vid[min,max]: ",k_vid.min().item(),k_vid.max().item())
+        # print(ntotal,q_vid.shape,k_vid.shape)
         dists,inds = search(q_vid,0,ntotal,k_vid)
+
+        # -- debug --
+        # any_nan = th.any(th.isnan(dists))
+        # print(dists)
+        # print("nans [0]: ",any_nan)
+        # if any_nan: exit(0)
+        # print("dists[min,max]: ",dists.min().item(),dists.max().item())
+
         if search.ws != 8: # don't match
             dists = self.softmax(dists)
         else:
             dists = search.window_attn_mod(dists,rel_pos,mask,vid.shape)
+        # -- debug --
+        # any_nan = th.any(th.isnan(dists))
+        # print("nans [0.5]: ",any_nan)
+        # if any_nan: exit(0)
+        # print("[softmax] dists[min,max]: ",dists.min().item(),dists.max().item())
+
         dists = self.attn_drop(dists)
 
+        # -- debug --
+        # any_nan = th.any(th.isnan(dists))
+        # print("nans [1]: ",any_nan)
+        # if any_nan: exit(0)
+
         # -- prod with "v" --
+        dists = dists.contiguous()
         x = wpsum(v_vid,dists,inds)
         ps = x.shape[-1]
         x = rearrange(x,'(o n) h c ph pw -> (o ph pw) n (h c)',o=ntotal)
+
+        # -- debug --
+        # any_nan = th.any(th.isnan(x))
+        # print("nans [2]: ",any_nan)
+        # if any_nan: exit(0)
 
         # -- proj --
         x = self.proj(x)
@@ -106,13 +150,22 @@ class ProductAttention(nn.Module):
         # -- prepare for folding --
         x = rearrange(x,'(o ph pw) n c -> (o n) 1 1 c ph pw',ph=ps,pw=ps)
         x = x.contiguous()
+        # print("x[min,max]: ",x.min().item(),x.max().item())
 
         # -- fold --
         fold(x,0)
 
         # -- unpack --
+        any_zero = th.any(th.abs(fold.zvid)<1e-10)
+        any_fold_nan = th.any(th.isnan(fold.vid))
         vid = fold.vid / fold.zvid
         vid = rearrange(vid,'t c h w -> t h w c')
+
+        # -- debug --
+        any_nan = th.any(th.isnan(vid))
+        if any_nan:
+            print("found a nan!: ",any_nan,any_zero,any_fold_nan)
+            exit(0)
 
         return vid
 

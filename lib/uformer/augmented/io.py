@@ -36,7 +36,7 @@ def load_model(*args,**kwargs):
 
     # -- defaults changed by noise version --
     noise_version = optional(kwargs,'noise_version',"noise")
-    if noise_version == "noise":
+    if "noise" in noise_version:
         default_modulator = True
         default_depth = [1, 2, 8, 8, 2, 8, 8, 2, 1]
         # default_modulator = False
@@ -89,6 +89,8 @@ def load_model(*args,**kwargs):
     pretrained_qkv = optional(kwargs,"pretrained_qkv","lin2conv")
     reset_qkv = optional(kwargs,"reset_qkv",False)
     attn_reset = optional(kwargs,"attn_reset",'f-f-f-f-f')
+    strict_model_load = optional(kwargs,"strict_model_load",True)
+    skip_mismatch_model_load = optional(kwargs,"skip_mismatch_model_load",False)
 
     # -- break here if init --
     if init: return
@@ -115,11 +117,13 @@ def load_model(*args,**kwargs):
         #load_checkpoint
         state_fn = get_pretrained_path(noise_version,pretrained_path)
         out_attn_mode = attn_mode
+        # if state_fn is None: break
         print("Loading pretrained file: %s" % str(state_fn))
-        print(reset_qkv,attn_reset,in_attn_mode,attn_mode)
         load_checkpoint_qkv(model,state_fn,in_attn_mode,
-                            out_attn_mode,prefix=prefix,
-                            reset_new=reset_qkv,attn_reset=attn_reset)
+                            out_attn_mode,embed_dim,prefix=prefix,
+                            reset_new=reset_qkv,attn_reset=attn_reset,
+                            strict=strict_model_load,
+                            skip_mismatch_model_load=skip_mismatch_model_load)
 
     # -- apply network filters [after load] --
     if filter_by_attn_post:
@@ -140,15 +144,16 @@ def get_pretrained_path(noise_version,optional_path):
         croot = fdir / "output/checkpoints/"
         mpath = get_recent_filename(croot,optional_path)
         return mpath
-    lit = False
     if noise_version == "noise":
         state_fn = fdir / "weights/Uformer_sidd_B.pth"
-        lit = False
+        assert os.path.isfile(str(state_fn))
     elif noise_version == "blur":
         state_fn = fdir / "weights/Uformer_gopro_B.pth"
+        assert os.path.isfile(str(state_fn))
+    elif noise_version in ["rgb_noise"]:
+        state_fn = None
     else:
         raise ValueError(f"Uknown noise_version [{noise_version}]")
-    assert os.path.isfile(str(state_fn))
     return state_fn
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

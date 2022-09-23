@@ -4,6 +4,7 @@
 import os,math,tqdm
 import pprint,copy
 pp = pprint.PrettyPrinter(indent=4)
+from functools import partial
 
 # -- linalg --
 import numpy as np
@@ -61,8 +62,9 @@ def grab_grad(model):
 
 class UformerLit(pl.LightningModule):
 
-    def __init__(self,model_cfg,flow=True,isize=None,batch_size=32,lr_init=0.0002,
-                 weight_decay=0.02,nepochs=250,warmup_epochs=3,scheduler="default"):
+    def __init__(self,model_cfg,flow=True,isize=None,batch_size=32,
+                 lr_init=0.0002,weight_decay=0.02,nepochs=250,
+                 warmup_epochs=3,scheduler="default",task="deblur"):
         super().__init__()
 
         # -- meta params --
@@ -76,6 +78,7 @@ class UformerLit(pl.LightningModule):
         self.nepochs = nepochs
         self.warmup_epochs = warmup_epochs
         self.scheduler = scheduler
+        self.task = task
 
         # -- load model --
         self.net = uformer.load_model(**model_cfg)
@@ -86,6 +89,12 @@ class UformerLit(pl.LightningModule):
         self.gen_loger = logging.getLogger('lightning')
         self.gen_loger.setLevel("NOTSET")
         self.attn_mode = model_cfg['attn_mode']
+
+        # -- manual optim --
+        # self.automatic_optimization = False
+        # self.set_backward_hooks()
+        # print(list(self.net.output_proj.proj.modules())[0])
+        # exit(0)
 
     def forward(self,vid,clamp=False):
 
@@ -170,9 +179,14 @@ class UformerLit(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
 
+        # -- init --
+        # opt = self.optimizers()
+        # opt.zero_grad()
+
         # -- each sample in batch --
+        noisy_key = self.get_data_keys()[0]
         loss = 0 # init @ zero
-        nbatch = len(batch['blur'])
+        nbatch = len(batch[noisy_key])
         denos,cleans = [],[]
         for i in range(nbatch):
             # th.cuda.empty_cache()
@@ -198,17 +212,124 @@ class UformerLit(pl.LightningModule):
         self.log("train_psnr", psnr, on_step=True,
                  on_epoch=False, batch_size=self.batch_size)
 
+        # -- proj --
+        # for name0,mod0 in self.net.output_proj.proj.named_children():
+        #     print(name0)
+        #     for name,param in mod0.named_parameters():
+        #         if param is None: continue
+        #         data = param.data
+        #         pmin = data.min().item()
+        #         pmax = data.max().item()
+        #         print(name,data.shape,th.isnan(th.any(data)),pmin,pmax)
+
         # -- scheduler step --
         # sch = self.lr_schedulers()
         # sch.step()
 
+        # -- optimizer step --
+        # print("pre" + "\n"*10)
+        # self.inspect_param_grads()
+        # loss.backward()
+        # self.manual_backward(loss)
+        # print("post" + "\n"*10)
+        # self.inspect_param_grads()
+        # opt.step()
+
         return loss
+
+
+    def set_backward_hooks(self):
+        def fwd_hook(name, module, input, output):
+            any_nan = False
+            # for g in gradInput:
+            #     if g is None: continue
+            if isinstance(input,tuple):
+                for _input in input:
+                    if _input is None: continue
+                    if isinstance(_input,int): continue
+                    any_nan = any_nan or th.any(th.isnan(_input))
+            else:
+                any_nan = any_nan or th.any(th.isnan(input))
+            if isinstance(output,tuple):
+                for _output in output:
+                    if _output is None: continue
+                    if isinstance(_output,int): continue
+                    any_nan = any_nan or th.any(th.isnan(_output))
+            else:
+                any_nan = any_nan or th.any(th.isnan(output))
+
+            if any_nan:
+                print("fwd.")
+                print(name)
+                print(module)
+                if isinstance(input,tuple):
+                    for _input in input:
+                        if _input is None: continue
+                        if isinstance(_input,int): continue
+                        print(_input.shape,th.any(th.isnan(_input)))
+                else:
+                    print(input.shape,th.any(th.isnan(input)))
+                if isinstance(output,tuple):
+                    for _output in output:
+                        if _output is None: continue
+                        if isinstance(_output,int): continue
+                        print(_output.shape,th.any(th.isnan(_output)))
+                else:
+                    print(output.shape,th.any(th.isnan(output)))
+                    # any_nan = any_nan or th.any(th.isnan(output))
+                # print(input)
+                # print(output)
+                # print(input.shape)
+                # print(output.shape)
+                # print("shapes: ")
+                # for g in gradInput:
+                #     print(g.shape,th.any(th.isnan(g)))
+                # for g in gradOutput:
+                #     print(g.shape)
+                exit(0)
+
+        def bwd_hook(name, module, gradInput, gradOutput):
+            any_nan = False
+            for g in gradInput:
+                if g is None: continue
+                any_nan = any_nan or th.any(th.isnan(g))
+            if any_nan:
+                print("bwd.")
+                print(name)
+                print(module)
+                print(gradInput)
+                print(gradOutput)
+                print("shapes: ")
+                for g in gradInput:
+                    print(g.shape,th.any(th.isnan(g)))
+                for g in gradOutput:
+                    print(g.shape,th.any(th.isnan(g)))
+                exit(0)
+        for name,mod in self.named_modules():
+            if name == "net": continue
+            named_hook = partial(fwd_hook,name)
+            mod.register_forward_hook(named_hook)
+            named_hook = partial(bwd_hook,name)
+            mod.register_backward_hook(named_hook)
+        #     print(name)
+        # exit(0)
+        # for param in self.parameters():
+        #     param.backward(register_backward_hook(hook))
+
+    def inspect_param_grads(self):
+        for param in self.parameters():
+            if param.grad is None: continue
+            any_nan = th.any(th.isnan(param.grad))
+            pmin = param.grad.min().item()
+            pmax = param.grad.max().item()
+            print("[any,pmin,pmax]: ",any_nan,pmin,pmax)
 
     def training_step_i(self, batch, i):
 
         # -- unpack batch
-        noisy = batch['blur'][i]/255.
-        clean = batch['sharp'][i]/255.
+        noisy_key,clean_key = self.get_data_keys()
+        noisy = batch[noisy_key][i]/255.
+        clean = batch[clean_key][i]/255.
         region = batch['region'][i]
         # print("noisy.shape: ",noisy.shape)
 
@@ -220,23 +341,34 @@ class UformerLit(pl.LightningModule):
         deno = self.forward(noisy,False)
 
         # -- save a few --
-        # io.save_burst(deno,"./output/","deno")
-        # io.save_burst(noisy,"./output/","noisy")
-        # io.save_burst(clean,"./output/","clean")
-        # exit(0)
+        if self.global_step % 300 == 0  and i == 0:
+            out_dir = "./output/lightning/%06d" % self.global_step
+            io.save_burst(deno,out_dir,"deno")
+            io.save_burst(noisy,out_dir,"noisy")
+            io.save_burst(clean,out_dir,"clean")
 
-        # -- report loss --
-        eps = 1e-3
-        diff = th.sqrt((clean - deno)**2 + eps**2)
-        loss = th.mean(diff)
+        # -- get loss for train types --
+        if self.task == "deblur":
+            eps = 1.*1e-3
+            diff = th.sqrt((clean - deno)**2 + eps**2)
+            loss = th.mean(diff)
+        else:
+            loss = th.mean((clean - deno)**2)
 
         return deno.detach(),clean,loss
 
 
+    def get_data_keys(self):
+        if self.task == "deblur":
+            return "blur","sharp"
+        else:
+            return "noisy","clean"
+
     def validation_step(self, batch, batch_idx):
 
-        # -- denoise --
-        noisy,clean = batch['blur'][0]/255.,batch['sharp'][0]/255.
+        # -- unpack data --
+        noisy_key,clean_key = self.get_data_keys()
+        noisy,clean = batch[noisy_key][0]/255.,batch[clean_key][0]/255.
         region = batch['region'][0]
         noisy = rslice(noisy,region)
         clean = rslice(clean,region)
@@ -268,7 +400,8 @@ class UformerLit(pl.LightningModule):
 
         # -- denoise --
         index,region = batch['index'][0],batch['region'][0]
-        noisy,clean = batch['blur'][0]/255.,batch['sharp'][0]/255.
+        noisy_key,clean_key = self.get_data_keys()
+        noisy,clean = batch[noisy_key][0]/255.,batch[clean_key][0]/255.
         noisy = rslice(noisy,region)
         clean = rslice(clean,region)
 

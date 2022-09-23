@@ -20,6 +20,12 @@ def tuple_as_int(elem):
     else:
         return elem
 
+def task_keys(task):
+    if "blur" in task:
+        return "blur","sharp"
+    else:
+        return "noisy","clean"
+
 def assert_nonan(tensor):
     assert th.any(th.isnan(tensor)).item() is False
 

@@ -226,9 +226,12 @@ def exps_verify_new_code_train(iexps=None):
     expl['freeze'] = ["f-f-f-t-t"]
     expl['attn_reset'] = ["t-t-f-f-f"]
     expl['embed_dim'] = ["9-9-32-32-32"]
+    expl['stride0'] = ['1-1-1-1-1']
+    expl['stride1'] = ['4-4-1-1-1']
     expl['ws'] = ["29-29-8-8-8"]
     expl['wt'] = ["2-2-0-0-0"]
     expl['k'] = ["64-64-0-0-0"]
+    expl['ps'] = ["7-7-1-1-1"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
     return exps
@@ -266,12 +269,99 @@ def exps_verify_new_code_test(iexps=None):
     expl['attn_mode'] = ["pd-pd-w-w-w"]
     expl['embed_dim'] = ["9-9-32-32-32"]
     expl['ws'] = ["29-29-8-8-8"]
+    expl['ps'] = ["7-7-1-1-1"]
     expl['wt'] = ["2-2-0-0-0"]
     expl['k'] = ["64-64-0-0-0"]
     # exps += cache_io.mesh_pydicts(expl) # create mesh
 
     return exps
 
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#
+#
+#     Run Denoising Experiments
+#
+#
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+def exps_rgb_denoising(iexps=None,mode="train"):
+    if mode == "train":
+        return exps_rgb_denoising_train(iexps)
+    elif mode == "test":
+        return exps_rgb_denoising_test(iexps)
+    else:
+        raise ValueError("Unable to verify new code.")
+
+def exps_rgb_denoising_train(iexps=None):
+
+    # -- init --
+    expl = exp_init(iexps,"train")
+    expl['freeze'] = ['false']
+
+    # -- [exp a] step 0 --
+    expl['in_attn_mode'] = ["w-w-w-w-w"]
+    expl['attn_mode'] = ["w-w-w-w-w"]
+    expl['attn_reset'] = ["t-t-f-f-f"]
+    exps = cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp b] step 0 --
+    expl['in_attn_mode'] = ["w-w-w-w-w"]
+    expl['attn_mode'] = ["pd-pd-w-w-w"]
+    expl['attn_reset'] = ["t-t-f-f-f"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp c] step 0 --
+    expl['in_attn_mode'] = ["w-w-w-w-w"]
+    expl['attn_mode'] = ["pd-pd-w-w-w"]
+    expl['attn_reset'] = ["t-t-f-f-f"]
+    expl['embed_dim'] = ["9-9-32-32-32"]
+    expl['stride0'] = ['1-1-1-1-1']
+    expl['stride1'] = ['4-4-1-1-1']
+    expl['ws'] = ["29-29-8-8-8"]
+    expl['wt'] = ["2-2-0-0-0"]
+    expl['k'] = ["64-64-0-0-0"]
+    expl['ps'] = ["7-7-1-1-1"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    return exps
+
+def exps_rgb_denoising_test(iexps=None):
+
+    # -- init --
+    expl = exp_init(iexps,"test")
+    expl['use_train'] = ['false']
+    expl['attn_reset'] = ["f-f-f-f-f"]
+    expl['pretrained_prefix'] = ["net."]
+
+    # -- [exp a] step 0 --
+    expl['pretrained_path'] = ["737d74db"]
+    expl['in_attn_mode'] = ["w-w-w-w-w"]
+    expl['attn_mode'] = ["w-w-w-w-w"]
+    exps = cache_io.mesh_pydicts(expl) # create mesh
+
+
+    # -- [exp b] step 0 --
+    expl['pretrained_path'] = ["ad209414"]
+    expl['in_attn_mode'] = ["w-w-w-w-w"]
+    expl['attn_mode'] = ["pd-pd-w-w-w"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp c] step 0 --
+    expl['pretrained_path'] = ["468b1845"]
+    expl['in_attn_mode'] = ["w-w-w-w-w"]
+    expl['attn_mode'] = ["pd-pd-w-w-w"]
+    expl['embed_dim'] = ["9-9-32-32-32"]
+    expl['stride0'] = ['1-1-1-1-1']
+    expl['stride1'] = ['4-4-1-1-1']
+    expl['ws'] = ["29-29-8-8-8"]
+    expl['wt'] = ["2-2-0-0-0"]
+    expl['k'] = ["64-64-0-0-0"]
+    expl['ps'] = ["7-7-1-1-1"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    return exps
+
+# --- final mesh --
 def get_exp_mesh(iexps=None):
     exps = exps_impact_of_replacing_layers(iexps)
     exps += exps_compare_attn_modes(iexps)
