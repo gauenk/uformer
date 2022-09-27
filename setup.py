@@ -28,5 +28,5 @@ setup(
     keywords='burst denoising, non-local search, video denoising, neural network',
     install_requires=['numpy','torch','flake8','dnls'],
     package_dir={"": "lib"},
-    packages=find_packages(""),
+    packages=find_packages("lib"),
 )

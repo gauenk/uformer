@@ -78,7 +78,8 @@ def launch_training(_cfg):
     model = UformerLit(model_cfg,flow=cfg.flow,isize=cfg.isize,
                        batch_size=cfg.batch_size_tr,lr_init=cfg.lr_init,
                        weight_decay=cfg.weight_decay,nepochs=cfg.nepochs,
-                       warmup_epochs=cfg.warmup_epochs,task=cfg.task)
+                       warmup_epochs=cfg.warmup_epochs,task=cfg.task,
+                       uuid=str(cfg.uuid))
 
     # -- load dataset with testing mods isizes --
     # model.isize = None
@@ -137,8 +138,10 @@ def launch_training(_cfg):
                          callbacks=[checkpoint_callback,cc_recent])
                          # strategy="ddp_find_unused_parameters_false")
     timer.start("train")
-    ckpt_path=None
-    trainer.fit(model, loaders.tr, loaders.val, ckpt_path=ckpt_path)
+    # ckpt_path=None
+    chkpt_base=Path("./output/checkpoints/")
+    chkpt_path=chkpt_base/"ff972aa2-4847-48f7-adb3-6c8c347b203a-epoch=33.ckpt"
+    trainer.fit(model, loaders.tr, loaders.val, ckpt_path=chkpt_path)
     timer.stop("train")
     best_model_path = checkpoint_callback.best_model_path
 
@@ -209,7 +212,7 @@ def main():
     cache_dir = ".cache_io"
     cache_name = "train_davis"
     cache = cache_io.ExpCache(cache_dir,cache_name)
-    # cache.clear()
+    cache.clear()
 
     # -- search info --
     exps = exps_menu.exps_rgb_denoising(mode="train")
@@ -241,6 +244,8 @@ def main():
     cfg.rbwd = "true"
     # cfg.limit_train_batches = 0.25 # with w
     cfg.limit_train_batches = 0.025 # with pd
+    cfg.aug_training_scales = [0.5,0.75,1.]
+    cfg.aug_training_flips = True
 
     # -- pick an exp --
     exps = [exps[-1]] # run0

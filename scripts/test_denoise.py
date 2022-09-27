@@ -197,7 +197,7 @@ def main():
     # cache_name = "test_rgb_net"
     cache_name = "davis_bench"
     cache = cache_io.ExpCache(cache_dir,cache_name)
-    # cache.clear()
+    cache.clear()
 
     # -- get data mesh --
     dname,dset = ["davis"],["val"]
@@ -214,7 +214,7 @@ def main():
     cfg.frame_start = 0
     cfg.frame_end = cfg.frame_start + cfg.nframes - 1
     cfg.noise_version = "rgb_noise"
-    cfg.spatial_crop_size = 512
+    cfg.spatial_crop_size = 256
     cfg.spatial_crop_overlap = 0.0
     cfg.temporal_crop_size = 5
     cfg.temporal_crop_overlap = 0/5. # 3 of 5 frames

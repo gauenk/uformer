@@ -347,8 +347,8 @@ def exps_rgb_denoising_test(iexps=None):
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
     # -- [exp c] step 0 --
-    expl['pretrained_path'] = ["468b1845"]
-    expl['in_attn_mode'] = ["w-w-w-w-w"]
+    expl['pretrained_path'] = ["ff972aa2"]
+    expl['in_attn_mode'] = ["pd-pd-w-w-w"]
     expl['attn_mode'] = ["pd-pd-w-w-w"]
     expl['embed_dim'] = ["9-9-32-32-32"]
     expl['stride0'] = ['1-1-1-1-1']

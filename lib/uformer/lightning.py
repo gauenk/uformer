@@ -64,12 +64,13 @@ class UformerLit(pl.LightningModule):
 
     def __init__(self,model_cfg,flow=True,isize=None,batch_size=32,
                  lr_init=0.0002,weight_decay=0.02,nepochs=250,
-                 warmup_epochs=3,scheduler="default",task="deblur"):
+                 warmup_epochs=3,scheduler="default",task="deblur",uuid="default"):
         super().__init__()
 
         # -- meta params --
         self.flow = flow
         self.isize = isize
+        self.uuid = uuid
 
         # -- learning --
         self.batch_size = batch_size
@@ -331,18 +332,19 @@ class UformerLit(pl.LightningModule):
         noisy = batch[noisy_key][i]/255.
         clean = batch[clean_key][i]/255.
         region = batch['region'][i]
-        # print("noisy.shape: ",noisy.shape)
 
         # -- get data --
         noisy = rslice(noisy,region)
         clean = rslice(clean,region)
+        # print("noisy.shape: ",noisy.shape)
 
         # -- foward --
         deno = self.forward(noisy,False)
+        # print("deno.shape: ",deno.shape)
 
         # -- save a few --
         if self.global_step % 300 == 0  and i == 0:
-            out_dir = "./output/lightning/%06d" % self.global_step
+            out_dir = "./output/lightning/%s/%06d" % (self.uuid,self.global_step)
             io.save_burst(deno,out_dir,"deno")
             io.save_burst(noisy,out_dir,"noisy")
             io.save_burst(clean,out_dir,"clean")
