@@ -50,7 +50,7 @@ def load_model(*args,**kwargs):
     # -- get cfg --
     nchnls = optional(kwargs,'nchnls',3)
     input_size = optional(kwargs,'input_size',128)
-    depths = optional(kwargs,'input_depth',default_depth)
+    depths = parse_depths(optional(kwargs,'model_depths',default_depth))
     device = optional(kwargs,'device','cuda:0')
 
     # -- other configs --
@@ -134,10 +134,6 @@ def load_model(*args,**kwargs):
 
     return model
 
-# -- run to populate "_fields" --
-load_model(__init=True)
-
-
 def get_pretrained_path(noise_version,optional_path):
     fdir = Path(__file__).absolute().parents[0] / "../../../" # parent of "./lib"
     if optional_path != "":
@@ -155,6 +151,17 @@ def get_pretrained_path(noise_version,optional_path):
     else:
         raise ValueError(f"Uknown noise_version [{noise_version}]")
     return state_fn
+
+
+def parse_depths(depths):
+    if isinstance(depths,list) and len(depths) == 9:
+        return depths
+    elif isinstance(depths,str):
+        depths_l = depths.split("-")
+        depths_l = [int(d) for d in depths_l]
+        return depths_l
+    else:
+        raise ValueError(f"Uknown value format for depths [{depths}]")
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #
@@ -175,3 +182,10 @@ def extract_model_io(cfg):
         if field in cfg:
             model_cfg[field] = cfg[field]
     return model_cfg
+
+
+
+# -- run to populate "_fields" --
+load_model(__init=True)
+
+
