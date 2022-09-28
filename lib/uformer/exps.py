@@ -63,6 +63,7 @@ def exp_default_init(iexps = None):
     embed_dim = [32]
     attn_reset = ['f-f-f-f-f']
     freeze = ['f-f-f-f-f']
+    model_depths = ["1-2-8-8-2-8-8-2-1"]
 
     # -- grid --
     exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,
@@ -73,7 +74,8 @@ def exp_default_init(iexps = None):
                  "freeze":freeze,"filter_by_attn_pre":filter_by_attn_pre,
                  "filter_by_attn_post":filter_by_attn_post,"embed_dim":embed_dim,
                  "attn_reset":attn_reset,"in_attn_mode":in_attn_mode,
-                 "attn_mode":attn_mode,"attn_reset":attn_reset,"freeze":freeze}
+                 "attn_mode":attn_mode,"attn_reset":attn_reset,"freeze":freeze,
+                 "model_depths":model_depths}
     # -- apped new values --
     dcat(exp_lists,iexps) # input overwrites defaults
     return exp_lists
@@ -321,6 +323,34 @@ def exps_rgb_denoising_train(iexps=None):
     expl['wt'] = ["2-2-0-0-0"]
     expl['k'] = ["64-64-0-0-0"]
     expl['ps'] = ["7-7-1-1-1"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp d] step 0 -- ["slim"]
+    expl['in_attn_mode'] = ["w-w-w-w-w"]
+    expl['attn_mode'] = ["pd-pd-pd-pd-pd"]
+    expl['attn_reset'] = ["t-t-t-t-t"]
+    expl['embed_dim'] = ["9-9-9-9-9"]
+    expl['stride0'] = ['1-1-1-1-1']
+    expl['stride1'] = ['4-4-2-2-2']
+    expl['ws'] = ["29-15-11-9-9"]
+    expl['wt'] = ["2-2-2-0-0"]
+    expl['k'] = ["64-64-64-64-64"]
+    expl['ps'] = ["7-7-7-5-3"]
+    expl['model_depths'] = ["2-2-2-2-2-2-2-2-2"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp e] step 0 -- ["skinny"]
+    expl['in_attn_mode'] = ["w-w-w-w-w"]
+    expl['attn_mode'] = ["pd-pd-pd-pd-pd"]
+    expl['attn_reset'] = ["t-t-t-t-t"]
+    expl['embed_dim'] = ["9-9-9-9-9"]
+    expl['stride0'] = ['1-1-1-1-1']
+    expl['stride1'] = ['4-4-2-2-2']
+    expl['ws'] = ["29-15-11-9-9"]
+    expl['wt'] = ["2-2-2-0-0"]
+    expl['k'] = ["64-64-64-64-64"]
+    expl['ps'] = ["7-7-7-5-3"]
+    expl['model_depths'] = ["1-1-1-1-1-1-1-1-1"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
     return exps

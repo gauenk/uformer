@@ -63,6 +63,7 @@ def load_model(*args,**kwargs):
     modulator = optional(kwargs,'modulator',default_modulator)
     cross_modulator = optional(kwargs,'cross_modulator',False)
     dd_in = optional(kwargs,'dd_in',3)
+    shift_flag = optional(kwargs,'shift_flag',True)
 
     # -- relevant configs --
     attn_mode = optional(kwargs,'attn_mode',"window_dnls")
@@ -104,7 +105,7 @@ def load_model(*args,**kwargs):
                     attn_mode=attn_mode,ps=ps,pt=pt,ws=ws,wt=wt,k=k,
                     stride0=stride0,stride1=stride1,
                     nbwd=nbwd,rbwd=rbwd,exact=exact,bs=bs,freeze=freeze,
-                    embed_dim=embed_dim)
+                    embed_dim=embed_dim,shift_flag=shift_flag)
     model = model.to(device)
 
     # -- apply network filters [before load] --
