@@ -126,12 +126,13 @@ def run_exp(_cfg):
         fwd_fxn = tchop_p # rename
 
         # -- denoise --
+        fsize = int(cfg.isize.split("_")[0]) if not(cfg.isize is None) else 1024
         timer.start("deno")
         with th.no_grad():
 
             vshape = noisy.shape
             print("noisy.shape: ",noisy.shape)
-            noisy_sq,mask = expand2square(noisy,1024.)
+            noisy_sq,mask = expand2square(noisy,fsize)
             print("noisy_sq.shape: ",noisy_sq.shape)
             deno = fwd_fxn(noisy_sq/imax)
             # deno = tchop_p(noisy_sq/imax)
@@ -208,13 +209,13 @@ def main():
 
     # -- group with default --
     cfg = configs.default_cfg()
-    # cfg.isize = "256_256"
+    cfg.isize = "256_256"
     cfg.task = "rgb_denoise"
-    cfg.nframes = 10
+    cfg.nframes = 5
     cfg.frame_start = 0
     cfg.frame_end = cfg.frame_start + cfg.nframes - 1
     cfg.noise_version = "rgb_noise"
-    cfg.spatial_crop_size = 256
+    cfg.spatial_crop_size = 128
     cfg.spatial_crop_overlap = 0.0
     cfg.temporal_crop_size = 5
     cfg.temporal_crop_overlap = 0/5. # 3 of 5 frames

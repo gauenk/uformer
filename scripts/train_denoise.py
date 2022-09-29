@@ -245,13 +245,16 @@ def main():
     # cfg.rbwd = "false"
     # cfg.limit_train_batches = 0.25 # with w
     cfg.limit_train_batches = 0.025 # with pd
+
     cfg.aug_training_scales = [0.5,0.75,1.]
     cfg.aug_training_flips = True
     cfg.shift_flag = False
-    cfg.batch_size_tr = 1
 
     # -- pick an exp --
-    exps = [exps[-1]] # run0
+    # exps = [exps[0]] # run0
+    exps = [exps[1]] # run0
+    # exps = [exps[-2]] # run0
+    # exps = [exps[-1]] # run0
     nexps = len(exps)
 
     # -- mix --

@@ -303,13 +303,14 @@ def exps_rgb_denoising_train(iexps=None):
     # -- [exp a] step 0 --
     expl['in_attn_mode'] = ["w-w-w-w-w"]
     expl['attn_mode'] = ["w-w-w-w-w"]
-    expl['attn_reset'] = ["t-t-f-f-f"]
+    expl['attn_reset'] = ["t-t-t-t-t"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
 
     # -- [exp b] step 0 --
     expl['in_attn_mode'] = ["w-w-w-w-w"]
     expl['attn_mode'] = ["pd-pd-w-w-w"]
-    expl['attn_reset'] = ["t-t-f-f-f"]
+    # expl['attn_reset'] = ["t-t-f-f-f"]
+    expl['attn_reset'] = ["t-t-t-t-t"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
     # -- [exp c] step 0 --
@@ -364,7 +365,7 @@ def exps_rgb_denoising_test(iexps=None):
     expl['pretrained_prefix'] = ["net."]
 
     # -- [exp a] step 0 --
-    expl['pretrained_path'] = ["737d74db"]
+    expl['pretrained_path'] = ["98918264-f802-44da-9255-8788f37cb0fc-epoch=60-val_loss=9.69e-04.ckpt"]
     expl['in_attn_mode'] = ["w-w-w-w-w"]
     expl['attn_mode'] = ["w-w-w-w-w"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
@@ -377,7 +378,22 @@ def exps_rgb_denoising_test(iexps=None):
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
     # -- [exp c] step 0 --
-    expl['pretrained_path'] = ["ff972aa2"]
+    expl['pretrained_path'] = ["f69d3cc4-986f-4f55-b0b9-b5f90b3b5957-epoch=58-val_loss=1.03e-03.ckpt"]
+    expl['in_attn_mode'] = ["w-w-w-w-w"]
+    expl['attn_mode'] = ["pd-pd-pd-pd-pd"]
+    expl['attn_reset'] = ["t-t-t-t-t"]
+    expl['embed_dim'] = ["9-9-9-9-9"]
+    expl['stride0'] = ['1-1-1-1-1']
+    expl['stride1'] = ['4-4-2-2-2']
+    expl['ws'] = ["29-15-11-9-9"]
+    expl['wt'] = ["2-2-2-0-0"]
+    expl['k'] = ["64-64-64-64-64"]
+    expl['ps'] = ["7-7-7-5-3"]
+    expl['model_depths'] = ["2-2-2-2-2-2-2-2-2"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp e] --
+    expl['pretrained_path'] = ["f69d3cc4-986f-4f55-b0b9-b5f90b3b5957-epoch=58-val_loss=1.03e-03.ckpt"]
     expl['in_attn_mode'] = ["pd-pd-w-w-w"]
     expl['attn_mode'] = ["pd-pd-w-w-w"]
     expl['embed_dim'] = ["9-9-32-32-32"]

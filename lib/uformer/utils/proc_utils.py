@@ -52,6 +52,7 @@ def get_chunks(size,chunk_size,overlap):
         else:
             points.append(pt)
         counter += 1
+    points = list(np.unique(points))
     return points
 
 def get_spatial_chunk(vid,h_chunk,w_chunk,size):
