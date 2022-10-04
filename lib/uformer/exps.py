@@ -63,7 +63,8 @@ def exp_default_init(iexps = None):
     embed_dim = [32]
     attn_reset = ['f-f-f-f-f']
     freeze = ['f-f-f-f-f']
-    model_depths = ["1-2-8-8-2-8-8-2-1"]
+    # model_depths = ["1-2-8-8-2-8-8-2-1"]
+    model_depths = ["1-2-8-8-2"]
 
     # -- grid --
     exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,

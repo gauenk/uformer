@@ -38,12 +38,12 @@ def load_model(*args,**kwargs):
     noise_version = optional(kwargs,'noise_version',"noise")
     if "noise" in noise_version:
         default_modulator = True
-        default_depth = [1, 2, 8, 8, 2, 8, 8, 2, 1]
+        default_depth = [1, 2, 8, 8, 2]
         # default_modulator = False
-        # default_depth = [2, 2, 2, 2, 2, 2, 2, 2, 2]
+        # default_depth = [2, 2, 2, 2, 2]
     elif noise_version == "blur":
         default_modulator = True
-        default_depth = [1, 2, 8, 8, 2, 8, 8, 2, 1]
+        default_depth = [1, 2, 8, 8, 2]
     else:
         raise ValueError(f"Uknown noise version [{noise_version}]")
 
@@ -52,6 +52,7 @@ def load_model(*args,**kwargs):
     input_size = optional(kwargs,'input_size',128)
     depths = parse_depths(optional(kwargs,'model_depths',default_depth))
     device = optional(kwargs,'device','cuda:0')
+    nblocks = len(depths)-1
 
     # -- other configs --
     embed_dim = optional(kwargs,'embed_dim',32)
@@ -89,7 +90,7 @@ def load_model(*args,**kwargs):
     pretrained_prefix = optional(kwargs,"pretrained_prefix","module.")
     pretrained_qkv = optional(kwargs,"pretrained_qkv","lin2conv")
     reset_qkv = optional(kwargs,"reset_qkv",False)
-    attn_reset = optional(kwargs,"attn_reset",'f-f-f-f-f')
+    attn_reset = optional(kwargs,"attn_reset",('f-'*nblocks)[:-1])
     strict_model_load = optional(kwargs,"strict_model_load",True)
     skip_mismatch_model_load = optional(kwargs,"skip_mismatch_model_load",False)
     strict_model_load = True
@@ -125,7 +126,8 @@ def load_model(*args,**kwargs):
                             out_attn_mode,embed_dim,prefix=prefix,
                             reset_new=reset_qkv,attn_reset=attn_reset,
                             strict=strict_model_load,
-                            skip_mismatch_model_load=skip_mismatch_model_load)
+                            skip_mismatch_model_load=skip_mismatch_model_load,
+                            nblocks=nblocks)
 
     # -- apply network filters [after load] --
     if filter_by_attn_post:
@@ -157,7 +159,7 @@ def get_pretrained_path(noise_version,optional_path):
 
 
 def parse_depths(depths):
-    if isinstance(depths,list) and len(depths) == 9:
+    if isinstance(depths,list):# and len(depths) == 5:
         return depths
     elif isinstance(depths,str):
         depths_l = depths.split("-")

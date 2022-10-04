@@ -35,8 +35,8 @@ class Uformer(nn.Module):
         super().__init__()
 
         # -- init --
-        self.num_enc_layers = len(depths)//2
-        self.num_dec_layers = len(depths)//2
+        self.num_enc_layers = len(depths)-1
+        self.num_dec_layers = len(depths)-1
         self.patch_norm = patch_norm
         self.mlp_ratio = mlp_ratio
         self.token_projection = token_projection
@@ -59,7 +59,7 @@ class Uformer(nn.Module):
         self.nbwd = nbwd
         self.exact = exact
         self.bs = bs
-        nblocks = len(depths)//2
+        nblocks = len(depths)-1
 
         # -- unroll for each module --
         out = fields2blocks(attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
