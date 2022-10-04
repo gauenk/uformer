@@ -3,6 +3,7 @@
 import os,copy
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
+from functools import partial
 
 # -- vision --
 import scipy.io
@@ -33,7 +34,8 @@ from uformer import configs
 from uformer import lightning
 from uformer.utils.misc import optional,rslice_pair
 from uformer.utils.metrics import compute_psnrs,compute_ssims
-from uformer.utils.model_utils import temporal_chop,expand2square,load_checkpoint
+from uformer.utils.model_utils import load_checkpoint
+from uformer.utils.proc_utils import spatial_chop,temporal_chop,expand2square
 
 def run_exp(_cfg):
 
@@ -65,7 +67,7 @@ def run_exp(_cfg):
     model_cfg = uformer.extract_model_io(cfg)
     print(model_cfg)
     model = uformer.load_model(**model_cfg)
-    substr = cfg.chkpt # note "" == most recent
+    substr = optional(cfg,"chkpt","")
     load_checkpoint(model,cfg.use_train,substr)
     imax = 255.
 
@@ -111,21 +113,41 @@ def run_exp(_cfg):
             flows = None
         timer.stop("flow")
 
+        # -- get space-time chopping wrapper --
+        s_verbose = True
+        t_verbose = True
+        s_size = cfg.spatial_crop_size
+        s_overlap = cfg.spatial_crop_overlap
+        t_size = cfg.temporal_crop_size
+        t_overlap = cfg.temporal_crop_overlap
+        schop_p = partial(spatial_chop,s_size,s_overlap,model,verbose=s_verbose)
+        tchop_p = partial(temporal_chop,t_size,t_overlap,schop_p,verbose=t_verbose)
+        fwd_fxn = tchop_p # rename
+        fsize = int(cfg.isize.split("_")[0]) if not(cfg.isize is None) else 1024
+
         # -- denoise --
         timer.start("deno")
         with th.no_grad():
 
             vshape = noisy.shape
             print("noisy.shape: ",noisy.shape)
-            noisy_sq,mask = expand2square(noisy)
+            noisy_sq,mask = expand2square(noisy,fsize)
             print("noisy_sq.shape: ",noisy_sq.shape)
-
-            tsize = 2
-            deno = temporal_chop(noisy_sq/imax,tsize,model)
-
+            deno = fwd_fxn(noisy_sq/imax)
+            # deno = tchop_p(noisy_sq/imax)
             print("deno.shape: ",deno.shape)
             deno = th.masked_select(deno,mask.bool()).reshape(*vshape)
             print("deno.shape: ",deno.shape)
+
+            # vshape = noisy.shape
+            # print("noisy.shape: ",noisy.shape)
+            # noisy_sq,mask = expand2square(noisy)
+            # print("noisy_sq.shape: ",noisy_sq.shape)
+            # tsize = 2
+            # deno = temporal_chop(noisy_sq/imax,tsize,model)
+            # print("deno.shape: ",deno.shape)
+            # deno = th.masked_select(deno,mask.bool()).reshape(*vshape)
+            # print("deno.shape: ",deno.shape)
             # t = noisy.shape[0]
             # deno = []
             # for ti in range(t):
@@ -197,15 +219,25 @@ def main():
 
     # -- group with default --
     cfg = configs.default_cfg()
-    # cfg.isize = "256_256"
+    cfg.isize = "256_256"
     cfg.nframes = 1
     cfg.frame_start = 0
     cfg.frame_end = cfg.frame_start + cfg.nframes - 1
     # cfg.isize = "256_256"
     cfg.noise_version = "blur"
-    cfg.chkpt = ""
+    # cfg.chkpt = ""
     # cfg.use_train = "false"
-    # cfg.load_pretrained = "false"
+    # cfg.load_pretrained = "true"
+    # cfg.pretrained_path = ""
+    # cfg.pretrained_prefix = "module."
+    
+
+    # -- chopping --
+    cfg.spatial_crop_size = 128
+    cfg.spatial_crop_overlap = 0.0
+    cfg.temporal_crop_size = 5
+    cfg.temporal_crop_overlap = 0/5. # 3 of 5 frames
+
     print(cfg)
     cache_io.append_configs(exps,cfg) # merge the two
 

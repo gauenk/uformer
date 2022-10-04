@@ -124,9 +124,9 @@ def run_exp(_cfg):
         schop_p = partial(spatial_chop,s_size,s_overlap,model,verbose=s_verbose)
         tchop_p = partial(temporal_chop,t_size,t_overlap,schop_p,verbose=t_verbose)
         fwd_fxn = tchop_p # rename
+        fsize = int(cfg.isize.split("_")[0]) if not(cfg.isize is None) else 1024
 
         # -- denoise --
-        fsize = int(cfg.isize.split("_")[0]) if not(cfg.isize is None) else 1024
         timer.start("deno")
         with th.no_grad():
 

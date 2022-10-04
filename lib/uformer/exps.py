@@ -255,8 +255,8 @@ def exps_verify_new_code_test(iexps=None):
     # -- [version 0] --
     expl['in_attn_mode'] = ["w-w-w-w-w"]
     expl['attn_mode'] = ["w-w-w-w-w"]
-    expl['pretrained_prefix'] = ["net."]
-    expl['pretrained_path'] = ["bdafda0c","2aa8a10a"]
+    expl['pretrained_prefix'] = ["module."]
+    expl['pretrained_path'] = [""]
     exps = cache_io.mesh_pydicts(expl) # create mesh
 
     # -- [version 1] --

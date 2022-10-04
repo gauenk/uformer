@@ -146,6 +146,7 @@ def get_pretrained_path(noise_version,optional_path):
         assert os.path.isfile(str(state_fn))
     elif noise_version == "blur":
         state_fn = fdir / "weights/Uformer_gopro_B.pth"
+        print(state_fn)
         assert os.path.isfile(str(state_fn))
     elif noise_version in ["rgb_noise"]:
         state_fn = None

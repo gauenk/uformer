@@ -3,6 +3,7 @@
 import torch as th
 import torch.nn as nn
 from einops import rearrange,repeat
+from functools import partial
 
 # -- extra deps --
 from timm.models.layers import trunc_normal_
@@ -10,6 +11,8 @@ from timm.models.layers import trunc_normal_
 # -- project deps --
 from .proj import InputProj,OutputProj
 from .basic_uformer import BasicUformerLayer
+from .basic_uformer import create_basic_enc_layer,create_basic_dec_layer
+from .basic_uformer import create_basic_conv_layer
 from .scaling import Downsample,Upsample
 from .parse import fields2blocks
 from ..utils.model_utils import apply_freeze
@@ -71,217 +74,227 @@ class Uformer(nn.Module):
         conv_dpr = [drop_path_rate]*depths[4]
         dec_dpr = enc_dpr[::-1]
 
-        # build layers
-
-        # Input/Output
+        # -- input/output --
         self.input_proj = InputProj(in_channel=dd_in, out_channel=embed_dim[0],
                                     kernel_size=3, stride=1, act_layer=nn.LeakyReLU)
         self.output_proj = OutputProj(in_channel=2*embed_dim[0],
                                       out_channel=in_chans, kernel_size=3, stride=1)
 
+        # -- init partial basic layer decl -- 
+        nblocks = 4
+        basic_enc_layer = partial(create_basic_enc_layer,BasicUformerLayer,embed_dim,
+                                  img_size,depths,num_heads,win_size,
+                                  self.mlp_ratio,qkv_bias,qk_scale,drop_rate,
+                                  attn_drop_rate,norm_layer,use_checkpoint,
+                                  token_projection,token_mlp,shift_flag,attn_mode,
+                                  k,ps,pt,ws,wt,dil,stride0,stride1,nbwd,rbwd,
+                                  nblocks,exact,bs,enc_dpr)
+        basic_conv_layer = partial(create_basic_conv_layer,BasicUformerLayer,embed_dim,
+                                   img_size,depths,num_heads,win_size,
+                                   self.mlp_ratio,qkv_bias,qk_scale,drop_rate,
+                                   attn_drop_rate,norm_layer,use_checkpoint,
+                                   token_projection,token_mlp,shift_flag,attn_mode,
+                                   k,ps,pt,ws,wt,dil,stride0,stride1,nbwd,rbwd,
+                                   nblocks,exact,bs,conv_dpr)
+        basic_dec_layer = partial(create_basic_dec_layer,BasicUformerLayer,embed_dim,
+                                  img_size,depths,num_heads,win_size,
+                                  self.mlp_ratio,qkv_bias,qk_scale,drop_rate,
+                                  attn_drop_rate,norm_layer,use_checkpoint,
+                                  token_projection,token_mlp,shift_flag,
+                                  modulator,cross_modulator,attn_mode,
+                                  k,ps,pt,ws,wt,dil,stride0,stride1,nbwd,rbwd,
+                                  nblocks,exact,bs,dec_dpr)
+        # -- info --
+        print("depths: ",depths)
+        print("drop_path[enc]: ",enc_dpr)
+        print("drop_path[dec]: ",dec_dpr)
+        print("win_size: ",win_size)
+        print("num_heads: ",num_heads)
+
+        # -- encoder --
+        for l in range(nblocks):
+            setattr(self,"encoderlayer_%d" % l,basic_enc_layer(l))
+            setattr(self,"dowsample_%d" % l,dowsample(embed_dim[l]*(2**l),
+                                                      embed_dim[l+1]*(2**(l+1))))
+
+        # -- center --
+        setattr(self,"conv",basic_conv_layer(nblocks))
+
+        # -- decoder --
+        for l in range(nblocks):
+            _l = nblocks - l
+            if l == 0:
+                mod_in = 16
+                mod_out = 8
+            else:
+                mod_in = 2**(_l+1)
+                mod_out = mod_in//4
+            print("[up]: ",l,_l,mod_in,mod_in,mod_out)
+            setattr(self,"upsample_%d" % l,upsample(embed_dim[l+1]*mod_in,
+                                                     embed_dim[l]*mod_out))
+            setattr(self,"decoderlayer_%d" % l,basic_dec_layer(l))
+
         # Encoder
-        l = 0
-        self.encoderlayer_0 = BasicUformerLayer(dim=embed_dim[l],
-                            output_dim=embed_dim[l],
-                            input_resolution=(img_size,
-                                                img_size),
-                            depth=depths[l],
-                            num_heads=num_heads[l],
-                            win_size=win_size,
-                            mlp_ratio=self.mlp_ratio,
-                            qkv_bias=qkv_bias, qk_scale=qk_scale,
-                            drop=drop_rate, attn_drop=attn_drop_rate,
-                            drop_path=enc_dpr[sum(depths[:0]):sum(depths[:1])],
-                            norm_layer=norm_layer,
-                            use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,
-                            token_mlp=token_mlp,shift_flag=shift_flag,
-                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
-                            ws=ws[l], wt=wt[l], dil=dil[l],
-                            stride0=stride0[l], stride1=stride1[l],
-                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.dowsample_0 = dowsample(embed_dim[l], embed_dim[l+1]*2)
+        # self.dowsample_1 = dowsample(embed_dim[l]*2, embed_dim[l+1]*4)
 
-        l = 1
-        self.encoderlayer_1 = BasicUformerLayer(dim=embed_dim[l]*2,
-                            output_dim=embed_dim[l]*2,
-                            input_resolution=(img_size // 2,
-                                                img_size // 2),
-                            depth=depths[l],
-                            num_heads=num_heads[l],
-                            win_size=win_size,
-                            mlp_ratio=self.mlp_ratio,
-                            qkv_bias=qkv_bias, qk_scale=qk_scale,
-                            drop=drop_rate, attn_drop=attn_drop_rate,
-                            drop_path=enc_dpr[sum(depths[:1]):sum(depths[:2])],
-                            norm_layer=norm_layer,
-                            use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,
-                            token_mlp=token_mlp,shift_flag=shift_flag,
-                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
-                            ws=ws[l], wt=wt[l], dil=dil[l],
-                            stride0=stride0[l], stride1=stride1[l],
-                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.dowsample_1 = dowsample(embed_dim[l]*2, embed_dim[l+1]*4)
+        # l = 2
+        # self.encoderlayer_2 = BasicUformerLayer(dim=embed_dim[l]*4,
+        #                     output_dim=embed_dim[l]*4,
+        #                     input_resolution=(img_size // (2 ** 2),
+        #                                         img_size // (2 ** 2)),
+        #                     depth=depths[2],
+        #                     num_heads=num_heads[2],
+        #                     win_size=win_size,
+        #                     mlp_ratio=self.mlp_ratio,
+        #                     qkv_bias=qkv_bias, qk_scale=qk_scale,
+        #                     drop=drop_rate, attn_drop=attn_drop_rate,
+        #                     drop_path=enc_dpr[sum(depths[:2]):sum(depths[:3])],
+        #                     norm_layer=norm_layer,
+        #                     use_checkpoint=use_checkpoint,
+        #                     token_projection=token_projection,
+        #                     token_mlp=token_mlp,shift_flag=shift_flag,
+        #                     attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+        #                     ws=ws[l], wt=wt[l], dil=dil[l],
+        #                     stride0=stride0[l], stride1=stride1[l],
+        #                     nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
+        # self.dowsample_2 = dowsample(embed_dim[l]*4, embed_dim[l+1]*8)
 
-        l = 2
-        self.encoderlayer_2 = BasicUformerLayer(dim=embed_dim[l]*4,
-                            output_dim=embed_dim[l]*4,
-                            input_resolution=(img_size // (2 ** 2),
-                                                img_size // (2 ** 2)),
-                            depth=depths[2],
-                            num_heads=num_heads[2],
-                            win_size=win_size,
-                            mlp_ratio=self.mlp_ratio,
-                            qkv_bias=qkv_bias, qk_scale=qk_scale,
-                            drop=drop_rate, attn_drop=attn_drop_rate,
-                            drop_path=enc_dpr[sum(depths[:2]):sum(depths[:3])],
-                            norm_layer=norm_layer,
-                            use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,
-                            token_mlp=token_mlp,shift_flag=shift_flag,
-                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
-                            ws=ws[l], wt=wt[l], dil=dil[l],
-                            stride0=stride0[l], stride1=stride1[l],
-                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.dowsample_2 = dowsample(embed_dim[l]*4, embed_dim[l+1]*8)
+        # l = 3
+        # self.encoderlayer_3 = BasicUformerLayer(dim=embed_dim[l]*8,
+        #                     output_dim=embed_dim[l]*8,
+        #                     input_resolution=(img_size // (2 ** 3),
+        #                                         img_size // (2 ** 3)),
+        #                     depth=depths[3],
+        #                     num_heads=num_heads[3],
+        #                     win_size=win_size,
+        #                     mlp_ratio=self.mlp_ratio,
+        #                     qkv_bias=qkv_bias, qk_scale=qk_scale,
+        #                     drop=drop_rate, attn_drop=attn_drop_rate,
+        #                     drop_path=enc_dpr[sum(depths[:3]):sum(depths[:4])],
+        #                     norm_layer=norm_layer,
+        #                     use_checkpoint=use_checkpoint,
+        #                     token_projection=token_projection,
+        #                     token_mlp=token_mlp,shift_flag=shift_flag,
+        #                     attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+        #                     ws=ws[l], wt=wt[l], dil=dil[l],
+        #                     stride0=stride0[l], stride1=stride1[l],
+        #                     nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
+        # self.dowsample_3 = dowsample(embed_dim[l]*8, embed_dim[l+1]*16)
 
-        l = 3
-        self.encoderlayer_3 = BasicUformerLayer(dim=embed_dim[l]*8,
-                            output_dim=embed_dim[l]*8,
-                            input_resolution=(img_size // (2 ** 3),
-                                                img_size // (2 ** 3)),
-                            depth=depths[3],
-                            num_heads=num_heads[3],
-                            win_size=win_size,
-                            mlp_ratio=self.mlp_ratio,
-                            qkv_bias=qkv_bias, qk_scale=qk_scale,
-                            drop=drop_rate, attn_drop=attn_drop_rate,
-                            drop_path=enc_dpr[sum(depths[:3]):sum(depths[:4])],
-                            norm_layer=norm_layer,
-                            use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,
-                            token_mlp=token_mlp,shift_flag=shift_flag,
-                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
-                            ws=ws[l], wt=wt[l], dil=dil[l],
-                            stride0=stride0[l], stride1=stride1[l],
-                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.dowsample_3 = dowsample(embed_dim[l]*8, embed_dim[l+1]*16)
+        # # Bottleneck
+        # l = 4
+        # self.conv = BasicUformerLayer(dim=embed_dim[l]*16,
+        #                     output_dim=embed_dim[l]*16,
+        #                     input_resolution=(img_size // (2 ** l),
+        #                                         img_size // (2 ** l)),
+        #                     depth=depths[l],
+        #                     num_heads=num_heads[l],
+        #                     win_size=win_size,
+        #                     mlp_ratio=self.mlp_ratio,
+        #                     qkv_bias=qkv_bias, qk_scale=qk_scale,
+        #                     drop=drop_rate, attn_drop=attn_drop_rate,
+        #                     drop_path=conv_dpr,
+        #                     norm_layer=norm_layer,
+        #                     use_checkpoint=use_checkpoint,
+        #                     token_projection=token_projection,
+        #                     token_mlp=token_mlp,shift_flag=shift_flag,
+        #                     attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+        #                     ws=ws[l], wt=wt[l], dil=dil[l],
+        #                     stride0=stride0[l], stride1=stride1[l],
+        #                     nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
 
-        # Bottleneck
-        l = 4
-        self.conv = BasicUformerLayer(dim=embed_dim[l]*16,
-                            output_dim=embed_dim[l]*16,
-                            input_resolution=(img_size // (2 ** l),
-                                                img_size // (2 ** l)),
-                            depth=depths[l],
-                            num_heads=num_heads[l],
-                            win_size=win_size,
-                            mlp_ratio=self.mlp_ratio,
-                            qkv_bias=qkv_bias, qk_scale=qk_scale,
-                            drop=drop_rate, attn_drop=attn_drop_rate,
-                            drop_path=conv_dpr,
-                            norm_layer=norm_layer,
-                            use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,
-                            token_mlp=token_mlp,shift_flag=shift_flag,
-                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
-                            ws=ws[l], wt=wt[l], dil=dil[l],
-                            stride0=stride0[l], stride1=stride1[l],
-                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.upsample_0 = upsample(embed_dim[l]*16, embed_dim[l-1]*8)
+        # # Decoder
+        # l = 3
+        # self.upsample_0 = upsample(embed_dim[l+1]*16, embed_dim[l]*8)
+        # self.decoderlayer_0 = BasicUformerLayer(dim=embed_dim[l]*16,
+        #                     output_dim=embed_dim[l]*16,
+        #                     input_resolution=(img_size // (2 ** 3),
+        #                                         img_size // (2 ** 3)),
+        #                     depth=depths[5],
+        #                     num_heads=num_heads[5],
+        #                     win_size=win_size,
+        #                     mlp_ratio=self.mlp_ratio,
+        #                     qkv_bias=qkv_bias, qk_scale=qk_scale,
+        #                     drop=drop_rate, attn_drop=attn_drop_rate,
+        #                     drop_path=dec_dpr[:depths[5]],
+        #                     norm_layer=norm_layer,
+        #                     use_checkpoint=use_checkpoint,
+        #                     token_projection=token_projection,
+        #                     token_mlp=token_mlp,shift_flag=shift_flag,
+        #                     modulator=modulator,cross_modulator=cross_modulator,
+        #                     attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+        #                     ws=ws[l], wt=wt[l], dil=dil[l],
+        #                     stride0=stride0[l], stride1=stride1[l],
+        #                     nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
 
-        # Decoder
-        l = 3
-        self.decoderlayer_0 = BasicUformerLayer(dim=embed_dim[l]*16,
-                            output_dim=embed_dim[l]*16,
-                            input_resolution=(img_size // (2 ** 3),
-                                                img_size // (2 ** 3)),
-                            depth=depths[5],
-                            num_heads=num_heads[5],
-                            win_size=win_size,
-                            mlp_ratio=self.mlp_ratio,
-                            qkv_bias=qkv_bias, qk_scale=qk_scale,
-                            drop=drop_rate, attn_drop=attn_drop_rate,
-                            drop_path=dec_dpr[:depths[5]],
-                            norm_layer=norm_layer,
-                            use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,
-                            token_mlp=token_mlp,shift_flag=shift_flag,
-                            modulator=modulator,cross_modulator=cross_modulator,
-                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
-                            ws=ws[l], wt=wt[l], dil=dil[l],
-                            stride0=stride0[l], stride1=stride1[l],
-                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.upsample_1 = upsample(embed_dim[l]*16, embed_dim[l-1]*4)
+        # l = 2
+        # self.upsample_1 = upsample(embed_dim[l+1]*16, embed_dim[l]*4)
+        # self.decoderlayer_1 = BasicUformerLayer(dim=embed_dim[l]*8,
+        #                     output_dim=embed_dim[l]*8,
+        #                     input_resolution=(img_size // (2 ** 2),
+        #                                         img_size // (2 ** 2)),
+        #                     depth=depths[6],
+        #                     num_heads=num_heads[6],
+        #                     win_size=win_size,
+        #                     mlp_ratio=self.mlp_ratio,
+        #                     qkv_bias=qkv_bias, qk_scale=qk_scale,
+        #                     drop=drop_rate, attn_drop=attn_drop_rate,
+        #                     drop_path=dec_dpr[sum(depths[5:6]):sum(depths[5:7])],
+        #                     norm_layer=norm_layer,
+        #                     use_checkpoint=use_checkpoint,
+        #                     token_projection=token_projection,
+        #                     token_mlp=token_mlp,shift_flag=shift_flag,
+        #                     modulator=modulator,cross_modulator=cross_modulator,
+        #                     attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+        #                     ws=ws[l], wt=wt[l], dil=dil[l],
+        #                     stride0=stride0[l], stride1=stride1[l],
+        #                     nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
 
-        l = 2
-        self.decoderlayer_1 = BasicUformerLayer(dim=embed_dim[l]*8,
-                            output_dim=embed_dim[l]*8,
-                            input_resolution=(img_size // (2 ** 2),
-                                                img_size // (2 ** 2)),
-                            depth=depths[6],
-                            num_heads=num_heads[6],
-                            win_size=win_size,
-                            mlp_ratio=self.mlp_ratio,
-                            qkv_bias=qkv_bias, qk_scale=qk_scale,
-                            drop=drop_rate, attn_drop=attn_drop_rate,
-                            drop_path=dec_dpr[sum(depths[5:6]):sum(depths[5:7])],
-                            norm_layer=norm_layer,
-                            use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,
-                            token_mlp=token_mlp,shift_flag=shift_flag,
-                            modulator=modulator,cross_modulator=cross_modulator,
-                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
-                            ws=ws[l], wt=wt[l], dil=dil[l],
-                            stride0=stride0[l], stride1=stride1[l],
-                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.upsample_2 = upsample(embed_dim[l]*8, embed_dim[l-1]*2)
+        # l = 1
+        # self.upsample_2 = upsample(embed_dim[l+1]*8, embed_dim[l]*2)
+        # self.decoderlayer_2 = BasicUformerLayer(dim=embed_dim[l]*4,
+        #                     output_dim=embed_dim[l]*4,
+        #                     input_resolution=(img_size // 2,
+        #                                         img_size // 2),
+        #                     depth=depths[7],
+        #                     num_heads=num_heads[7],
+        #                     win_size=win_size,
+        #                     mlp_ratio=self.mlp_ratio,
+        #                     qkv_bias=qkv_bias, qk_scale=qk_scale,
+        #                     drop=drop_rate, attn_drop=attn_drop_rate,
+        #                     drop_path=dec_dpr[sum(depths[5:7]):sum(depths[5:8])],
+        #                     norm_layer=norm_layer,
+        #                     use_checkpoint=use_checkpoint,
+        #                     token_projection=token_projection,
+        #                     token_mlp=token_mlp,shift_flag=shift_flag,
+        #                     modulator=modulator,cross_modulator=cross_modulator,
+        #                     attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+        #                     ws=ws[l], wt=wt[l], dil=dil[l],
+        #                     stride0=stride0[l], stride1=stride1[l],
+        #                     nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
 
-        l = 1
-        self.decoderlayer_2 = BasicUformerLayer(dim=embed_dim[l]*4,
-                            output_dim=embed_dim[l]*4,
-                            input_resolution=(img_size // 2,
-                                                img_size // 2),
-                            depth=depths[7],
-                            num_heads=num_heads[7],
-                            win_size=win_size,
-                            mlp_ratio=self.mlp_ratio,
-                            qkv_bias=qkv_bias, qk_scale=qk_scale,
-                            drop=drop_rate, attn_drop=attn_drop_rate,
-                            drop_path=dec_dpr[sum(depths[5:7]):sum(depths[5:8])],
-                            norm_layer=norm_layer,
-                            use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,
-                            token_mlp=token_mlp,shift_flag=shift_flag,
-                            modulator=modulator,cross_modulator=cross_modulator,
-                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
-                            ws=ws[l], wt=wt[l], dil=dil[l],
-                            stride0=stride0[l], stride1=stride1[l],
-                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
-        self.upsample_3 = upsample(embed_dim[l]*4, embed_dim[l-1])
-
-        l = 0
-        self.decoderlayer_3 = BasicUformerLayer(dim=embed_dim[l]*2,
-                            output_dim=embed_dim[l]*2,
-                            input_resolution=(img_size,
-                                                img_size),
-                            depth=depths[8],
-                            num_heads=num_heads[8],
-                            win_size=win_size,
-                            mlp_ratio=self.mlp_ratio,
-                            qkv_bias=qkv_bias, qk_scale=qk_scale,
-                            drop=drop_rate, attn_drop=attn_drop_rate,
-                            drop_path=dec_dpr[sum(depths[5:8]):sum(depths[5:9])],
-                            norm_layer=norm_layer,
-                            use_checkpoint=use_checkpoint,
-                            token_projection=token_projection,
-                            token_mlp=token_mlp,shift_flag=shift_flag,
-                            modulator=modulator,cross_modulator=cross_modulator,
-                            attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
-                            ws=ws[l], wt=wt[l], dil=dil[l],
-                            stride0=stride0[l], stride1=stride1[l],
-                            nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
+        # l = 0
+        # self.upsample_3 = upsample(embed_dim[l+1]*4, embed_dim[l])
+        # self.decoderlayer_3 = BasicUformerLayer(dim=embed_dim[l]*2,
+        #                     output_dim=embed_dim[l]*2,
+        #                     input_resolution=(img_size,
+        #                                         img_size),
+        #                     depth=depths[8],
+        #                     num_heads=num_heads[8],
+        #                     win_size=win_size,
+        #                     mlp_ratio=self.mlp_ratio,
+        #                     qkv_bias=qkv_bias, qk_scale=qk_scale,
+        #                     drop=drop_rate, attn_drop=attn_drop_rate,
+        #                     drop_path=dec_dpr[sum(depths[5:8]):sum(depths[5:9])],
+        #                     norm_layer=norm_layer,
+        #                     use_checkpoint=use_checkpoint,
+        #                     token_projection=token_projection,
+        #                     token_mlp=token_mlp,shift_flag=shift_flag,
+        #                     modulator=modulator,cross_modulator=cross_modulator,
+        #                     attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
+        #                     ws=ws[l], wt=wt[l], dil=dil[l],
+        #                     stride0=stride0[l], stride1=stride1[l],
+        #                     nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
 
         self.apply(self._init_weights)
 
@@ -331,7 +344,10 @@ class Uformer(nn.Module):
         # print(conv3.shape)
         pool3 = self.dowsample_3(conv3)
 
-        # Bottleneck
+        # -=-=-=-=-=-=-=-=-=-=-=-=-
+        # -->    Bottleneck    <--
+        # -=-=-=-=-=-=-=-=-=-=-=-=-
+
         _h,_w = h//(2**4),w//(2**4)
         conv4 = self.conv(pool3, _h, _w, mask=mask)
         # print(conv4.shape)

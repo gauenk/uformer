@@ -1,6 +1,15 @@
 #!/bin/bash
-python -m pip instal pip --upgrade
-python -m pip install -e git+file:"$(pwd)"/../data_hub#egg=data_hub
-python -m pip install -e git+file:"$(pwd)"/../cache_io#egg=cache_io
-python -m pip install -e git+file:"$(pwd)"/../dnls#egg=dnls
+CWD=$(pwd)
+python -m pip install pip --upgrade
+cd ../
+git clone git@github.com:gauenk/data_hub.git
+git clone git@github.com:gauenk/cache_io.git
+git clone git@github.com:gauenk/dnls.git
+cd ./data_hub
+python -m pip install -e .
+cd ../cache_io
+python -m pip install -e .
+cd ../dnls
+python -m pip install -e .
+cd ../uformer
 python -m pip install -e .

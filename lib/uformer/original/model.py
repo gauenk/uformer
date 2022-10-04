@@ -1278,10 +1278,11 @@ class Uformer(nn.Module):
         return f"embed_dim={self.embed_dim}, token_projection={self.token_projection}, token_mlp={self.mlp},win_size={self.win_size}"
 
     def forward(self, x, mask=None):
-        # Input Projection
+        # -- Input Projection --
         y = self.input_proj(x)
         y = self.pos_drop(y)
-        #Encoder
+
+        # -- Encoder --
         conv0 = self.encoderlayer_0(y,mask=mask)
         pool0 = self.dowsample_0(conv0)
         conv1 = self.encoderlayer_1(pool0,mask=mask)
@@ -1313,7 +1314,7 @@ class Uformer(nn.Module):
 
         # Output Projection
         y = self.output_proj(deconv3)
-        return x + y if self.dd_in ==3 else y
+        return x + y if self.dd_in == 3 else y
 
     def flops(self):
         flops = 0

@@ -42,6 +42,7 @@ def get_chunks(size,chunk_size,overlap):
     """
     points = [0]
     stride = max(int(chunk_size * (1-overlap)),1)
+    if size <= chunk_size: return [0]
     assert stride > 0
     counter = 1
     while True:

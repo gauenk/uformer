@@ -225,9 +225,9 @@ def main():
     cfg.nframes = 1
 
     # -- trainig --
-    cfg.ndevices = 2
-    cfg.accumulate_grad_batches = 3
-    cfg.batch_size_tr = 5
+    cfg.ndevices = 1
+    cfg.accumulate_grad_batches = 1
+    cfg.batch_size_tr = 32
     cfg.lr_init = 2e-4
     cfg.weight_decay = 2e-3
     cfg.nepochs = 20
