@@ -92,6 +92,7 @@ def load_model(*args,**kwargs):
     attn_reset = optional(kwargs,"attn_reset",'f-f-f-f-f')
     strict_model_load = optional(kwargs,"strict_model_load",True)
     skip_mismatch_model_load = optional(kwargs,"skip_mismatch_model_load",False)
+    strict_model_load = True
 
     # -- break here if init --
     if init: return

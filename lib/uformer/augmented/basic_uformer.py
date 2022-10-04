@@ -84,7 +84,7 @@ def create_basic_enc_layer(base,embed_dim,img_size,depths,num_heads,win_size,
                            nbwd,rbwd,nblocks,exact,bs,drop_path,l):
     mult = 2**l
     isize = img_size // 2**l
-    print("enc: ",drop_path[sum(depths[:l]):sum(depths[:l+1])])
+    # print("enc: ",drop_path[sum(depths[:l]):sum(depths[:l+1])])
     layer = BasicUformerLayer(dim=embed_dim[l]*mult,
                               output_dim=embed_dim[l]*mult,
                               input_resolution=(isize,isize),
@@ -135,14 +135,14 @@ def create_basic_conv_layer(base,embed_dim,img_size,depths,num_heads,win_size,
 def create_basic_dec_layer(base,embed_dim,img_size,depths,num_heads,win_size,
                            mlp_ratio,qkv_bias,qk_scale,drop_rate,attn_drop_rate,
                            norm_layer,use_checkpoint,token_projection,token_mlp,
-                           shift_flag,modulator,cross_modulator,attn_mode,
-                           k,ps,pt,ws,wt,dil,stride0,stride1,
+                           shift_flag,modulator,cross_modulator,
+                           attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
                            nbwd,rbwd,nblocks,exact,bs,drop_path,l):
     # -- size --
     _l = (nblocks - l)
+    lr = nblocks - l - 1
     mult = 2**(_l)
-    isize = img_size // mult
-    print(depths)
+    isize = img_size // (mult//2)
 
     # -- drop paths --
     # l == 0 | dec_dpr[:depths[5]]
@@ -158,11 +158,11 @@ def create_basic_dec_layer(base,embed_dim,img_size,depths,num_heads,win_size,
     # print(dpr)
     # print(depths,l,nblocks+1,nblocks+1+l)
     # print(mult)
-    print(l,_l,2**(_l),mult)
+    # print(l,_l,lr,2**(_l),mult)
 
     # -- init --
-    layer = BasicUformerLayer(dim=embed_dim[l]*mult,
-                              output_dim=embed_dim[l]*mult,
+    layer = BasicUformerLayer(dim=embed_dim[lr]*mult,
+                              output_dim=embed_dim[lr]*mult,
                               input_resolution=(isize,isize),
                               depth=depths[nblocks+1+l],
                               num_heads=num_heads[nblocks+1+l],
@@ -176,9 +176,9 @@ def create_basic_dec_layer(base,embed_dim,img_size,depths,num_heads,win_size,
                               token_projection=token_projection,
                               token_mlp=token_mlp,shift_flag=shift_flag,
                               modulator=modulator,cross_modulator=cross_modulator,
-                              attn_mode=attn_mode[l], k=k[l], ps=ps[l], pt=pt[l],
-                              ws=ws[l], wt=wt[l], dil=dil[l],
-                              stride0=stride0[l], stride1=stride1[l],
-                              nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l], bs=bs[l])
+                              attn_mode=attn_mode[lr], k=k[lr], ps=ps[lr], pt=pt[lr],
+                              ws=ws[lr], wt=wt[lr], dil=dil[lr],
+                              stride0=stride0[lr], stride1=stride1[lr],
+                              nbwd=nbwd[lr], rbwd=rbwd[lr], exact=exact[lr], bs=bs[lr])
     return layer
 
