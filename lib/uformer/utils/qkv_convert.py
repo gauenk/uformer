@@ -124,7 +124,7 @@ def block_name2num(name,nblocks=3):
         if encdec == "encoderlayer":
             return int(encdec_id)
         elif encdec == "decoderlayer":
-            return 3 - int(encdec_id)
+            return (nblocks-1) - (int(encdec_id)+1)
         elif encdec == "dowsample":
             return int(encdec_id)
         elif encdec == "upsample":
@@ -132,7 +132,7 @@ def block_name2num(name,nblocks=3):
         else:
             raise ValueError(f"Uknown name [{name}]")
     elif name == "conv":
-        return 4
+        return nblocks - 1
     else:
         return -1
         # raise ValueError(f"Uknown name [{name}]")
@@ -153,11 +153,16 @@ def qkv_convert_state(state_dict,in_attn_modes,out_attn_modes,
     in_attn_modes = expand_attn_mode(in_attn_modes,nblocks)
     out_attn_modes = expand_attn_mode(out_attn_modes,nblocks)
     attn_reset = expand_attn_reset(attn_reset,nblocks)
+    nskip = len(prefix)
     # embed_dim = expand_embed_dim(embed_dim)
     # nheads = [2**l for l in range(5)]
 
+    # -- check equal --
+    if all([i==o for i,o in zip(in_attn_modes,out_attn_modes)]):
+        new_state = {k[nskip:] if prefix in k else k: v for k,v in state_dict.items()}
+        return new_state
+
     # -- init --
-    nskip = len(prefix)
     new_state_dict = OrderedDict()
 
     for k, val in state_dict.items():
@@ -176,7 +181,7 @@ def qkv_convert_state(state_dict,in_attn_modes,out_attn_modes,
 
             # -- get block id --
             block_name = name.split(".")[0]
-            l = block_name2num(block_name)
+            l = block_name2num(block_name,nblocks)
 
             # -- extract modes --
             in_mode = get_attn_mode_cat(in_attn_modes[l])

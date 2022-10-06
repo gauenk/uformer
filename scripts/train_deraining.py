@@ -245,11 +245,16 @@ def main():
     cfg.rbwd = "false"
     # cfg.limit_train_batches = 0.25 # with w
     cfg.limit_train_batches = 0.005 # with pd
+    cfg.in_attn_mode = "pd-pd-pd"
     
 
     cfg.aug_training_scales = [0.5,0.75,1.]
     cfg.aug_training_flips = True
     cfg.shift_flag = False
+
+    cfg.pretrained_prefix = "net."
+    cfg.pretrained_path = "583a193a-ee1c-4fa5-9f20-41450a155e6d-epoch=08-val_loss=1.93e-03.ckpt"
+    cfg.load_pretrained = "false"
 
     # -- pick an exp --
     exps = [exps[0]] # run0
@@ -264,7 +269,7 @@ def main():
         # -- info --
         if verbose:
             print("-="*25+"-")
-            print(f"Running experiment number {exp_num+1}/{nexps}")
+            # print(f"Running experiment number {exp_num+1}/{nexps}")
             print("-="*25+"-")
             pp.pprint(exp)
 

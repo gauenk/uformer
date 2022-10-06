@@ -434,16 +434,16 @@ def exps_deraining_train(iexps=None):
     # -- [exp e] step 0 --
     expl['in_attn_mode'] = ["w-w-w"]
     expl['attn_mode'] = ["pd-pd-pd"]
-    expl['attn_reset'] = ["t-t-t"]
-    expl['embed_dim'] = ["9-9-9"]
+    expl['attn_reset'] = ["f-f-f"]
+    expl['embed_dim'] = ["3-6-9"]
     expl['stride0'] = ['1-1-1']
-    expl['stride1'] = ['4-4-4']
-    expl['ws'] = ["29-29-29"]
+    expl['stride1'] = ['4-2-1']
+    expl['ws'] = ["29-15-9"]
     expl['wt'] = ["0-0-0"]
     expl['k'] = ["64-64-64"]
-    expl['ps'] = ["7-7-7"]
-    expl['model_depths'] = ["1-2-2"]
-    expl['num_heads'] = ["1-2-2"]
+    expl['ps'] = ["7-5-3"]
+    expl['model_depths'] = ["2-2-2"]
+    expl['num_heads'] = ["1-2-4"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
 
     return exps

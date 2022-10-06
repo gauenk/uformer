@@ -136,6 +136,7 @@ class ProductAttention(nn.Module):
         dists = dists.contiguous()
         x = wpsum(v_vid,dists,inds)
         ps = x.shape[-1]
+        # print("x.shape: ",x.shape)
         x = rearrange(x,'(o n) h c ph pw -> (o ph pw) n (h c)',o=ntotal)
 
         # -- debug --
@@ -144,6 +145,7 @@ class ProductAttention(nn.Module):
         # if any_nan: exit(0)
 
         # -- proj --
+        # print("x.shape: ",x.shape)
         x = self.proj(x)
         x = self.proj_drop(x)
 
