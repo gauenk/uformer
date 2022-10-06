@@ -376,6 +376,98 @@ def exps_rgb_denoising_test(iexps=None):
     expl['pretrained_path'] = ["ad209414"]
     expl['in_attn_mode'] = ["w-w-w-w-w"]
     expl['attn_mode'] = ["pd-pd-w-w-w"]
+    model_depths = ["1-2-8-8-2"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp c] step 0 --
+    expl['pretrained_path'] = ["f69d3cc4-986f-4f55-b0b9-b5f90b3b5957-epoch=58-val_loss=1.03e-03.ckpt"]
+    expl['in_attn_mode'] = ["w-w-w-w-w"]
+    expl['attn_mode'] = ["pd-pd-pd-pd-pd"]
+    expl['attn_reset'] = ["t-t-t-t-t"]
+    expl['embed_dim'] = ["9-9-9-9-9"]
+    expl['stride0'] = ['1-1-1-1-1']
+    expl['stride1'] = ['4-4-2-2-2']
+    expl['ws'] = ["29-15-11-9-9"]
+    expl['wt'] = ["2-2-2-0-0"]
+    expl['k'] = ["64-64-64-64-64"]
+    expl['ps'] = ["7-7-7-5-3"]
+    expl['model_depths'] = ["2-2-2-2-2-2-2-2-2"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp e] --
+    expl['pretrained_path'] = ["f69d3cc4-986f-4f55-b0b9-b5f90b3b5957-epoch=58-val_loss=1.03e-03.ckpt"]
+    expl['in_attn_mode'] = ["pd-pd-w-w-w"]
+    expl['attn_mode'] = ["pd-pd-w-w-w"]
+    expl['embed_dim'] = ["9-9-32-32-32"]
+    expl['stride0'] = ['1-1-1-1-1']
+    expl['stride1'] = ['4-4-1-1-1']
+    expl['ws'] = ["29-29-8-8-8"]
+    expl['wt'] = ["2-2-0-0-0"]
+    expl['k'] = ["64-64-0-0-0"]
+    expl['ps'] = ["7-7-1-1-1"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    return exps
+
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#
+#
+#       Run Deraining Experiments
+#
+#
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+def exps_deraining(iexps=None,mode="train"):
+    if mode == "train":
+        return exps_deraining_train(iexps)
+    elif mode == "test":
+        return exps_deraining_test(iexps)
+    else:
+        raise ValueError("Unable to verify new code.")
+
+def exps_deraining_train(iexps=None):
+
+    # -- init --
+    expl = exp_init(iexps,"train")
+    expl['freeze'] = ['false']
+
+    # -- [exp e] step 0 --
+    expl['in_attn_mode'] = ["w-w-w"]
+    expl['attn_mode'] = ["pd-pd-pd"]
+    expl['attn_reset'] = ["t-t-t"]
+    expl['embed_dim'] = ["9-9-9"]
+    expl['stride0'] = ['1-1-1']
+    expl['stride1'] = ['4-4-4']
+    expl['ws'] = ["29-29-29"]
+    expl['wt'] = ["0-0-0"]
+    expl['k'] = ["64-64-64"]
+    expl['ps'] = ["7-7-7"]
+    expl['model_depths'] = ["1-2-2"]
+    expl['num_heads'] = ["1-2-2"]
+    exps = cache_io.mesh_pydicts(expl) # create mesh
+
+    return exps
+
+def exps_deraining_test(iexps=None):
+
+    # -- init --
+    expl = exp_init(iexps,"test")
+    expl['use_train'] = ['false']
+    expl['attn_reset'] = ["f-f-f-f-f"]
+    expl['pretrained_prefix'] = ["net."]
+
+    # -- [exp a] step 0 --
+    expl['pretrained_path'] = ["98918264-f802-44da-9255-8788f37cb0fc-epoch=60-val_loss=9.69e-04.ckpt"]
+    expl['in_attn_mode'] = ["w-w-w-w-w"]
+    expl['attn_mode'] = ["w-w-w-w-w"]
+    exps = cache_io.mesh_pydicts(expl) # create mesh
+
+
+    # -- [exp b] step 0 --
+    expl['pretrained_path'] = ["ad209414"]
+    expl['in_attn_mode'] = ["w-w-w-w-w"]
+    expl['attn_mode'] = ["pd-pd-w-w-w"]
+    model_depths = ["1-2-8-8-2"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
     # -- [exp c] step 0 --

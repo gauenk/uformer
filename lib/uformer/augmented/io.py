@@ -36,23 +36,17 @@ def load_model(*args,**kwargs):
 
     # -- defaults changed by noise version --
     noise_version = optional(kwargs,'noise_version',"noise")
-    if "noise" in noise_version:
-        default_modulator = True
-        default_depth = [1, 2, 8, 8, 2]
-        # default_modulator = False
-        # default_depth = [2, 2, 2, 2, 2]
-    elif noise_version == "blur":
-        default_modulator = True
-        default_depth = [1, 2, 8, 8, 2]
-    else:
-        raise ValueError(f"Uknown noise version [{noise_version}]")
+    default_modulator = True
+    default_depth = [1, 2, 8, 8, 2]
 
     # -- get cfg --
     nchnls = optional(kwargs,'nchnls',3)
     input_size = optional(kwargs,'input_size',128)
     depths = parse_depths(optional(kwargs,'model_depths',default_depth))
+    num_heads = parse_heads(optional(kwargs,'num_heads',[1,2,4,8,16]))
     device = optional(kwargs,'device','cuda:0')
-    nblocks = len(depths)-1
+    assert len(depths) == len(num_heads),"Must match length."
+    nblocks = len(depths)
 
     # -- other configs --
     embed_dim = optional(kwargs,'embed_dim',32)
@@ -90,7 +84,7 @@ def load_model(*args,**kwargs):
     pretrained_prefix = optional(kwargs,"pretrained_prefix","module.")
     pretrained_qkv = optional(kwargs,"pretrained_qkv","lin2conv")
     reset_qkv = optional(kwargs,"reset_qkv",False)
-    attn_reset = optional(kwargs,"attn_reset",('f-'*nblocks)[:-1])
+    attn_reset = optional(kwargs,"attn_reset",False)
     strict_model_load = optional(kwargs,"strict_model_load",True)
     skip_mismatch_model_load = optional(kwargs,"skip_mismatch_model_load",False)
     strict_model_load = True
@@ -99,7 +93,8 @@ def load_model(*args,**kwargs):
     if init: return
 
     # -- init model --
-    model = Uformer(img_size=input_size, in_chans=nchnls, depths=depths,
+    model = Uformer(img_size=input_size, in_chans=nchnls,
+                    depths=depths, num_heads=num_heads,
                     win_size=win_size, mlp_ratio=mlp_ratio,
                     qkv_bias=qkv_bias, token_projection=token_projection,
                     token_mlp=token_mlp,modulator=modulator,
@@ -151,13 +146,23 @@ def get_pretrained_path(noise_version,optional_path):
         state_fn = fdir / "weights/Uformer_gopro_B.pth"
         print(state_fn)
         assert os.path.isfile(str(state_fn))
-    elif noise_version in ["rgb_noise"]:
+    elif noise_version in ["rgb_noise","rain"]:
         state_fn = None
     else:
         raise ValueError(f"Uknown noise_version [{noise_version}]")
     return state_fn
 
 
+def parse_heads(heads):
+    if isinstance(heads,list):
+        return heads
+    elif isinstance(heads,str):
+        heads_l = heads.split("-")
+        heads_l = [int(h) for h in heads_l]
+        return heads_l
+    else:
+        raise ValueError(f"Uknown value format for num_heads [{heads}]")
+        
 def parse_depths(depths):
     if isinstance(depths,list):# and len(depths) == 5:
         return depths

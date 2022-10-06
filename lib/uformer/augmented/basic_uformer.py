@@ -81,7 +81,7 @@ def create_basic_enc_layer(base,embed_dim,img_size,depths,num_heads,win_size,
                            mlp_ratio,qkv_bias,qk_scale,drop_rate,attn_drop_rate,
                            norm_layer,use_checkpoint,token_projection,token_mlp,
                            shift_flag,attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
-                           nbwd,rbwd,nblocks,exact,bs,drop_path,l):
+                           nbwd,rbwd,num_enc,exact,bs,drop_path,l):
     mult = 2**l
     isize = img_size // 2**l
     # print("enc: ",drop_path[sum(depths[:l]):sum(depths[:l+1])])
@@ -109,13 +109,14 @@ def create_basic_conv_layer(base,embed_dim,img_size,depths,num_heads,win_size,
                             mlp_ratio,qkv_bias,qk_scale,drop_rate,attn_drop_rate,
                             norm_layer,use_checkpoint,token_projection,token_mlp,
                             shift_flag,attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
-                            nbwd,rbwd,nblocks,exact,bs,drop_path,l):
+                            nbwd,rbwd,num_enc,exact,bs,drop_path,l):
     mult = 2**l
     isize = img_size // 2**l
+    print("conv: ",mult)
     layer = BasicUformerLayer(dim=embed_dim[l]*mult,
                               output_dim=embed_dim[l]*mult,
                               input_resolution=(isize,isize),
-                              depth=depths[nblocks],
+                              depth=depths[num_enc],
                               num_heads=num_heads[l],
                               win_size=win_size,
                               mlp_ratio=mlp_ratio,
@@ -137,35 +138,37 @@ def create_basic_dec_layer(base,embed_dim,img_size,depths,num_heads,win_size,
                            norm_layer,use_checkpoint,token_projection,token_mlp,
                            shift_flag,modulator,cross_modulator,
                            attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
-                           nbwd,rbwd,nblocks,exact,bs,drop_path,l):
+                           nbwd,rbwd,num_enc,exact,bs,drop_path,l):
     # -- size --
-    _l = (nblocks - l)
-    lr = nblocks - l - 1
+    _l = (num_enc - l)
+    lr = num_enc - l - 1
     mult = 2**(_l)
     isize = img_size // (mult//2)
 
     # -- drop paths --
     # l == 0 | dec_dpr[:depths[5]]
     # l == 1 | dec_dpr[sum(depths[5:6]):sum(depths[5:7])]
-    dpr_s = nblocks + 1
+    nbs = num_enc+1
     if l == 0:
-        dpr = drop_path[:depths[5]]
+        dpr = drop_path[:depths[nbs]]
     else:
-        nbs = nblocks+1
         s = sum(depths[nbs:nbs+l])
         e = sum(depths[nbs:nbs+l+1])
         dpr = drop_path[s:e]
     # print(dpr)
-    # print(depths,l,nblocks+1,nblocks+1+l)
+    # print(depths,l,num_enc+1,num_enc+1+l)
     # print(mult)
-    # print(l,_l,lr,2**(_l),mult)
+    print(l,_l,lr,2**(_l),mult)
+    print("num_enc: ",num_enc)
+    # print(drop_path)
+    # print(dpr)
 
     # -- init --
     layer = BasicUformerLayer(dim=embed_dim[lr]*mult,
                               output_dim=embed_dim[lr]*mult,
                               input_resolution=(isize,isize),
-                              depth=depths[nblocks+1+l],
-                              num_heads=num_heads[nblocks+1+l],
+                              depth=depths[num_enc+1+l],
+                              num_heads=num_heads[num_enc+1+l],
                               win_size=win_size,
                               mlp_ratio=mlp_ratio,
                               qkv_bias=qkv_bias, qk_scale=qk_scale,

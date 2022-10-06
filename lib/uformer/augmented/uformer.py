@@ -20,8 +20,8 @@ from ..utils.model_utils import apply_freeze
 
 class Uformer(nn.Module):
     def __init__(self, img_size=256, in_chans=3, dd_in=3,
-                 depths=[2, 2, 2, 2, 2, 2, 2, 2, 2],
-                 num_heads=[1, 2, 4, 8, 16, 16, 8, 4, 2],
+                 depths=[2, 2, 2, 2, 2],
+                 num_heads=[1, 2, 4, 8, 16],
                  win_size=8, mlp_ratio=4., qkv_bias=True, qk_scale=None,
                  drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1,
                  norm_layer=nn.LayerNorm, patch_norm=True,
@@ -59,11 +59,14 @@ class Uformer(nn.Module):
         self.nbwd = nbwd
         self.exact = exact
         self.bs = bs
-        nblocks = len(depths)-1
+        self.depths = depths
+        self.nblocks = len(depths)
+        num_encs = self.nblocks-1
 
         # -- unroll for each module --
         out = fields2blocks(attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
-                            nbwd,rbwd,exact,bs,embed_dim,freeze)
+                            nbwd,rbwd,exact,bs,embed_dim,freeze,
+                            nblocks=self.nblocks)
         attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1 = out[:9]
         nbwd,rbwd,exact,bs,embed_dim,freeze = out[9:]
         self.freeze = freeze
@@ -72,8 +75,14 @@ class Uformer(nn.Module):
         # stochastic depth
         enc_dpr = [x.item() for x in th.linspace(0, drop_path_rate,
                                                     sum(depths[:self.num_enc_layers]))]
-        conv_dpr = [drop_path_rate]*depths[4]
+        conv_dpr = [drop_path_rate]*depths[-1]
         dec_dpr = enc_dpr[::-1]
+        print(enc_dpr)
+
+        # -- reflect depths --
+        depths_ref = depths + depths[:-1][::-1]
+        num_heads_ref = num_heads + num_heads[0:][::-1]
+        print(depths_ref)
 
         # -- input/output --
         self.input_proj = InputProj(in_channel=dd_in, out_channel=embed_dim[0],
@@ -83,27 +92,27 @@ class Uformer(nn.Module):
 
         # -- init partial basic layer decl -- 
         basic_enc_layer = partial(create_basic_enc_layer,BasicUformerLayer,embed_dim,
-                                  img_size,depths,num_heads,win_size,
+                                  img_size,depths_ref,num_heads_ref,win_size,
                                   self.mlp_ratio,qkv_bias,qk_scale,drop_rate,
                                   attn_drop_rate,norm_layer,use_checkpoint,
                                   token_projection,token_mlp,shift_flag,
                                   attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
-                                  nbwd,rbwd,nblocks,exact,bs,enc_dpr)
+                                  nbwd,rbwd,num_encs,exact,bs,enc_dpr)
         basic_conv_layer = partial(create_basic_conv_layer,BasicUformerLayer,embed_dim,
-                                   img_size,depths,num_heads,win_size,
+                                   img_size,depths_ref,num_heads_ref,win_size,
                                    self.mlp_ratio,qkv_bias,qk_scale,drop_rate,
                                    attn_drop_rate,norm_layer,use_checkpoint,
                                    token_projection,token_mlp,shift_flag,
                                    attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
-                                   nbwd,rbwd,nblocks,exact,bs,conv_dpr)
+                                   nbwd,rbwd,num_encs,exact,bs,conv_dpr)
         basic_dec_layer = partial(create_basic_dec_layer,BasicUformerLayer,embed_dim,
-                                  img_size,depths,num_heads,win_size,
+                                  img_size,depths_ref,num_heads_ref,win_size,
                                   self.mlp_ratio,qkv_bias,qk_scale,drop_rate,
                                   attn_drop_rate,norm_layer,use_checkpoint,
                                   token_projection,token_mlp,
                                   shift_flag,modulator,cross_modulator,
                                   attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
-                                  nbwd,rbwd,nblocks,exact,bs,dec_dpr)
+                                  nbwd,rbwd,num_encs,exact,bs,dec_dpr)
         # -- info --
         # print("depths: ",depths)
         # print("drop_path[enc]: ",enc_dpr)
@@ -113,7 +122,7 @@ class Uformer(nn.Module):
 
         # -- encoder --
         enc_list = []
-        for l in range(nblocks):
+        for l in range(num_encs):
 
             # -- decl --
             setattr(self,"encoderlayer_%d" % l,basic_enc_layer(l))
@@ -126,14 +135,14 @@ class Uformer(nn.Module):
         self.enc_list = enc_list
             
         # -- center --
-        setattr(self,"conv",basic_conv_layer(nblocks))
+        setattr(self,"conv",basic_conv_layer(num_encs))
 
         # -- decoder --
         dec_list = []
-        for l in range(nblocks):
+        for l in range(num_encs):
             # -- decl --
-            _l = nblocks - l
-            if l == 0: mod_in,mod_out = 16,8
+            _l = num_encs - l
+            if l == 0: mod_in,mod_out = 2**num_encs,2**(num_encs-1)
             else: mod_in,mod_out = 2**(_l+1),2**(_l-1)
             setattr(self,"upsample_%d" % l,upsample(embed_dim[_l]*mod_in,
                                                      embed_dim[_l-1]*mod_out))
@@ -148,6 +157,7 @@ class Uformer(nn.Module):
         self.apply(self._init_weights)
 
     def _apply_freeze(self):
+        if all([f is False for f in self.freeze]): return
         apply_freeze(self,self.freeze)
 
     def _init_weights(self, m):
@@ -167,8 +177,8 @@ class Uformer(nn.Module):
     def no_weight_decay_keywords(self):
         return {'relative_position_bias_table'}
 
-    def extra_repr(self) -> str:
-        return f"embed_dim={self.embed_dim}, token_projection={self.token_projection}, token_mlp={self.mlp},win_size={self.win_size}"
+    # def extra_repr(self) -> str:
+    #     return f"embed_dim={self.embed_dim}, token_projection={self.token_projection}, token_mlp={self.mlp},win_size={self.win_size}"
 
     def forward(self, x, mask=None, flows=None):
 

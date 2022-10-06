@@ -24,6 +24,7 @@ def compute_psnrs(clean,deno,div=255.):
     # mse = th.mean((clean_rs - deno_rs)**2,1)
     # psnrs = -10. * th.log10(mse).detach()
     # psnrs = psnrs.cpu().numpy()
+        
     psnrs = []
     t = clean.shape[0]
     for ti in range(t):

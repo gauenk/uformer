@@ -109,7 +109,7 @@ def qkv_convert_conv2lin(new_state_dict,name,val):
                 new_state_dict[name_kv] = shell
                 new_state_dict[name_kv][slice_half] = val.data
 
-def block_name2num(name):
+def block_name2num(name,nblocks=3):
 
     # -- how to compute id --
     fields = ["encoderlayer","decoderlayer",
@@ -147,12 +147,12 @@ def get_attn_mode_cat(attn_mode):
 
 def qkv_convert_state(state_dict,in_attn_modes,out_attn_modes,
                       embed_dim,prefix="module.",keep=False,
-                      reset_new=False,attn_reset=False):
+                      reset_new=False,attn_reset=False,nblocks=5):
 
     # -- io attn modes --
-    in_attn_modes = expand_attn_mode(in_attn_modes)
-    out_attn_modes = expand_attn_mode(out_attn_modes)
-    attn_reset = expand_attn_reset(attn_reset)
+    in_attn_modes = expand_attn_mode(in_attn_modes,nblocks)
+    out_attn_modes = expand_attn_mode(out_attn_modes,nblocks)
+    attn_reset = expand_attn_reset(attn_reset,nblocks)
     # embed_dim = expand_embed_dim(embed_dim)
     # nheads = [2**l for l in range(5)]
 

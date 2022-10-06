@@ -4,6 +4,7 @@ import os,copy
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
 from functools import partial
+from torchsummary import summary
 
 # -- vision --
 import scipy.io
@@ -67,6 +68,8 @@ def run_exp(_cfg):
     model_cfg = uformer.extract_model_io(cfg)
     print(model_cfg)
     model = uformer.load_model(**model_cfg)
+    summary(model.cuda(),(3,256,256))
+    exit(0)
     substr = optional(cfg,"chkpt","")
     load_checkpoint(model,cfg.use_train,substr)
     imax = 255.
@@ -228,7 +231,12 @@ def main():
     cfg.noise_version = "blur"
     # cfg.chkpt = ""
     # cfg.use_train = "false"
-    # cfg.load_pretrained = "true"
+    cfg.num_heads = [1,2,4,8]
+    cfg.model_depths = [1,2,8,2]
+    cfg.freeze = "false"
+    # cfg.attn_mode = "w-w-w-w"
+    cfg.attn_mode = "pd-pd-pd-pd"
+    cfg.load_pretrained = "false"
     # cfg.pretrained_path = ""
     # cfg.pretrained_prefix = "module."
     

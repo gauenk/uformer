@@ -43,13 +43,15 @@ def reset_mismatch(model,state_dict):
 
 def load_checkpoint_qkv(model, weights,in_attn_modes, out_attn_modes,
                         embed_dim,prefix="module.",reset_new=False,
-                        attn_reset=False,strict=True,skip_mismatch_model_load=False):
+                        attn_reset=False,strict=True,skip_mismatch_model_load=False,
+                        nblocks=5):
     if weights is None: return
     checkpoint = th.load(weights)
     state_dict = checkpoint["state_dict"]
     new_state_dict = qkv_convert_state(
         state_dict,in_attn_modes,out_attn_modes,embed_dim,
-        prefix=prefix,reset_new=reset_new,attn_reset=attn_reset)
+        prefix=prefix,reset_new=reset_new,attn_reset=attn_reset,
+        nblocks=nblocks)
     if skip_mismatch_model_load:
         reset_mismatch(model,new_state_dict)
     model.load_state_dict(new_state_dict,strict=strict)
@@ -180,7 +182,7 @@ def reset_product_attn_mods(model):
             submod.data = th.randn_like(submod.data).clamp(-1,1)/100.
 
 def filter_rel_pos(model,in_attn_mode):
-    attn_modes = expand_attn_mode(in_attn_mode)
+    attn_modes = expand_attn_mode(in_attn_mode,model.nblocks)
     for name,param in model.named_parameters():
         if "relative_position_bias_table" in name:
             bname = name.split(".")[0]
