@@ -52,7 +52,7 @@ class FastLeFF(nn.Module):
         flops += H*W*self.hidden_dim*3*3
         # fc2
         flops += H*W*self.hidden_dim*self.dim
-        print("LeFF:{%.2f}"%(flops/1e9))
+        # print("LeFF:{%.2f}"%(flops/1e9))
         return flops
 
 class Mlp(nn.Module):
@@ -82,7 +82,7 @@ class Mlp(nn.Module):
         flops += H*W*self.in_features*self.hidden_features
         # fc2
         flops += H*W*self.hidden_features*self.out_features
-        print("MLP:{%.2f}"%(flops/1e9))
+        # print("MLP:{%.2f}"%(flops/1e9))
         return flops
 
 
@@ -127,7 +127,7 @@ class LeFF(nn.Module):
         flops += H*W*self.hidden_dim*3*3
         # fc2
         flops += H*W*self.hidden_dim*self.dim
-        print("LeFF:{%.2f}"%(flops/1e9))
+        # print("LeFF:{%.2f}"%(flops/1e9))
         # eca
         if hasattr(self.eca, 'flops'):
             flops += self.eca.flops()

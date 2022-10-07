@@ -94,6 +94,7 @@ class WindowAttention(nn.Module):
         # qkv = self.qkv(x)
         # flops += N * self.dim * 3 * self.dim
         flops += self.qkv.flops(H*W, H*W)
+        # print("window: ",self.qkv.flops(H*W, H*W))
 
         # attn = (q @ k.transpose(-2, -1))
 
@@ -103,5 +104,5 @@ class WindowAttention(nn.Module):
 
         # x = self.proj(x)
         flops += nW * N * self.dim * self.dim
-        print("W-MSA:{%.2f}"%(flops/1e9))
+        # print("W-MSA:{%.2f}"%(flops/1e9))
         return flops

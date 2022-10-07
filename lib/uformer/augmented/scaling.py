@@ -37,7 +37,7 @@ class Downsample(nn.Module):
         flops = 0
         # conv
         flops += H/2*W/2*self.in_channel*self.out_channel*4*4
-        print("Downsample:{%.2f}"%(flops/1e9))
+        # print("Downsample:{%.2f}"%(flops/1e9))
         return flops
 
 # Upsample Block
@@ -62,5 +62,5 @@ class Upsample(nn.Module):
         flops = 0
         # conv
         flops += H*2*W*2*self.in_channel*self.out_channel*2*2
-        print("Upsample:{%.2f}"%(flops/1e9))
+        # print("Upsample:{%.2f}"%(flops/1e9))
         return flops

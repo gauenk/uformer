@@ -39,7 +39,7 @@ class InputProj(nn.Module):
 
         if self.norm is not None:
             flops += H*W*self.out_channel
-        print("Input_proj:{%.2f}"%(flops/1e9))
+        # print("Input_proj:{%.2f}"%(flops/1e9))
         return flops
 
 # Output Projection
@@ -77,7 +77,43 @@ class OutputProj(nn.Module):
 
         if self.norm is not None:
             flops += H*W*self.out_channel
-        print("Output_proj:{%.2f}"%(flops/1e9))
+        # print("Output_proj:{%.2f}"%(flops/1e9))
+        return flops
+
+class SepConv2d(th.nn.Module):
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 kernel_size,
+                 stride=1,
+                 padding=0,
+                 dilation=1,act_layer=nn.ReLU):
+        super(SepConv2d, self).__init__()
+        self.depthwise = th.nn.Conv2d(in_channels,
+                                         in_channels,
+                                         kernel_size=kernel_size,
+                                         stride=stride,
+                                         padding=padding,
+                                         dilation=dilation,
+                                         groups=in_channels)
+        self.pointwise = th.nn.Conv2d(in_channels, out_channels, kernel_size=1)
+        self.act_layer = act_layer() if act_layer is not None else nn.Identity()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+
+    def forward(self, x):
+        x = self.depthwise(x)
+        x = self.act_layer(x)
+        x = self.pointwise(x)
+        return x
+
+    def flops(self, HW): 
+        flops = 0
+        flops += HW*self.in_channels*self.kernel_size**2/self.stride**2
+        flops += HW*self.in_channels*self.out_channels
+        # print("SeqConv2d:{%.2f}"%(flops/1e9))
         return flops
 
 class ConvProjection(nn.Module):
@@ -149,7 +185,6 @@ class LinearProjection(nn.Module):
         flops = q_L*self.dim*self.inner_dim+kv_L*self.dim*self.inner_dim*2
         return flops
 
-
 class ConvProjectionNoReshape(nn.Module):
     def __init__(self, dim, heads = 8, dim_head = 64, kernel_size=1,
                  q_stride=1, k_stride=1, v_stride=1, dropout = 0.,
@@ -186,8 +221,31 @@ class ConvProjectionNoReshape(nn.Module):
 
     def flops(self, H, W):
         flops = 0
-        flops += self.to_q.flops(H, W)
-        flops += self.to_k.flops(H, W)
-        flops += self.to_v.flops(H, W)
+        flops += conv2d_flops(self.to_q,H,W)
+        flops += conv2d_flops(self.to_k,H,W)
+        flops += conv2d_flops(self.to_v,H,W)
         return flops
 
+def conv2d_flops(conv,H,W):
+
+    # -- unpack --
+    ksize = conv.kernel_size
+    stride = conv.stride
+    groups = conv.groups
+    # W = conv.weights
+    # b = conv.bias
+    in_C = conv.in_channels
+    out_C = conv.out_channels
+
+    # -- flop --
+    flop = (H // stride[0]) * (W // stride[1]) * (ksize[0] * ksize[1])
+    flop *= ((in_C//groups) * (out_C//groups) * groups)
+    return flop
+
+# def calculate_conv2d_flops(input_size: list, output_size: list, kernel_size: list, groups: int, bias: bool = False):
+#     # n, out_c, oh, ow = output_size
+#     # n, in_c, ih, iw = input_size
+#     # out_c, in_c, kh, kw = kernel_size
+#     in_c = input_size[1]
+#     g = groups
+#     return l_prod(output_size) * (in_c // g) * l_prod(kernel_size[2:])

@@ -68,6 +68,12 @@ class ProductAttention(nn.Module):
 
         self.softmax = nn.Softmax(dim=-1)
 
+        # -- init dnls --
+        search,wpsum = self.init_dnls()
+        self.search = search
+        self.wpsum = wpsum
+
+
     def get_weights(self,module):
         weights = []
         for name,mod in module.named_parameters():
@@ -83,7 +89,7 @@ class ProductAttention(nn.Module):
         T, C, H, W = vid.shape
         # print("vid.shape: ",vid.shape)
         # print("vid[min,max]: ",vid.min().item(),vid.max().item())
-        qkv_weights = self.get_weights(self.qkv)
+        # qkv_weights = self.get_weights(self.qkv)
         # print("qkv_weights[min,max]: ",
         #       qkv_weights.min().item(),qkv_weights.max().item())
         # print("qkv_weights[nan]: ",th.any(th.isnan(qkv_weights)))
@@ -91,7 +97,7 @@ class ProductAttention(nn.Module):
         # -- init --
         mask = None
         rel_pos = self.get_rel_pos()
-        search,wpsum,fold = self.init_dnls(vid.shape,vid.device,self.num_heads)
+        fold = self.init_fold(vid.shape,vid.device)
 
         # -- qkv --
         q_vid, k_vid, v_vid = self.qkv(vid,attn_kv)
@@ -106,7 +112,7 @@ class ProductAttention(nn.Module):
         # print("q_vid[min,max]: ",q_vid.min().item(),q_vid.max().item())
         # print("k_vid[min,max]: ",k_vid.min().item(),k_vid.max().item())
         # print(ntotal,q_vid.shape,k_vid.shape)
-        dists,inds = search(q_vid,0,ntotal,k_vid)
+        dists,inds = self.search(q_vid,0,ntotal,k_vid)
 
         # -- debug --
         # any_nan = th.any(th.isnan(dists))
@@ -118,7 +124,7 @@ class ProductAttention(nn.Module):
         if search.ws != 8: # don't match
             dists = self.softmax(dists)
         else:
-            dists = search.window_attn_mod(dists,rel_pos,mask,vid.shape)
+            dists = self.search.window_attn_mod(dists,rel_pos,mask,vid.shape)
         # -- debug --
         # any_nan = th.any(th.isnan(dists))
         # print("nans [0.5]: ",any_nan)
@@ -134,7 +140,7 @@ class ProductAttention(nn.Module):
 
         # -- prod with "v" --
         dists = dists.contiguous()
-        x = wpsum(v_vid,dists,inds)
+        x = self.wpsum(v_vid,dists,inds)
         ps = x.shape[-1]
         # print("x.shape: ",x.shape)
         x = rearrange(x,'(o n) h c ph pw -> (o ph pw) n (h c)',o=ntotal)
@@ -187,7 +193,7 @@ class ProductAttention(nn.Module):
         return relative_position_bias
 
 
-    def init_dnls(self,vshape,device,nheads):
+    def init_dnls(self):
 
         # -- unpack params --
         k       = self.k
@@ -202,6 +208,7 @@ class ProductAttention(nn.Module):
         nbwd    = self.nbwd
         rbwd    = self.rbwd
         exact   = self.exact
+        nheads  = self.num_heads
         # print("k,ps,ws,wt: ",k,ps,ws,wt)
         # print(rbwd,nbwd)
 
@@ -232,31 +239,55 @@ class ProductAttention(nn.Module):
                                                     dilation=dil,
                                                     reflect_bounds=reflect_bounds,
                                                     adj=0, exact=exact)
+        return search,wpsum
+
+    def init_fold(self,vshape,device):
+        dil     = self.dil
+        stride0 = self.stride0
+        only_full = False
+        reflect_bounds = True
         fold = dnls.iFoldz(vshape,None,stride=stride0,dilation=dil,
                            adj=0,only_full=only_full,
                            use_reflect=reflect_bounds,device=device)
-        return search,wpsum,fold
+        return fold
+
 
     def extra_repr(self) -> str:
         return f'dim={self.dim}, win_size={self.win_size}, num_heads={self.num_heads}'
 
     def flops(self, H, W):
-        # calculate flops for 1 window with token length of N
-        # print(N, self.dim)
+
+        # -- init flops --
         flops = 0
-        N = self.win_size[0]*self.win_size[1]
-        nW = H*W/N
-        # qkv = self.qkv(x)
-        # flops += N * self.dim * 3 * self.dim
-        flops += self.qkv.flops(H*W, H*W)
 
-        # attn = (q @ k.transpose(-2, -1))
+        # -- num of reference points --
+        nrefs = ((H-1)//self.stride0+1) * ((W-1)//self.stride0+1)
 
-        flops += nW * self.num_heads * N * (self.dim // self.num_heads) * N
-        #  x = (attn @ v)
-        flops += nW * self.num_heads * N * N * (self.dim // self.num_heads)
+        # -- convolution flops --
+        flops += self.qkv.flops(H,W)
+        # print("product: ",self.qkv.flops(H,W))
 
-        # x = self.proj(x)
-        flops += nW * N * self.dim * self.dim
-        print("W-MSA:{%.2f}"%(flops/1e9))
+
+        # -- non-local search --
+        C = self.qkv.to_q.out_channels
+        vshape = (1,C,H,W)
+        flops += self.search.flops(1,C,H,W)
+        # print(vshape)
+        # print("search flops: ",self.search.flops(1,C,H,W))
+
+        # -- weighted patch sum --
+        k = self.search.k
+        nheads = self.num_heads
+        chnls_per_head = C//nheads
+        flops += self.wpsum.flops(nrefs,chnls_per_head,nheads,k)
+        # print("wpsum flops: ",self.wpsum.flops(nrefs,chnls_per_head,nheads,k))
+
+        # -- projection --
+        flops += nrefs * self.dim * self.dim
+
+        # -- fold --
+        ps = self.ps
+        flops += nrefs * ps * ps
+        # print(flops)
+
         return flops

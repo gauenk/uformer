@@ -71,10 +71,10 @@ class BasicUformerLayer(nn.Module):
                 x = blk(x,h,w,mask)
         return x
 
-    def flops(self):
+    def flops(self,h,w):
         flops = 0
         for blk in self.blocks:
-            flops += blk.flops()
+            flops += blk.flops(h,w)
         return flops
 
 def create_basic_enc_layer(base,embed_dim,img_size,depths,num_heads,win_size,
@@ -112,7 +112,6 @@ def create_basic_conv_layer(base,embed_dim,img_size,depths,num_heads,win_size,
                             nbwd,rbwd,num_enc,exact,bs,drop_path,l):
     mult = 2**l
     isize = img_size // 2**l
-    print("conv: ",mult)
     layer = BasicUformerLayer(dim=embed_dim[l]*mult,
                               output_dim=embed_dim[l]*mult,
                               input_resolution=(isize,isize),
@@ -158,8 +157,8 @@ def create_basic_dec_layer(base,embed_dim,img_size,depths,num_heads,win_size,
     # print(dpr)
     # print(depths,l,num_enc+1,num_enc+1+l)
     # print(mult)
-    print(l,_l,lr,2**(_l),mult)
-    print("num_enc: ",num_enc)
+    # print(l,_l,lr,2**(_l),mult)
+    # print("num_enc: ",num_enc)
     # print(drop_path)
     # print(dpr)
 

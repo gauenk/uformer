@@ -250,10 +250,9 @@ class LeWinTransformerBlockRefactored(nn.Module):
             x = x + mweight
         return x
 
-    def flops(self):
+    def flops(self,H,W):
         flops = 0
-        H, W = self.input_resolution
-
+        # H, W = self.input_resolution
         if self.cross_modulator is not None:
             flops += self.dim * H * W
             flops += self.cross_attn.flops(H*W, self.win_size*self.win_size)
