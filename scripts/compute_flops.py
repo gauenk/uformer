@@ -66,19 +66,31 @@ def create_grids_depth3():
     expl['load_pretrained'] = ["false"]
     expl['freeze'] = ["false"]
     expl['in_attn_mode'] = ["w-w-w"]
-    expl['attn_mode'] = ["pd-pd-pd","w-w-w"]
+    expl['attn_mode'] = ["pd-pd-pd"]
     expl['attn_reset'] = ["f-f-f"]
     expl['embed_dim'] = ["3-6-9","32-32-32"]
-    expl['stride0'] = ['1-1-1']
-    expl['stride1'] = ['4-2-1']
-    expl['ws'] = ["8-8-8"]
-    # expl['ws'] = ["29-15-9"]
+    expl['stride0'] = ["4-2-1"]
+    expl['stride1'] = ["1-1-1"]
+    expl['ws'] = ["29-15-9"]
     expl['wt'] = ["0-0-0"]
     expl['k'] = ["64-64-64"]
     expl['ps'] = ["7-5-3"]
-    expl['model_depths'] = ["2-2-2","2-4-8"]
+    expl['model_depths'] = ["2-2-2"]
     expl['num_heads'] = ["1-2-4"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
+
+    expl['attn_mode'] = ["w-w-w"]
+    expl['attn_reset'] = ["f-f-f"]
+    expl['embed_dim'] = ["32-32-32"]
+    expl['stride0'] = [1]
+    expl['stride1'] = [1]
+    expl['ws'] = [8]
+    expl['wt'] = [0]
+    expl['k'] = [64]
+    expl['ps'] = [8]
+    expl['model_depths'] = ["2-4-8"]
+    expl['num_heads'] = ["1-2-4"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
     return exps
 
 def create_grids_depth4():
@@ -105,12 +117,13 @@ def main():
     cache_dir = ".cache_io"
     cache_name = "compute_flops"
     cache = cache_io.ExpCache(cache_dir,cache_name)
-    # cache.clear()
+    cache.clear()
 
     # -- get experimental configs --
     cfg = configs.default_train_cfg()
     cfg.seed = 234
-    cfg.isize = "256_256"
+    cfg.isize = "512_512"
+    # cfg.isize = "256_256"
     exps = create_grids()
     cache_io.append_configs(exps,cfg) # merge the two
 
@@ -136,7 +149,9 @@ def main():
 
     # -- results --
     records = cache.load_flat_records(exps)
-    print(records[['flops','params','attn_mode','embed_dim','model_depths']])
+    vals = ['flops','params','attn_mode','embed_dim','model_depths']
+    vals += ['stride0','stride1']
+    print(records[vals])
 
 
 if __name__ == "__main__":

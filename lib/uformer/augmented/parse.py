@@ -27,8 +27,8 @@ def fields2blocks(attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
     # order = ["attn_mode","k","ps","pt","ws","wt","dil",
     #          "stride0","stride1","nbwd","rbwd","exact","bs","freeze"]
     fields = OrderedDict({"attn_mode":attn_mode, "k":k, "ps":ps, "pt":pt,
-                          "ws":ws, "wt":wt, "dil":dil, "stride0":stride1,
-                          "stride1":stride0, "nbwd":nbwd, "rbwd": rbwd,
+                          "ws":ws, "wt":wt, "dil":dil, "stride0":stride0,
+                          "stride1":stride1, "nbwd":nbwd, "rbwd": rbwd,
                           "exact":exact,"bs":bs,"embed_dim":embed_dim,"freeze":freeze,
     })
     order = list(fields.keys())
