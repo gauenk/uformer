@@ -51,7 +51,7 @@ def launch_training(_cfg):
     cfg = copy.deepcopy(_cfg)
     cache_io.exp_strings2bools(cfg)
     configs.set_seed(cfg.seed)
-    root = Path(__file__).parents[0].absolute()
+    root = (Path(__file__).parents[0] / ".." ).absolute()
 
     # -- create timer --
     timer = ExpTimer()
@@ -232,7 +232,7 @@ def main():
     # -- trainig --
     cfg.ndevices = 1
     cfg.accumulate_grad_batches = 1
-    cfg.batch_size_tr = 30
+    cfg.batch_size_tr = 16
     cfg.lr_init = 2e-4
     cfg.weight_decay = 2e-2
     cfg.nepochs = 100

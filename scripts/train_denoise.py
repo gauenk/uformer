@@ -51,7 +51,7 @@ def launch_training(_cfg):
     cfg = copy.deepcopy(_cfg)
     cache_io.exp_strings2bools(cfg)
     configs.set_seed(cfg.seed)
-    root = Path(__file__).parents[0].absolute()
+    root = (Path(__file__).parents[0] / ".." ).absolute()
 
     # -- create timer --
     timer = ExpTimer()
