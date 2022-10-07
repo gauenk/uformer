@@ -47,6 +47,11 @@ def compute_flops(_cfg):
     # -- compute params --
     params = count_params(model)
 
+    # -- forward runtime --
+
+    # -- backward runtime --
+
+
     # -- format results --
     results = edict()
     results.flops = flops

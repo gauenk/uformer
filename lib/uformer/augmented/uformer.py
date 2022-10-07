@@ -90,7 +90,7 @@ class Uformer(nn.Module):
         self.output_proj = OutputProj(in_channel=2*embed_dim[0],
                                       out_channel=in_chans, kernel_size=3, stride=1)
 
-        # -- init partial basic layer decl -- 
+        # -- init partial basic layer decl --
         basic_enc_layer = partial(create_basic_enc_layer,BasicUformerLayer,embed_dim,
                                   img_size,depths_ref,num_heads_ref,win_size,
                                   self.mlp_ratio,qkv_bias,qk_scale,drop_rate,
@@ -122,15 +122,17 @@ class Uformer(nn.Module):
 
         # -- encoder --
         enc_list = []
-        for l in range(num_encs):
+        for l_enc in range(num_encs):
 
             # -- decl --
-            setattr(self,"encoderlayer_%d" % l,basic_enc_layer(l))
-            setattr(self,"dowsample_%d" % l,dowsample(embed_dim[l]*(2**l),
-                                                      embed_dim[l+1]*(2**(l+1))))
+            mod_in = num_heads[l_enc]
+            mod_out = num_heads[l_enc+1]
+            setattr(self,"encoderlayer_%d" % l_enc,basic_enc_layer(l_enc))
+            setattr(self,"dowsample_%d" % l_enc,dowsample(embed_dim[l_enc]*mod_in,
+                                                          embed_dim[l_enc+1]*mod_out))
             # -- add to list --
-            enc_layer = [getattr(self,"encoderlayer_%d" % l),
-                         getattr(self,"dowsample_%d" % l)]
+            enc_layer = [getattr(self,"encoderlayer_%d" % l_enc),
+                         getattr(self,"dowsample_%d" % l_enc)]
             enc_list.append(enc_layer)
         self.enc_list = enc_list
 
@@ -139,18 +141,19 @@ class Uformer(nn.Module):
 
         # -- decoder --
         dec_list = []
-        for l in range(num_encs):
+        for l_dec in range(num_encs):
+
             # -- decl --
-            _l = num_encs - l
-            if l == 0: mod_in,mod_out = 2**num_encs,2**(num_encs-1)
-            else: mod_in,mod_out = 2**(_l+1),2**(_l-1)
-            setattr(self,"upsample_%d" % l,upsample(embed_dim[_l]*mod_in,
-                                                     embed_dim[_l-1]*mod_out))
-            setattr(self,"decoderlayer_%d" % l,basic_dec_layer(l))
+            l_rev = (num_encs - 1) - l_dec
+            mult = 1 if l_dec==0 else 2
+            mod_in,mod_out = num_heads[l_rev+1],num_heads[l_rev]
+            setattr(self,"upsample_%d" % l_dec,upsample(mult*embed_dim[l_rev+1]*mod_in,
+                                                        embed_dim[l_rev]*mod_out))
+            setattr(self,"decoderlayer_%d" % l_dec,basic_dec_layer(l_dec))
 
             # -- add to list --
-            dec_layer = [getattr(self,"upsample_%d" % l),
-                         getattr(self,"decoderlayer_%d" % l)]
+            dec_layer = [getattr(self,"upsample_%d" % l_dec),
+                         getattr(self,"decoderlayer_%d" % l_dec)]
             dec_list.append(dec_layer)
         self.dec_list = dec_list
 
@@ -187,7 +190,7 @@ class Uformer(nn.Module):
         y = self.input_proj(x)
         y = self.pos_drop(y)
         z = y
-        nblocks = self.num_enc_layers
+        num_encs = self.num_enc_layers
 
         # -- enc --
         encs = []
@@ -198,16 +201,16 @@ class Uformer(nn.Module):
             z = down(z)
 
         # -- middle --
-        mod = 2**nblocks
+        mod = 2**num_encs
         _h,_w = h//mod,w//mod
         z = self.conv(z,_h,_w,mask=mask)
 
         # -- dec --
         for i,(up,dec) in enumerate(self.dec_list):
-            _i = nblocks-1-i
-            _h,_w = h//(2**(_i)),w//(2**(_i))
+            i_rev = (num_encs-1)-i
+            _h,_w = h//(2**(i_rev)),w//(2**(i_rev))
             z = up(z)
-            z = th.cat([z,encs[_i]],-1)
+            z = th.cat([z,encs[i_rev]],-1)
             z = dec(z,_h,_w,mask=mask)
 
         # -- Output Projection --
@@ -225,7 +228,7 @@ class Uformer(nn.Module):
 
         # -- Input Projection --
         flops += self.input_proj.flops(h,w)
-        nblocks = self.num_enc_layers
+        num_encs = self.num_enc_layers
 
         # -- enc --
         encs = []
@@ -235,14 +238,14 @@ class Uformer(nn.Module):
             flops += down.flops(_h,_w)
 
         # -- middle --
-        mod = 2**nblocks
+        mod = 2**num_encs
         _h,_w = h//mod,w//mod
         flops += self.conv.flops(_h,_w)
 
         # -- dec --
         for i,(up,dec) in enumerate(self.dec_list):
-            _i = nblocks-1-i
-            _h,_w = h//(2**(_i)),w//(2**(_i))
+            i_rev = num_encs-1-i
+            _h,_w = h//(2**(i_rev)),w//(2**(i_rev))
             flops += up.flops(_h,_w)
             flops += dec.flops(_h,_w)
 

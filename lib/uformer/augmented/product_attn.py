@@ -121,7 +121,7 @@ class ProductAttention(nn.Module):
         # if any_nan: exit(0)
         # print("dists[min,max]: ",dists.min().item(),dists.max().item())
 
-        if search.ws != 8: # don't match
+        if self.search.ws != 8: # don't match
             dists = self.softmax(dists)
         else:
             dists = self.search.window_attn_mod(dists,rel_pos,mask,vid.shape)

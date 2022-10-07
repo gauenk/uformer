@@ -72,7 +72,6 @@ def launch_training(_cfg):
         save_dir.mkdir(parents=True)
 
     # -- network --
-    print(cfg)
     model_cfg = uformer.extract_model_io(cfg)
     print(model_cfg)
     model = UformerLit(model_cfg,flow=cfg.flow,isize=cfg.isize,
@@ -227,15 +226,14 @@ def main():
     # -- num to train --
     cfg.nsamples_tr = 0
     cfg.nsamples_val = 0
-    cfg.nframes = 5
+    cfg.nframes = 1
 
     # -- trainig --
     cfg.ndevices = 1
     cfg.accumulate_grad_batches = 1
-    cfg.batch_size_tr = 4
+    cfg.batch_size_tr = 16
     cfg.lr_init = 2e-4
     cfg.weight_decay = 2e-2
-    cfg.nepochs = 100
     cfg.warmup_epochs = 5
     cfg.task = "rgb_denoise" # fixed
     cfg.noise_version = "rgb_noise" # fixed.
@@ -244,15 +242,18 @@ def main():
     cfg.rbwd = "true"
     # cfg.rbwd = "false"
     # cfg.limit_train_batches = 0.25 # with w
-    cfg.limit_train_batches = 0.025 # with pd
+    cfg.limit_train_batches = 0.05 # with pd
+    # cfg.limit_train_batches = 0.025 # with pd
+    cfg.nepochs = 200 # 5 epochs = 5 * 20 = 100
 
     cfg.aug_training_scales = [0.5,0.75,1.]
     cfg.aug_training_flips = True
     cfg.shift_flag = False
 
     # -- pick an exp --
-    exps = [exps[0]] # run0
-    # exps = [exps[-1]] # run0
+    # exps = [exps[0]] # run0
+    # exps = [exps[-2]] # run0
+    exps = [exps[-1]] # run0
     nexps = len(exps)
 
     # -- mix --
