@@ -68,14 +68,14 @@ def create_grids_depth3():
     expl['in_attn_mode'] = ["w-w-w"]
     expl['attn_mode'] = ["pd-pd-pd"]
     expl['attn_reset'] = ["f-f-f"]
-    expl['embed_dim'] = ["3-6-9","32-32-32"]
+    expl['embed_dim'] = ["3-3-6"]
     expl['stride0'] = ["4-2-1"]
     expl['stride1'] = ["1-1-1"]
     expl['ws'] = ["29-15-9"]
     expl['wt'] = ["0-0-0"]
     expl['k'] = ["64-64-64"]
     expl['ps'] = ["7-5-3"]
-    expl['model_depths'] = ["2-2-2"]
+    expl['model_depths'] = ["2-2-2","2-4-8"]
     expl['num_heads'] = ["1-2-4"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
 
