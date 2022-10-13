@@ -231,9 +231,9 @@ def main():
     # -- trainig --
     cfg.ndevices = 1
     cfg.accumulate_grad_batches = 1
-    cfg.batch_size_tr = 16
+    cfg.batch_size_tr = 4
     cfg.lr_init = 2e-4
-    cfg.weight_decay = 2e-2
+    cfg.weight_decay = 2e-3
     cfg.warmup_epochs = 5
     cfg.task = "rgb_denoise" # fixed
     cfg.noise_version = "rgb_noise" # fixed.
@@ -252,8 +252,8 @@ def main():
 
     # -- pick an exp --
     # exps = [exps[0]] # run0
-    exps = [exps[-3]] # run0
-    # exps = [exps[-2]] # run0
+    # exps = [exps[-3]] # run0
+    exps = [exps[-2]] # run0
     # exps = [exps[-1]] # run0
     nexps = len(exps)
 

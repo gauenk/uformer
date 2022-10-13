@@ -347,12 +347,12 @@ def exps_rgb_denoising_train(iexps=None):
     expl['attn_mode'] = ["pd-pd-pd-pd"]
     expl['attn_reset'] = ["t-t-t-t"]
     expl['embed_dim'] = ["9-9-9-9"]
-    expl['stride0'] = ['5-4-2-1']
+    expl['stride0'] = ['4-4-2-1']
     expl['stride1'] = ['1-1-1-1']
     expl['ws'] = ["29-15-9-9"]
     expl['wt'] = ["0-0-0-0"]
     expl['k'] = [64]
-    expl['ps'] = ["9-7-5-3"]
+    expl['ps'] = [7]
     expl['model_depths'] = ["2-2-2-2"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
@@ -431,12 +431,13 @@ def exps_deraining_train(iexps=None):
     # -- init --
     expl = exp_init(iexps,"train")
     expl['freeze'] = ['false']
+    expl['input_proj_depth'] = [4]
 
     # -- [exp e] step 0 --
     expl['in_attn_mode'] = ["w-w-w"]
     expl['attn_mode'] = ["pd-pd-pd"]
-    expl['attn_reset'] = ["f-f-f"]
-    expl['embed_dim'] = ["3-6-9"]
+    expl['attn_reset'] = ["true"]
+    expl['embed_dim'] = [9]
     expl['stride0'] = ['4-2-1']
     expl['stride1'] = ['1-1-1']
     expl['ws'] = ["29-15-9"]
@@ -444,7 +445,7 @@ def exps_deraining_train(iexps=None):
     expl['k'] = ["64-64-64"]
     expl['ps'] = ["7-5-3"]
     expl['model_depths'] = ["2-2-2"]
-    expl['num_heads'] = ["1-2-4"]
+    expl['num_heads'] = ["1-2-2"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
 
     return exps
