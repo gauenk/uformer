@@ -63,7 +63,8 @@ def save_image(image,path,div=None,fmt="image"):
         image = np.clip(image,0,255).astype(np.uint8)
 
         # -- remove single color --
-        image = rearrange(image,'c h w -> h w c')
+        if image.shape[0] in [3,1]:
+            image = rearrange(image,'c h w -> h w c')
         image = image.squeeze()
 
         # -- save --

@@ -9,6 +9,34 @@ import math
 
 
 # Input Projection
+class InputProjSeq(nn.Module):
+
+    def __init__(self, depth=4, in_channel=3, out_channel=64, kernel_size=3, stride=1,
+                 norm_layer=None,act_layer=nn.LeakyReLU):
+        super().__init__()
+        self.depth = depth
+        self.in_channel = in_channel
+        self.out_channel = out_channel
+        layers = []
+        for d in range(depth):
+            if d > 0: in_channel = out_channel
+            layers.append(nn.Conv2d(in_channel, out_channel, kernel_size=3,
+                                    stride=stride, padding=kernel_size//2))
+            layers.append(act_layer(inplace=True))
+        self.proj = nn.Sequential(*layers)
+
+    def forward(self, x):
+        B, T, C, H, W = x.shape
+        x = x.view(B*T,C,H,W)
+        x = self.proj(x)
+        x = x.view(B,T,-1,H,W)
+        return x
+
+    def flops(self, H, W):
+        flops = H*W*self.in_channel*self.out_channel*3*3*self.depth
+        return flops
+
+
 class InputProj(nn.Module):
     def __init__(self, in_channel=3, out_channel=64, kernel_size=3, stride=1,
                  norm_layer=None,act_layer=nn.LeakyReLU):
@@ -32,7 +60,7 @@ class InputProj(nn.Module):
         # x = self.proj(x).flatten(2).transpose(1, 2).contiguous()  # B H*W C
         # if self.norm is not None:
         #     x = self.norm(x)
-        x = x.view(B,T,C,H,W)
+        x = x.view(B,T,-1,H,W)
         return x
 
     def flops(self, H, W):
@@ -64,15 +92,16 @@ class OutputProj(nn.Module):
         self.out_channel = out_channel
 
     def forward(self, x):
-        B, T, L, C = x.shape
-        x = x.view(B*T,L,C)
-        H = int(math.sqrt(L))
-        W = int(math.sqrt(L))
-        x = x.transpose(1, 2).view(T*B, C, H, W)
+        B, T, C, H, W = x.shape
+        x = x.view(B*T,C,H,W)
+        # H = int(math.sqrt(L))
+        # W = int(math.sqrt(L))
+        # x = x.transpose(1, 2).view(T*B, C, H, W)
         x = self.proj(x)
+        BT,C,H,W = x.shape
         if self.norm is not None:
             x = self.norm(x)
-        x = x.view(T,B,C,H,W)
+        x = x.view(B,T,-1,H,W)
         return x
 
     def flops(self, H, W):

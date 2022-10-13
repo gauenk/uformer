@@ -180,6 +180,7 @@ class LeWinTransformerBlockRefactored(nn.Module):
 
         # -- norm layer --
         x = x.view(B*T,C,H*W).transpose(1,2)
+        # print("x.shape: ",x.shape)
         x = self.norm1(x)
         x = x.transpose(1,2).view(B, T, C, H, W)
 
@@ -251,11 +252,14 @@ class LeWinTransformerBlockRefactored(nn.Module):
     def apply_modulator(self,x,wsize=8):
         # -- if modular weight --
         if not(self.modulator is None):
-            b,t,h,w,c = x.shape
+            # print("x.shape: ",x.shape)
+            b,t,c,h,w = x.shape
             mweight = self.modulator.weight
             nh,nw = h//wsize,w//wsize
-            shape_s = '(wh ww) c -> 1 1 (rh wh) (rw ww) c'
+            # print("mweight.shape: ",mweight.shape)
+            shape_s = '(wh ww) c -> 1 1 c (rh wh) (rw ww)'
             mweight = repeat(mweight,shape_s,wh=wsize,rh=nh,rw=nw)
+            # print("mweight.shape: ",mweight.shape)
             x = x + mweight
         return x
 

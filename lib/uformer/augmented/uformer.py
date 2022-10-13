@@ -9,7 +9,7 @@ from functools import partial
 from timm.models.layers import trunc_normal_
 
 # -- project deps --
-from .proj import InputProj,OutputProj
+from .proj import InputProj,InputProjSeq,OutputProj
 from .basic_uformer import BasicUformerLayer
 from .basic_uformer import create_basic_enc_layer,create_basic_dec_layer
 from .basic_uformer import create_basic_conv_layer
@@ -20,6 +20,7 @@ from ..utils.model_utils import apply_freeze
 
 class Uformer(nn.Module):
     def __init__(self, img_size=256, in_chans=3, dd_in=3,
+                 input_proj_depth=1,
                  depths=[2, 2, 2, 2, 2],
                  num_heads=[1, 2, 4, 8, 16],
                  win_size=8, mlp_ratio=4., qkv_bias=True, qk_scale=None,
@@ -85,8 +86,9 @@ class Uformer(nn.Module):
         # print(depths_ref)
 
         # -- input/output --
-        self.input_proj = InputProj(in_channel=dd_in, out_channel=embed_dim[0],
-                                    kernel_size=3, stride=1, act_layer=nn.LeakyReLU)
+        self.input_proj = InputProjSeq(depth=input_proj_depth,
+                                       in_channel=dd_in, out_channel=embed_dim[0],
+                                       kernel_size=3, stride=1, act_layer=nn.LeakyReLU)
         self.output_proj = OutputProj(in_channel=2*embed_dim[0],
                                       out_channel=in_chans, kernel_size=3, stride=1)
 
@@ -208,12 +210,11 @@ class Uformer(nn.Module):
             i_rev = (num_encs-1)-i
             _h,_w = h//(2**(i_rev)),w//(2**(i_rev))
             z = up(z)
-            z = th.cat([z,encs[i_rev]],-1)
+            z = th.cat([z,encs[i_rev]],-3)
             z = dec(z,_h,_w,mask=mask)
 
         # -- Output Projection --
         y = self.output_proj(z)
-        print("y.shape:" ,y.shape)
 
         # -- residual connection --
         out = x + y if self.dd_in == 3 else y

@@ -113,6 +113,8 @@ class UformerLit(pl.LightningModule):
 
     def forward_product(self,vid,clamp=False):
         flows = self._get_flow_batch(vid)
+        # print("vid.shape: ",vid.shape)
+        # print("flows.fflow.shape: ",flows.fflow.shape)
         deno = self.net(vid,flows=flows)
         if clamp:
             deno = th.clamp(deno,0.,1.)
@@ -201,18 +203,19 @@ class UformerLit(pl.LightningModule):
         noisy_key = self.get_data_keys()[0]
         loss = 0 # init @ zero
         nbatch = len(batch[noisy_key])
-        denos,cleans = [],[]
-        for i in range(nbatch):
-            # th.cuda.empty_cache()
-            deno_i,clean_i,loss_i = self.training_step_i(batch, i)
-            loss += loss_i
-            denos.append(deno_i)
-            cleans.append(clean_i)
-        loss = loss / nbatch
+        denos,cleans,loss = self.training_step_i(batch, slice(0,nbatch))
+        # denos,cleans = [],[]
+        # for i in range(nbatch):
+        #     # th.cuda.empty_cache()
+        #     deno_i,clean_i,loss_i = self.training_step_i(batch, i)
+        #     loss += loss_i
+        #     denos.append(deno_i)
+        #     cleans.append(clean_i)
+        # loss = loss / nbatch
 
         # -- append --
-        denos = th.stack(denos)
-        cleans = th.stack(cleans)
+        # denos = th.stack(denos)
+        # cleans = th.stack(cleans)
         # grab_grad(self.net)
 
         # -- log --
@@ -338,30 +341,33 @@ class UformerLit(pl.LightningModule):
             pmax = param.grad.max().item()
             print("[any,pmin,pmax]: ",any_nan,pmin,pmax)
 
-    def training_step_i(self, batch, i):
+    def training_step_i(self, batch, batch_inds):
 
         # -- unpack batch
         noisy_key,clean_key = self.get_data_keys()
-        noisy = batch[noisy_key][[i]]/255.
-        clean = batch[clean_key][[i]]/255.
-        region = batch['region'][[i]]
+        noisy = batch[noisy_key][batch_inds]/255.
+        clean = batch[clean_key][batch_inds]/255.
+        # region = batch['region'][[i]]
 
         # -- get data --
         # B = noisy.shape[0]
         # for b in range(B):
         #     noisy[b] = rslice(noisy,region)
         #     clean[b] = rslice(clean,region)
-        print("noisy.shape: ",noisy.shape)
+        # print("noisy.shape: ",noisy.shape)
 
         # -- foward --
         deno = self.forward(noisy,False)
+        # print("deno.shape: ",deno.shape)
 
         # -- save a few --
-        if self.global_step % 300 == 0  and i == 0:
+        if self.global_step % 300 == 0: # and i == 0
             out_dir = "./output/lightning/%s/%06d" % (self.uuid,self.global_step)
-            io.save_burst(deno,out_dir,"deno")
-            io.save_burst(noisy,out_dir,"noisy")
-            io.save_burst(clean,out_dir,"clean")
+            B = deno.shape[0]
+            for b in range(B):
+                io.save_burst(deno[b],out_dir,"deno_%d" % b)
+                io.save_burst(noisy[b],out_dir,"noisy_%d" % b)
+                io.save_burst(clean[b],out_dir,"clean_%d" % b)
 
         # -- get loss for train types --
         if self.task == "deblur":
@@ -385,9 +391,9 @@ class UformerLit(pl.LightningModule):
         # -- unpack data --
         noisy_key,clean_key = self.get_data_keys()
         noisy,clean = batch[noisy_key][[0]]/255.,batch[clean_key][[0]]/255.
-        region = batch['region'][0]
-        noisy[0] = rslice(noisy[0],region)
-        clean[0] = rslice(clean[0],region)
+        # region = batch['region'][0]
+        # noisy[0] = rslice(noisy[0],region)
+        # clean[0] = rslice(clean[0],region)
 
         # -- forward --
         gpu_mem.print_peak_gpu_stats(False,"val",reset=True)
@@ -418,8 +424,8 @@ class UformerLit(pl.LightningModule):
         index,region = batch['index'][0],batch['region'][0]
         noisy_key,clean_key = self.get_data_keys()
         noisy,clean = batch[noisy_key][[0]]/255.,batch[clean_key][[0]]/255.
-        noisy = rslice(noisy,region)
-        clean = rslice(clean,region)
+        # noisy = rslice(noisy,region)
+        # clean = rslice(clean,region)
 
         # -- forward --
         gpu_mem.print_peak_gpu_stats(False,"test",reset=True)

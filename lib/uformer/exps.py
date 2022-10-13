@@ -301,6 +301,7 @@ def exps_rgb_denoising_train(iexps=None):
     # -- init --
     expl = exp_init(iexps,"train")
     expl['freeze'] = ['false']
+    expl['input_proj_depth'] = [4]
 
     # -- [exp a] step 0 --
     expl['in_attn_mode'] = ["w-w-w-w-w"]
@@ -326,8 +327,8 @@ def exps_rgb_denoising_train(iexps=None):
     expl['num_heads'] = ['1-2-4']
     expl['attn_mode'] = ["pd-pd-pd"]
     expl['attn_reset'] = ["t-t-t"]
-    expl['embed_dim'] = ["3-6-9"]
-    expl['stride0'] = ['2-1-1']
+    expl['embed_dim'] = ["9-9-9"]
+    expl['stride0'] = ['4-2-1']
     expl['stride1'] = ['1-1-1']
     expl['ws'] = ["29-15-9"]
     expl['wt'] = ["0-0-0"]
@@ -345,7 +346,7 @@ def exps_rgb_denoising_train(iexps=None):
     expl['num_heads'] = ['1-2-4-8']
     expl['attn_mode'] = ["pd-pd-pd-pd"]
     expl['attn_reset'] = ["t-t-t-t"]
-    expl['embed_dim'] = ["3-6-9-9"]
+    expl['embed_dim'] = ["9-9-9-9"]
     expl['stride0'] = ['5-4-2-1']
     expl['stride1'] = ['1-1-1-1']
     expl['ws'] = ["29-15-9-9"]

@@ -75,6 +75,7 @@ def load_model(*args,**kwargs):
     exact = optional(kwargs,'exact',False)
     bs = optional(kwargs,'bs',-1)
     freeze = optional(kwargs,'freeze',False)
+    input_proj_depth = optional(kwargs,"input_proj_depth",1)
 
     # -- modify network after load --
     filter_by_attn_pre = optional(kwargs,"filter_by_attn_pre",False)
@@ -94,6 +95,7 @@ def load_model(*args,**kwargs):
 
     # -- init model --
     model = Uformer(img_size=input_size, in_chans=nchnls,
+                    input_proj_depth=input_proj_depth,
                     depths=depths, num_heads=num_heads,
                     win_size=win_size, mlp_ratio=mlp_ratio,
                     qkv_bias=qkv_bias, token_projection=token_projection,

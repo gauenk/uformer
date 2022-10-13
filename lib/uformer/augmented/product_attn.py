@@ -92,6 +92,7 @@ class ProductAttention(nn.Module):
         mask = None
         rel_pos = self.get_rel_pos()
         fold = self.init_fold((B,T,C,H,W),vid.device)
+        self.search.update_flow(vid)
 
         # -- qkv --
         vid = vid.view(B*T,C,H,W)
