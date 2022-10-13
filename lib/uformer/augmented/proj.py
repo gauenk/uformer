@@ -26,10 +26,13 @@ class InputProj(nn.Module):
         self.out_channel = out_channel
 
     def forward(self, x):
-        B, C, H, W = x.shape
-        x = self.proj(x).flatten(2).transpose(1, 2).contiguous()  # B H*W C
-        if self.norm is not None:
-            x = self.norm(x)
+        B, T, C, H, W = x.shape
+        x = x.view(B*T,C,H,W)
+        x = self.proj(x)
+        # x = self.proj(x).flatten(2).transpose(1, 2).contiguous()  # B H*W C
+        # if self.norm is not None:
+        #     x = self.norm(x)
+        x = x.view(B,T,C,H,W)
         return x
 
     def flops(self, H, W):
@@ -61,13 +64,15 @@ class OutputProj(nn.Module):
         self.out_channel = out_channel
 
     def forward(self, x):
-        B, L, C = x.shape
+        B, T, L, C = x.shape
+        x = x.view(B*T,L,C)
         H = int(math.sqrt(L))
         W = int(math.sqrt(L))
-        x = x.transpose(1, 2).view(B, C, H, W)
+        x = x.transpose(1, 2).view(T*B, C, H, W)
         x = self.proj(x)
         if self.norm is not None:
             x = self.norm(x)
+        x = x.view(T,B,C,H,W)
         return x
 
     def flops(self, H, W):

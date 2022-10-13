@@ -85,24 +85,24 @@ class ProductAttention(nn.Module):
     def forward(self, vid, attn_kv=None, mask=None):
 
         # -- unpack --
-        vid = rearrange(vid,'t h w c -> t c h w')
-        T, C, H, W = vid.shape
-        # print("vid.shape: ",vid.shape)
-        # print("vid[min,max]: ",vid.min().item(),vid.max().item())
-        # qkv_weights = self.get_weights(self.qkv)
-        # print("qkv_weights[min,max]: ",
-        #       qkv_weights.min().item(),qkv_weights.max().item())
-        # print("qkv_weights[nan]: ",th.any(th.isnan(qkv_weights)))
+        B, T, C, H, W = vid.shape
+        # vid = rearrange(vid,'b t h w c -> (b t) c h w')
 
         # -- init --
         mask = None
         rel_pos = self.get_rel_pos()
-        fold = self.init_fold(vid.shape,vid.device)
+        fold = self.init_fold((B,T,C,H,W),vid.device)
 
         # -- qkv --
+        vid = vid.view(B*T,C,H,W)
         q_vid, k_vid, v_vid = self.qkv(vid,attn_kv)
         q_vid = q_vid * self.scale
         #print("q_vid.shape:",q_vid.shape,q_vid.shape[1]//self.num_heads,self.num_heads)
+
+        # -- shape --
+        q_vid = q_vid.view(B,T,-1,H,W)
+        k_vid = k_vid.view(B,T,-1,H,W)
+        v_vid = v_vid.view(B,T,-1,H,W)
 
         # -- attn map --
         stride0 = self.stride0
@@ -143,7 +143,8 @@ class ProductAttention(nn.Module):
         x = self.wpsum(v_vid,dists,inds)
         ps = x.shape[-1]
         # print("x.shape: ",x.shape)
-        x = rearrange(x,'(o n) h c ph pw -> (o ph pw) n (h c)',o=ntotal)
+        # print("x.shape: ",x.shape)
+        x = rearrange(x,'b h (o n) c ph pw -> (b o ph pw) n (h c)',o=ntotal)
 
         # -- debug --
         # any_nan = th.any(th.isnan(x))
@@ -156,7 +157,7 @@ class ProductAttention(nn.Module):
         x = self.proj_drop(x)
 
         # -- prepare for folding --
-        x = rearrange(x,'(o ph pw) n c -> (o n) 1 1 c ph pw',ph=ps,pw=ps)
+        x = rearrange(x,'(b o ph pw) n c -> b (o n) 1 1 c ph pw',b=B,ph=ps,pw=ps)
         x = x.contiguous()
         # print("x[min,max]: ",x.min().item(),x.max().item())
 
@@ -167,7 +168,7 @@ class ProductAttention(nn.Module):
         any_zero = th.any(th.abs(fold.zvid)<1e-10)
         any_fold_nan = th.any(th.isnan(fold.vid))
         vid = fold.vid / fold.zvid
-        vid = rearrange(vid,'t c h w -> t h w c')
+        vid = rearrange(vid,'b t c h w -> b t h w c')
 
         # -- debug --
         any_nan = th.any(th.isnan(vid))
@@ -191,7 +192,6 @@ class ProductAttention(nn.Module):
         # relative_position_bias = repeat(relative_position_bias,
         #                                 'nH l c -> nH l (c d)', d = ratio)
         return relative_position_bias
-
 
     def init_dnls(self):
 

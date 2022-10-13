@@ -252,8 +252,9 @@ def main():
 
     # -- pick an exp --
     # exps = [exps[0]] # run0
+    exps = [exps[-3]] # run0
     # exps = [exps[-2]] # run0
-    exps = [exps[-1]] # run0
+    # exps = [exps[-1]] # run0
     nexps = len(exps)
 
     # -- mix --

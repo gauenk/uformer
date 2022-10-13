@@ -112,14 +112,14 @@ class UformerLit(pl.LightningModule):
             return self.forward_default(vid,clamp=clamp)
 
     def forward_product(self,vid,clamp=False):
-        flows = self._get_flow(vid)
+        flows = self._get_flow_batch(vid)
         deno = self.net(vid,flows=flows)
         if clamp:
             deno = th.clamp(deno,0.,1.)
         return deno
 
     def forward_default(self,vid,clamp=False):
-        flows = self._get_flow(vid)
+        flows = self._get_flow_batch(vid)
         # model = self._model[0]
         # model.model = self.net
         model = self.net
@@ -130,6 +130,19 @@ class UformerLit(pl.LightningModule):
         if clamp:
             deno = th.clamp(deno,0.,1.)
         return deno
+
+    def _get_flow_batch(self,vid):
+        flows = edict()
+        flows.fflow = []
+        flows.bflow = []
+        B = vid.shape[0]
+        for b in range(B):
+            flows_b = self._get_flow(vid[b])
+            flows.fflow.append(flows_b.fflow)
+            flows.bflow.append(flows_b.bflow)
+        flows.fflow = th.stack(flows.fflow)
+        flows.bflow = th.stack(flows.bflow)
+        return flows
 
     def _get_flow(self,vid):
         if self.flow == True:
@@ -329,18 +342,19 @@ class UformerLit(pl.LightningModule):
 
         # -- unpack batch
         noisy_key,clean_key = self.get_data_keys()
-        noisy = batch[noisy_key][i]/255.
-        clean = batch[clean_key][i]/255.
-        region = batch['region'][i]
+        noisy = batch[noisy_key][[i]]/255.
+        clean = batch[clean_key][[i]]/255.
+        region = batch['region'][[i]]
 
         # -- get data --
-        noisy = rslice(noisy,region)
-        clean = rslice(clean,region)
-        # print("noisy.shape: ",noisy.shape)
+        # B = noisy.shape[0]
+        # for b in range(B):
+        #     noisy[b] = rslice(noisy,region)
+        #     clean[b] = rslice(clean,region)
+        print("noisy.shape: ",noisy.shape)
 
         # -- foward --
         deno = self.forward(noisy,False)
-        # print("deno.shape: ",deno.shape)
 
         # -- save a few --
         if self.global_step % 300 == 0  and i == 0:
@@ -370,10 +384,10 @@ class UformerLit(pl.LightningModule):
 
         # -- unpack data --
         noisy_key,clean_key = self.get_data_keys()
-        noisy,clean = batch[noisy_key][0]/255.,batch[clean_key][0]/255.
+        noisy,clean = batch[noisy_key][[0]]/255.,batch[clean_key][[0]]/255.
         region = batch['region'][0]
-        noisy = rslice(noisy,region)
-        clean = rslice(clean,region)
+        noisy[0] = rslice(noisy[0],region)
+        clean[0] = rslice(clean[0],region)
 
         # -- forward --
         gpu_mem.print_peak_gpu_stats(False,"val",reset=True)
@@ -403,7 +417,7 @@ class UformerLit(pl.LightningModule):
         # -- denoise --
         index,region = batch['index'][0],batch['region'][0]
         noisy_key,clean_key = self.get_data_keys()
-        noisy,clean = batch[noisy_key][0]/255.,batch[clean_key][0]/255.
+        noisy,clean = batch[noisy_key][[0]]/255.,batch[clean_key][[0]]/255.
         noisy = rslice(noisy,region)
         clean = rslice(clean,region)
 

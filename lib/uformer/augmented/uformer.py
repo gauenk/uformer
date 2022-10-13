@@ -180,15 +180,13 @@ class Uformer(nn.Module):
     def no_weight_decay_keywords(self):
         return {'relative_position_bias_table'}
 
-    # def extra_repr(self) -> str:
-    #     return f"embed_dim={self.embed_dim}, token_projection={self.token_projection}, token_mlp={self.mlp},win_size={self.win_size}"
-
     def forward(self, x, mask=None, flows=None):
 
         # -- Input Projection --
-        t,c,h,w = x.shape
+        b,t,c,h,w = x.shape
         y = self.input_proj(x)
         y = self.pos_drop(y)
+        # print("y.shape: ",y.shape)
         z = y
         num_encs = self.num_enc_layers
 
@@ -215,6 +213,7 @@ class Uformer(nn.Module):
 
         # -- Output Projection --
         y = self.output_proj(z)
+        print("y.shape:" ,y.shape)
 
         # -- residual connection --
         out = x + y if self.dd_in == 3 else y

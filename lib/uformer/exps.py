@@ -145,6 +145,7 @@ def exps_motivate_paper(iexps=None):
     expl['attn_mode'] = ['product_dnls']
     # expl['attn_mode'] = ['pd-w-w-w-w']
     expl['freeze'] = ["false"]
+    expl['shift_flag'] = ["false"]
     expl['filter_by_attn_post'] = ["false"]
     exps += cache_io.mesh_pydicts(expl)
 
@@ -326,7 +327,7 @@ def exps_rgb_denoising_train(iexps=None):
     expl['attn_mode'] = ["pd-pd-pd"]
     expl['attn_reset'] = ["t-t-t"]
     expl['embed_dim'] = ["3-6-9"]
-    expl['stride0'] = ['4-2-1']
+    expl['stride0'] = ['2-1-1']
     expl['stride1'] = ['1-1-1']
     expl['ws'] = ["29-15-9"]
     expl['wt'] = ["0-0-0"]

@@ -80,7 +80,7 @@ class LeWinTransformerBlockRefactored(nn.Module):
             self.cross_modulator = None
 
         self.norm1 = norm_layer(dim)
-
+        # print("self.norm1: ",self.norm1)
 
         self.attn_mode = attn_mode
         main_attn_mode,sub_attn_mode = attn_mode.split("_")
@@ -124,11 +124,14 @@ class LeWinTransformerBlockRefactored(nn.Module):
                f"win_size={self.win_size}, shift_size={self.shift_size}, mlp_ratio={self.mlp_ratio},modulator={self.modulator}"
 
     def forward(self, x, H, W, mask=None):
-        B, L, C = x.shape
+        B,T,C,H,W = x.shape
+        # print("x.shape: ",x.shape)
+        # B, L, C = x.shape
         # H = int(math.sqrt(L))
         # W = int(math.sqrt(L))
 
         ## input mask
+        # assert mask is None:
         if mask != None:
             input_mask = F.interpolate(mask, size=(H,W)).permute(0,2,3,1)
             input_mask_windows = window_partition(input_mask, self.win_size) # nW, win_size, win_size, 1
@@ -165,19 +168,24 @@ class LeWinTransformerBlockRefactored(nn.Module):
                 not None else shift_attn_mask
 
         if self.cross_modulator is not None:
-            shortcut = x
+            x_rs = x.view(B*T,C,H*W).transpose(1,2)
+            shortcut = x_rs
             x_cross = self.norm_cross(x)
             x_cross = self.cross_attn(x, self.cross_modulator.weight)
             x = shortcut + x_cross
+            x = x.transpose(1,2).view(B,T,C,H,W)
 
-        shortcut = x
-        # print("x.shape: ",x.shape)
+        # -- shortcut --
+        shortcut = x.view(B*T,C,H*W).transpose(1,2)
+
+        # -- norm layer --
+        x = x.view(B*T,C,H*W).transpose(1,2)
         x = self.norm1(x)
-        x = x.view(B, H, W, C)
+        x = x.transpose(1,2).view(B, T, C, H, W)
 
-        # cyclic shift
+        # -- cyclic shift --
         if self.shift_size > 0:
-            shifted_x = th.roll(x, shifts=(-self.shift_size, -self.shift_size), dims=(1, 2))
+            shifted_x = th.roll(x, shifts=(-self.shift_size, -self.shift_size), dims=(2, 3))
         else:
             shifted_x = x
 
@@ -189,12 +197,13 @@ class LeWinTransformerBlockRefactored(nn.Module):
                                            self.shift_size), dims=(1, 2))
         else:
             x = shifted_x
-        x = x.view(B, H * W, C)
+        x = x.view(B*T, H * W, C)
 
         # FFN
         x = shortcut + self.drop_path(x)
         x = x + self.drop_path(self.mlp(self.norm2(x)))
         del attn_mask
+        x = x.transpose(1,2).view(B,T,C,H,W)
         return x
 
     def run_attn(self,shifted_x,attn_mask):
@@ -206,7 +215,7 @@ class LeWinTransformerBlockRefactored(nn.Module):
     def run_video_attn(self,shifted_x,attn_mask,wsize=8):
 
         # -- unpack --
-        B,H,W,C = shifted_x.shape
+        B,T,H,W,C = shifted_x.shape
 
         # with_modulator
         wmsa_in = self.apply_modulator(shifted_x,wsize)
@@ -242,10 +251,10 @@ class LeWinTransformerBlockRefactored(nn.Module):
     def apply_modulator(self,x,wsize=8):
         # -- if modular weight --
         if not(self.modulator is None):
-            t,h,w,c = x.shape
+            b,t,h,w,c = x.shape
             mweight = self.modulator.weight
             nh,nw = h//wsize,w//wsize
-            shape_s = '(wh ww) c -> 1 (rh wh) (rw ww) c'
+            shape_s = '(wh ww) c -> 1 1 (rh wh) (rw ww) c'
             mweight = repeat(mweight,shape_s,wh=wsize,rh=nh,rw=nw)
             x = x + mweight
         return x
