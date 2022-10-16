@@ -9,7 +9,7 @@ from functools import partial
 from timm.models.layers import trunc_normal_
 
 # -- project deps --
-from .proj import InputProj,InputProjSeq,OutputProj
+from .proj import InputProj,InputProjSeq,OutputProj,OutputProjSeq
 from .basic_uformer import BasicUformerLayer
 from .basic_uformer import create_basic_enc_layer,create_basic_dec_layer
 from .basic_uformer import create_basic_conv_layer
@@ -20,10 +20,11 @@ from ..utils.model_utils import apply_freeze
 
 class Uformer(nn.Module):
     def __init__(self, img_size=256, in_chans=3, dd_in=3,
-                 input_proj_depth=1,
+                 input_proj_depth=1,output_proj_depth=1,
                  depths=[2, 2, 2, 2, 2],
                  num_heads=[1, 2, 4, 8, 16],
-                 win_size=8, mlp_ratio=4., qkv_bias=True, qk_scale=None,
+                 win_size=8, mlp_ratio=4.,
+                 qk_frac=1.,qkv_bias=True, qk_scale=None,
                  drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1,
                  norm_layer=nn.LayerNorm, patch_norm=True,
                  use_checkpoint=False, token_projection='linear', token_mlp='leff',
@@ -62,14 +63,15 @@ class Uformer(nn.Module):
         self.bs = bs
         self.depths = depths
         self.nblocks = len(depths)
+        self.qk_frac = qk_frac
         num_encs = self.nblocks-1
 
         # -- unroll for each module --
         out = fields2blocks(attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
-                            nbwd,rbwd,exact,bs,embed_dim,freeze,
+                            nbwd,rbwd,exact,bs,qk_frac,embed_dim,freeze,
                             nblocks=self.nblocks)
         attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1 = out[:9]
-        nbwd,rbwd,exact,bs,embed_dim,freeze = out[9:]
+        nbwd,rbwd,exact,bs,qk_frac,embed_dim,freeze = out[9:]
         self.freeze = freeze
         # print(embed_dim)
 
@@ -90,26 +92,31 @@ class Uformer(nn.Module):
                                        in_channel=dd_in, out_channel=embed_dim[0],
                                        kernel_size=3, stride=1, act_layer=nn.LeakyReLU)
         self.output_proj = OutputProj(in_channel=2*embed_dim[0],
-                                      out_channel=in_chans, kernel_size=3, stride=1)
+                                      out_channel=in_chans, kernel_size=3,
+                                      stride=1)
+        # self.output_proj = OutputProjSeq(depth=output_proj_depth,
+        #                                  in_channel=2*embed_dim[0],
+        #                                  out_channel=in_chans, kernel_size=3,
+        #                                  stride=1,act_layer=nn.LeakyReLU)
 
         # -- init partial basic layer decl --
         basic_enc_layer = partial(create_basic_enc_layer,BasicUformerLayer,embed_dim,
                                   img_size,depths_ref,num_heads_ref,win_size,
-                                  self.mlp_ratio,qkv_bias,qk_scale,drop_rate,
+                                  self.mlp_ratio,qk_frac,qkv_bias,qk_scale,drop_rate,
                                   attn_drop_rate,norm_layer,use_checkpoint,
                                   token_projection,token_mlp,shift_flag,
                                   attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
                                   nbwd,rbwd,num_encs,exact,bs,enc_dpr)
         basic_conv_layer = partial(create_basic_conv_layer,BasicUformerLayer,embed_dim,
                                    img_size,depths_ref,num_heads_ref,win_size,
-                                   self.mlp_ratio,qkv_bias,qk_scale,drop_rate,
+                                   self.mlp_ratio,qk_frac,qkv_bias,qk_scale,drop_rate,
                                    attn_drop_rate,norm_layer,use_checkpoint,
                                    token_projection,token_mlp,shift_flag,
                                    attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
                                    nbwd,rbwd,num_encs,exact,bs,conv_dpr)
         basic_dec_layer = partial(create_basic_dec_layer,BasicUformerLayer,embed_dim,
                                   img_size,depths_ref,num_heads_ref,win_size,
-                                  self.mlp_ratio,qkv_bias,qk_scale,drop_rate,
+                                  self.mlp_ratio,qk_frac,qkv_bias,qk_scale,drop_rate,
                                   attn_drop_rate,norm_layer,use_checkpoint,
                                   token_projection,token_mlp,
                                   shift_flag,modulator,cross_modulator,

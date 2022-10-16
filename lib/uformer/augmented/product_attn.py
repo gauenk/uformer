@@ -16,7 +16,7 @@ class ProductAttention(nn.Module):
     def __init__(self, dim, win_size,num_heads, token_projection='linear',
                  qkv_bias=True, qk_scale=None, attn_drop=0., proj_drop=0.,
                  ps=1,pt=1,k=-1,ws=8,wt=0,dil=1,stride0=1,stride1=1,
-                 nbwd=1,rbwd=False,exact=False,bs=-1):
+                 nbwd=1,rbwd=False,exact=False,bs=-1,qk_frac=1.):
 
         super().__init__()
 
@@ -59,7 +59,8 @@ class ProductAttention(nn.Module):
         # print(self.relative_position_bias_table.shape,relative_position_index.shape)
         self.register_buffer("relative_position_index", relative_position_index)
         trunc_normal_(self.relative_position_bias_table, std=.02)
-        self.qkv = ConvProjectionNoReshape(dim,num_heads,dim//num_heads,bias=qkv_bias)
+        self.qkv = ConvProjectionNoReshape(dim,num_heads,dim//num_heads,
+                                           qk_frac,bias=qkv_bias)
 
         self.token_projection = token_projection
         self.attn_drop = nn.Dropout(attn_drop)

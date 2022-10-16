@@ -76,6 +76,8 @@ def load_model(*args,**kwargs):
     bs = optional(kwargs,'bs',-1)
     freeze = optional(kwargs,'freeze',False)
     input_proj_depth = optional(kwargs,"input_proj_depth",1)
+    output_proj_depth = optional(kwargs,"output_proj_depth",1)
+    qk_frac = optional(kwargs,'qk_frac',1.)
 
     # -- modify network after load --
     filter_by_attn_pre = optional(kwargs,"filter_by_attn_pre",False)
@@ -88,7 +90,7 @@ def load_model(*args,**kwargs):
     attn_reset = optional(kwargs,"attn_reset",False)
     strict_model_load = optional(kwargs,"strict_model_load",True)
     skip_mismatch_model_load = optional(kwargs,"skip_mismatch_model_load",False)
-    strict_model_load = True
+    # strict_model_load = True
 
     # -- break here if init --
     if init: return
@@ -96,9 +98,11 @@ def load_model(*args,**kwargs):
     # -- init model --
     model = Uformer(img_size=input_size, in_chans=nchnls,
                     input_proj_depth=input_proj_depth,
+                    output_proj_depth=output_proj_depth,
                     depths=depths, num_heads=num_heads,
                     win_size=win_size, mlp_ratio=mlp_ratio,
-                    qkv_bias=qkv_bias, token_projection=token_projection,
+                    qk_frac=qk_frac, qkv_bias=qkv_bias,
+                    token_projection=token_projection,
                     token_mlp=token_mlp,modulator=modulator,
                     cross_modulator=cross_modulator,dd_in=dd_in,
                     attn_mode=attn_mode,ps=ps,pt=pt,ws=ws,wt=wt,k=k,

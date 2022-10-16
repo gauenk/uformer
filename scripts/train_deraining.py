@@ -232,7 +232,7 @@ def main():
     # -- trainig --
     cfg.ndevices = 1
     cfg.accumulate_grad_batches = 1
-    cfg.batch_size_tr = 16
+    cfg.batch_size_tr = 2
     cfg.lr_init = 2e-4
     cfg.weight_decay = 2e-2
     cfg.nepochs = 100
@@ -245,8 +245,7 @@ def main():
     cfg.rbwd = "false"
     # cfg.limit_train_batches = 0.25 # with w
     cfg.limit_train_batches = 0.005 # with pd
-    cfg.in_attn_mode = "pd-pd-pd"
-    
+    cfg.in_attn_mode = "w-w-w"
 
     cfg.aug_training_scales = [0.5,0.75,1.]
     cfg.aug_training_flips = True

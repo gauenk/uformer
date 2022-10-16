@@ -65,6 +65,9 @@ def exp_default_init(iexps = None):
     freeze = ['f-f-f-f-f']
     # model_depths = ["1-2-8-8-2-8-8-2-1"]
     model_depths = ["1-2-8-8-2"]
+    input_proj_depth = [4]
+    output_proj_depth = [1]
+    qk_frac = [1.]
 
     # -- grid --
     exp_lists = {"attn_mode":attn_mode,"ws":ws,"wt":wt,"k":k,"ps":ps,
@@ -76,7 +79,9 @@ def exp_default_init(iexps = None):
                  "filter_by_attn_post":filter_by_attn_post,"embed_dim":embed_dim,
                  "attn_reset":attn_reset,"in_attn_mode":in_attn_mode,
                  "attn_mode":attn_mode,"attn_reset":attn_reset,"freeze":freeze,
-                 "model_depths":model_depths}
+                 "model_depths":model_depths,"input_proj_depth":input_proj_depth,
+                 "output_proj_depth":output_proj_depth,"qk_frac":qk_frac,
+    }
     # -- apped new values --
     dcat(exp_lists,iexps) # input overwrites defaults
     return exp_lists
@@ -302,14 +307,15 @@ def exps_rgb_denoising_train(iexps=None):
     expl = exp_init(iexps,"train")
     expl['freeze'] = ['false']
     expl['input_proj_depth'] = [4]
+    expl['output_proj_depth'] = [4]
 
-    # -- [exp a] step 0 --
+    # -- [exp a:0] step 0 --
     expl['in_attn_mode'] = ["w-w-w-w-w"]
     expl['attn_mode'] = ["w-w-w-w-w"]
     expl['attn_reset'] = ["t-t-t-t-t"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
 
-    # -- [exp b] step 0 --
+    # -- [exp b:1] step 0 --
     expl['in_attn_mode'] = ["w-w-w-w-w"]
     expl['attn_mode'] = ["pd-pd-w-w-w"]
     expl['attn_reset'] = ["t-t-f-f-f"]
@@ -322,7 +328,7 @@ def exps_rgb_denoising_train(iexps=None):
     expl['ps'] = ["7-7-1-1-1"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
-    # -- [exp c] step 0 -- ["slim"]
+    # -- [exp c:2] step 0 -- ["slim"]
     expl['in_attn_mode'] = ["w-w-w"]
     expl['num_heads'] = ['1-2-4']
     expl['attn_mode'] = ["pd-pd-pd"]
@@ -337,11 +343,11 @@ def exps_rgb_denoising_train(iexps=None):
     expl['model_depths'] = ["2-4-4"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
-    # -- [exp d] step 0 -- ["skinny"]
-    expl['model_depths'] = ["2-2-2"]
+    # -- [exp d:3] step 0 -- ["skinny"]
+    expl['model_depths'] = ["2-2-4"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
-    # -- [exp c] step 0 -- ["mid"]
+    # -- [exp e:4] step 0 -- ["mid"]
     expl['in_attn_mode'] = ["w-w-w-w"]
     expl['num_heads'] = ['1-2-4-8']
     expl['attn_mode'] = ["pd-pd-pd-pd"]
@@ -354,6 +360,22 @@ def exps_rgb_denoising_train(iexps=None):
     expl['k'] = [64]
     expl['ps'] = [7]
     expl['model_depths'] = ["2-2-2-2"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp f:5] -- ["qk_frac"]
+    expl['in_attn_mode'] = ["w-w-w"]
+    expl['num_heads'] = ['1-2-4']
+    expl['attn_mode'] = ["pd-pd-pd"]
+    expl['attn_reset'] = ["t-t-t"]
+    expl['embed_dim'] = ["32-32-32"]
+    expl['stride0'] = ['4-2-1']
+    expl['stride1'] = ['1-1-1']
+    expl['ws'] = ["29-15-9"]
+    expl['wt'] = ["0-0-0"]
+    expl['k'] = [64]
+    expl['ps'] = [7]
+    expl['model_depths'] = ["2-4-4"]
+    expl['qk_frac'] = [.25]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
     return exps
@@ -374,13 +396,28 @@ def exps_rgb_denoising_test(iexps=None):
 
 
     # -- [exp b] step 0 --
-    expl['pretrained_path'] = ["ad209414"]
-    expl['in_attn_mode'] = ["w-w-w-w-w"]
-    expl['attn_mode'] = ["pd-pd-w-w-w"]
-    model_depths = ["1-2-8-8-2"]
+    expl['freeze'] = ['false']
+    expl['num_heads'] = ['1-2-4']
+    expl['attn_mode'] = ["pd-pd-pd"]
+    expl['attn_reset'] = ["t-t-t"]
+    expl['embed_dim'] = ["9-9-9"]
+    expl['stride0'] = ['4-2-1']
+    expl['stride1'] = ['1-1-1']
+    expl['ws'] = ["29-15-9"]
+    expl['wt'] = ["0-0-0"]
+    expl['k'] = [64]
+    expl['ps'] = [7]
+    expl['model_depths'] = ["2-4-4"]
+    expl['pretrained_path'] = ["a40d6c5f-d612-42"]
+    expl['input_proj_depth'] = [4]
+    # expl['pretrained_path'] = ["ad209414"]
+    # expl['in_attn_mode'] = ["w-w-w-w-w"]
+    # expl['attn_mode'] = ["pd-pd-w-w-w"]
+    # model_depths = ["1-2-8-8-2"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
     # -- [exp c] step 0 --
+    expl['input_proj_depth'] = [1]
     expl['pretrained_path'] = ["f69d3cc4-986f-4f55-b0b9-b5f90b3b5957-epoch=58-val_loss=1.03e-03.ckpt"]
     expl['in_attn_mode'] = ["w-w-w-w-w"]
     expl['attn_mode'] = ["pd-pd-pd-pd-pd"]
@@ -445,7 +482,7 @@ def exps_deraining_train(iexps=None):
     expl['k'] = ["64-64-64"]
     expl['ps'] = ["7-5-3"]
     expl['model_depths'] = ["2-2-2"]
-    expl['num_heads'] = ["1-2-2"]
+    expl['num_heads'] = ["1-2-4"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
 
     return exps

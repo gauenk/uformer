@@ -11,6 +11,11 @@ def translate_values(field,in_values):
         for _v in in_values:
             v = translate_freeze(_v)
             out_values.append(v)
+    elif field == "qk_frac":
+        out_values = []
+        for _v in in_values:
+            v = float(_v)
+            out_values.append(v)
     else:
         out_values = [int(v) for v in in_values]
     return out_values

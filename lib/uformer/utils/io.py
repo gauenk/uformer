@@ -8,6 +8,24 @@ from PIL import Image
 from pathlib import Path
 
 def save_burst(burst,root,name,fstart=0,div=None,fmt="image"):
+    if burst.ndim == 4:
+        return save_burst_single(burst,root,name,fstart,div,fmt)
+    elif burst.ndim == 5:
+        return save_burst_batch(burst,root,name,fstart,div,fmt)
+    else:
+        raise ValueError(f"Uknown ndim case [{burst.ndim}]")
+
+def save_burst_batch(burst,root,name,fstart=0,div=None,fmt="image"):
+    fns = []
+    B = burst.shape[0]
+    for b in range(B):
+        name_b = "%s_%d" % (name,b)
+        fn = save_burst_single(burst[b],root,name_b,fstart,div,fmt)
+        fns += fn
+    print(fns)
+    return fns
+
+def save_burst_single(burst,root,name,fstart=0,div=None,fmt="image"):
 
     # -- path --
     root = Path(str(root))

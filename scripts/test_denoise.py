@@ -65,7 +65,6 @@ def run_exp(_cfg):
 
     # -- load model --
     model_cfg = uformer.extract_model_io(cfg)
-    print(model_cfg)
     model = uformer.load_model(**model_cfg)
     substr = optional(cfg,"chkpt","")
     load_checkpoint(model,cfg.use_train,substr)
@@ -100,6 +99,7 @@ def run_exp(_cfg):
         fstart = min(vid_frames)
         noisy,clean = rslice_pair(noisy,clean,region)
         print("[%d] noisy.shape: " % index,noisy.shape)
+        noisy,clean = noisy[None,:],clean[None,:]
 
         # -- create timer --
         timer = uformer.utils.timer.ExpTimer()
@@ -151,20 +151,21 @@ def run_exp(_cfg):
 
         # -- save example --
         out_dir = Path(cfg.saved_dir) / cfg.dname / cfg.attn_mode / cfg.vid_name
+        print("Saving examples: ",out_dir)
         deno_fns = uformer.utils.io.save_burst(deno,out_dir,"deno",
-                                               fstart=fstart,div=1.,fmt="np")
+                                            fstart=fstart,div=1.,fmt="np")
         deno_fns = uformer.utils.io.save_burst(deno,out_dir,"deno",
-                                               fstart=fstart,div=1.,fmt="png")
+                                            fstart=fstart,div=1.,fmt="png")
         # uformer.utils.io.save_burst(clean,out_dir,"clean",
         #                             fstart=fstart,div=1.,fmt="np")
         # uformer.utils.io.save_burst(noisy,out_dir,"noisy",
         #                             fstart=fstart,div=1.,fmt="np")
 
         # -- psnr --
-        noisy_psnrs = compute_psnrs(clean,noisy,div=imax)
-        psnrs = compute_psnrs(clean,deno,div=imax)
-        noisy_ssims = compute_ssims(clean,noisy,div=imax)
-        ssims = compute_ssims(clean,deno,div=imax)
+        noisy_psnrs = compute_psnrs(clean,noisy,div=imax).ravel()
+        psnrs = compute_psnrs(clean,deno,div=imax).ravel()
+        noisy_ssims = compute_ssims(clean,noisy,div=imax).ravel()
+        ssims = compute_ssims(clean,deno,div=imax).ravel()
         print(noisy_psnrs)
         print(psnrs)
 
@@ -183,6 +184,7 @@ def run_exp(_cfg):
     timer0.stop("total")
     ttotal,N = timer0['total'],len(results.psnrs)
     results.timer_total = [ttotal for _ in range(N)]
+    print(results)
 
     return results
 
@@ -200,25 +202,52 @@ def main():
     cache = cache_io.ExpCache(cache_dir,cache_name)
     cache.clear()
 
-    # -- get data mesh --
-    dname,dset = ["davis"],["val"]
-    vid_names = ["bike-packing"]#,"blackswan","bmx-trees"]
+    # -- train cache --
+    train_cache = cache_io.ExpCache(cache_dir,"train_davis")
+
+    #
+    # -- data params --
+    #
+
+    # -- davis --
+    # dname,dset = ["davis"],["val"]
+    # vid_names = ["bike-packing"]#,"blackswan","bmx-trees"]
+
+    # -- set8 --
+    dname,dset = ["set8"],["te"]
+    vid_names = ["motorbike"]
+
+    # -- exp mesh --
     iexps = {"dname":dname,"vid_name":vid_names,"dset":dset}
     exps = exps_menu.exps_rgb_denoising(iexps,mode="test")
-    exps = [exps[0],exps[-1]]
+    exps = [exps[1]]#,exps[-1]]
+
+    # print(cfg)
+    # exit(0)
 
     # -- group with default --
     cfg = configs.default_cfg()
-    cfg.isize = "256_256"
+    # cfg = train_cache.get_config_from_uuid("a40d6c5f-d612-42fe-9ecf-de0d93ab28ba")
+    # del cfg['uuid']
+    # del cfg['dname']
+    cfg.pretrained_prefix = "net."
+    cfg.pretrained_path = "output/checkpoints/a40d6c5f-d612-42fe-9ecf-de0d93ab28ba-epoch=55.ckpt"
+    cfg.strict_model_load = "true"
+    # exps = [exps]
+    # cfg = configs.default_cfg()
+    cfg.cropmode = "rand"
+    cfg.use_train = "true"
+    cfg.isize = "none"
     cfg.task = "rgb_denoise"
     cfg.nframes = 5
     cfg.frame_start = 0
     cfg.frame_end = cfg.frame_start + cfg.nframes - 1
     cfg.noise_version = "rgb_noise"
-    cfg.spatial_crop_size = 128
-    cfg.spatial_crop_overlap = 0.0
+    cfg.spatial_crop_size = 512
+    cfg.spatial_crop_overlap = 0.1
     cfg.temporal_crop_size = 5
-    cfg.temporal_crop_overlap = 0/5. # 3 of 5 frames
+    cfg.temporal_crop_overlap = 1/5. # 3 of 5 frames
+    cfg.in_attn_mode = "pd-pd-pd"
     print(cfg)
     cache_io.append_configs(exps,cfg) # merge the two
 
@@ -240,12 +269,14 @@ def main():
         if results is None: # check if no result
             exp.uuid = uuid
             results = run_exp(exp)
+            print(results)
             cache.save_exp(uuid,exp,results) # save to cache
 
     # -- load results --
     records = cache.load_flat_records(exps)
     print(records[['attn_mode','use_train','psnrs','timer_total']])
     print(np.stack(records['psnrs'].to_numpy()).mean(1))
+    exit(0)
 
     for attn_mode,mdf in records.groupby("attn_mode"):
         for use_tr,tdf in mdf.groupby("use_train"):

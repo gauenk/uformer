@@ -413,7 +413,6 @@ class UformerLit(pl.LightningModule):
         self.log("val_mem_alloc", mem_alloc, on_step=False,
                  on_epoch=True,batch_size=1, sync_dist=True)
 
-
         # -- terminal log --
         val_psnr = np.mean(compute_psnrs(deno,clean,div=1.)).item()
         self.gen_loger.info("val_psnr: %2.2f" % val_psnr)

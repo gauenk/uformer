@@ -211,7 +211,7 @@ def main():
     cache_dir = ".cache_io"
     cache_name = "train_davis"
     cache = cache_io.ExpCache(cache_dir,cache_name)
-    cache.clear()
+    # cache.clear()
 
     # -- search info --
     exps = exps_menu.exps_rgb_denoising(mode="train")
@@ -245,6 +245,9 @@ def main():
     cfg.limit_train_batches = 0.05 # with pd
     # cfg.limit_train_batches = 0.025 # with pd
     cfg.nepochs = 200 # 5 epochs = 5 * 20 = 100
+    cfg.input_proj_depth = 4
+    cfg.output_proj_depth = 1
+    cfg.in_prod_attn = "pd-pd-pd"
 
     cfg.aug_training_scales = [0.5,0.75,1.]
     cfg.aug_training_flips = True
@@ -252,13 +255,19 @@ def main():
 
     # -- pick an exp --
     # exps = [exps[0]] # run0
+    # exps = [exps[2]] # a success
+    # exps = [exps[3]] # run0
+    exps = [exps[5]] # run0
     # exps = [exps[-3]] # run0
-    exps = [exps[-2]] # run0
+    # exps = [exps[-2]] # run0
     # exps = [exps[-1]] # run0
     nexps = len(exps)
 
     # -- mix --
     cache_io.append_configs(exps,cfg) # merge the two
+    # cfg = cache.get_config_from_uuid("a40d6c5f-d612-42fe-9ecf-de0d93ab28ba")
+    # print(cfg)
+    # exit(0)
 
     # -- launch each experiment --
     for exp_num,exp in enumerate(exps):
@@ -272,21 +281,25 @@ def main():
 
         # -- check if loaded --
         uuid = cache.get_uuid(exp) # assing ID to each Dict in Meshgrid
+        # cache.add_uuid_config_pair(uuid,exp)
         # cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result
 
         # -- run experiment --
         if results is None: # check if no result
             exp.uuid = uuid
-            results = launch_training(exp)
+            results = {"none":["none"]}
+            launch_training(exp)
             cache.save_exp(uuid,exp,results) # save to cache
 
     # -- results --
     records = cache.load_flat_records(exps)
-    print(records.columns)
+    print(records)
     print(records['uuid'])
-    print(records['best_model_path'].iloc[0])
-    print(records['best_model_path'].iloc[1])
+    # print(records.columns)
+    # print(records['uuid'])
+    # print(records['best_model_path'].iloc[0])
+    # print(records['best_model_path'].iloc[1])
     exit(0)
 
     # -- load res --

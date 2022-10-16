@@ -11,7 +11,7 @@ import math
 # Input Projection
 class InputProjSeq(nn.Module):
 
-    def __init__(self, depth=4, in_channel=3, out_channel=64, kernel_size=3, stride=1,
+    def __init__(self, depth=1, in_channel=3, out_channel=64, kernel_size=3, stride=1,
                  norm_layer=None,act_layer=nn.LeakyReLU):
         super().__init__()
         self.depth = depth
@@ -71,6 +71,33 @@ class InputProj(nn.Module):
         if self.norm is not None:
             flops += H*W*self.out_channel
         # print("Input_proj:{%.2f}"%(flops/1e9))
+        return flops
+
+# Output Projection Sequence
+class OutputProjSeq(nn.Module):
+    def __init__(self, depth=1, in_channel=64, out_channel=3, kernel_size=3,
+                 stride=1, norm_layer=None,act_layer=None):
+        super().__init__()
+        self.depth = depth
+        self.in_channel = in_channel
+        self.out_channel = out_channel
+        layers,out_chn = [],in_channel
+        for d in range(depth):
+            if d == (depth-1): out_chn = out_channel
+            layers.append(nn.Conv2d(in_channel, out_chn, kernel_size=3,
+                                    stride=stride, padding=kernel_size//2))
+            layers.append(act_layer(inplace=True))
+        self.proj = nn.Sequential(*layers)
+
+    def forward(self, x):
+        B, T, C, H, W = x.shape
+        x = x.view(B*T,C,H,W)
+        x = self.proj(x)
+        x = x.view(B,T,-1,H,W)
+        return x
+
+    def flops(self, H, W):
+        flops = H*W*self.in_channel*self.out_channel*3*3*self.depth
         return flops
 
 # Output Projection
@@ -220,19 +247,20 @@ class LinearProjection(nn.Module):
         return flops
 
 class ConvProjectionNoReshape(nn.Module):
-    def __init__(self, dim, heads = 8, dim_head = 64, kernel_size=1,
-                 q_stride=1, k_stride=1, v_stride=1, dropout = 0.,
+    def __init__(self, dim, heads = 8, dim_head = 64, qk_frac=1.,
+                 kernel_size=1,q_stride=1, k_stride=1, v_stride=1, dropout = 0.,
                  last_stage=False,bias=True):
 
         super().__init__()
 
         inner_dim = dim_head *  heads
+        inner_dim_qk = int(qk_frac*dim_head) * heads
         self.heads = heads
         pad = (kernel_size - q_stride)//2
-        self.to_q = nn.Conv2d(dim, inner_dim, kernel_size=kernel_size,
+        self.to_q = nn.Conv2d(dim, inner_dim_qk, kernel_size=kernel_size,
                               stride=q_stride, padding=pad, bias=bias,
                               groups=1,padding_mode="reflect")
-        self.to_k = nn.Conv2d(dim, inner_dim, kernel_size=kernel_size,
+        self.to_k = nn.Conv2d(dim, inner_dim_qk, kernel_size=kernel_size,
                               stride=k_stride, padding=pad, bias=bias,
                               groups=1,padding_mode="reflect")
         self.to_v = nn.Conv2d(dim, inner_dim, kernel_size=kernel_size,

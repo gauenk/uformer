@@ -52,7 +52,7 @@ class LeWinTransformerBlockRefactored(nn.Module):
                  token_projection='linear',token_mlp='leff',
                  modulator=False,cross_modulator=False,attn_mode="window_default",
                  ps=1,pt=1,k=-1,ws=8,wt=0,stride0=1,stride1=1,dil=1,
-                 nbwd=1,rbwd=False,exact=False,bs=-1):
+                 nbwd=1,rbwd=False,exact=False,bs=-1,qk_frac=1.):
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
@@ -97,7 +97,7 @@ class LeWinTransformerBlockRefactored(nn.Module):
                 proj_drop=drop, token_projection=token_projection,
                 k=k, ps=ps, pt=pt, ws=ws, wt=wt, dil=dil,
                 stride0=stride0, stride1=stride1,
-                nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs)
+                nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs, qk_frac=qk_frac)
         else:
             raise ValueError(f"Uknown attention mode [{attn_mode}]")
 

@@ -12,17 +12,17 @@ def _vprint(verbose,*args,**kwargs):
     if verbose:
         print(*args,**kwargs)
 def expand2square(timg,factor=16.0):
-    t, _, h, w = timg.size()
+    b, t, _, h, w = timg.size()
 
     X = int(math.ceil(max(h,w)/float(factor))*factor)
 
-    img = th.zeros(t,3,X,X).type_as(timg) # 3, h,w
-    mask = th.zeros(t,1,X,X).type_as(timg)
+    img = th.zeros(b,t,3,X,X).type_as(timg) # 3, h,w
+    mask = th.zeros(b,t,1,X,X).type_as(timg)
 
-    print(img.size(),mask.size())
+    # print(img.size(),mask.size())
     # print((X - h)//2, (X - h)//2+h, (X - w)//2, (X - w)//2+w)
-    img[:,:, ((X - h)//2):((X - h)//2 + h),((X - w)//2):((X - w)//2 + w)] = timg
-    mask[:,:, ((X - h)//2):((X - h)//2 + h),((X - w)//2):((X - w)//2 + w)].fill_(1)
+    img[:,:,:, ((X - h)//2):((X - h)//2 + h),((X - w)//2):((X - w)//2 + w)] = timg
+    mask[:,:,:, ((X - h)//2):((X - h)//2 + h),((X - w)//2):((X - w)//2 + w)].fill_(1)
 
     return img, mask
 
@@ -91,7 +91,7 @@ def temporal_chop(tsize,overlap,fwd_fxn,vid,flows=None,verbose=False):
     overlap is a __percent__
     """
     vprint = partial(_vprint,verbose)
-    nframes = vid.shape[0]
+    nframes = vid.shape[1]
     t_chunks = get_chunks(nframes,tsize,overlap)
     vprint("t_chunks: ",t_chunks)
     deno,Z = th.zeros_like(vid),th.zeros_like(vid)
@@ -99,7 +99,7 @@ def temporal_chop(tsize,overlap,fwd_fxn,vid,flows=None,verbose=False):
 
         # -- extract --
         t_slice = slice(t_chunk,t_chunk+tsize)
-        vid_chunk = vid[t_slice]
+        vid_chunk = vid[:,t_slice]
         vprint("t_chunk: ",t_chunk,vid_chunk.shape)
 
         # -- process --
@@ -108,8 +108,8 @@ def temporal_chop(tsize,overlap,fwd_fxn,vid,flows=None,verbose=False):
 
         # -- accumulate --
         ones = th.ones_like(deno_chunk)
-        deno[t_slice] += deno_chunk
-        Z[t_slice] += ones
+        deno[:,t_slice] += deno_chunk
+        Z[:,t_slice] += ones
     deno /= Z
     return deno
 

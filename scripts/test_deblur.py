@@ -221,7 +221,6 @@ def main():
     exps = exps_menu.exps_verify_new_code(iexps,mode="test")
 
     # -- group with default --
-
     cfg = configs.default_cfg()
     cfg.isize = "256_256"
     cfg.nframes = 1
@@ -239,7 +238,7 @@ def main():
     cfg.load_pretrained = "false"
     # cfg.pretrained_path = ""
     # cfg.pretrained_prefix = "module."
-    
+
 
     # -- chopping --
     cfg.spatial_crop_size = 128
