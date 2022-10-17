@@ -231,12 +231,12 @@ def main():
     # del cfg['uuid']
     # del cfg['dname']
     cfg.pretrained_prefix = "net."
-    cfg.pretrained_path = "output/checkpoints/a40d6c5f-d612-42fe-9ecf-de0d93ab28ba-epoch=55.ckpt"
+    cfg.pretrained_path = "output/checkpoints/a40d6c5f-d612-42fe-9ecf-de0d93ab28ba-epoch=20-val_loss=1.09e-03.ckpt"
     cfg.strict_model_load = "true"
     # exps = [exps]
     # cfg = configs.default_cfg()
     cfg.cropmode = "rand"
-    cfg.use_train = "true"
+    cfg.use_train = "false"
     cfg.isize = "none"
     cfg.task = "rgb_denoise"
     cfg.nframes = 5

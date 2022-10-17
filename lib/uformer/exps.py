@@ -396,7 +396,7 @@ def exps_rgb_denoising_test(iexps=None):
 
 
     # -- [exp b] step 0 --
-    expl['freeze'] = ['false']
+    del expl['freeze']# = ['false']
     expl['num_heads'] = ['1-2-4']
     expl['attn_mode'] = ["pd-pd-pd"]
     expl['attn_reset'] = ["t-t-t"]

@@ -40,3 +40,27 @@ class ExpTimer():
         start_time = self.start_times[idx]
         exec_time = end_time - start_time
         self.times.append(exec_time)
+
+    """
+
+    Support using ExpTimer and "with"
+
+    timer = ExpTimer()
+    with timer("name"):
+       ...
+
+    """
+
+    def __call__(self,name):
+        self.name = name
+
+    def __enter__(self):
+        """Start a new timer as a context manager"""
+        self.start(self.name)
+        return self
+
+    def __exit__(self, *exc_info):
+        """Stop the context manager timer"""
+        self.sync_stop(self.name)
+        self.name = None
+

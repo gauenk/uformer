@@ -14,6 +14,9 @@ pp = pprint.PrettyPrinter(indent=4)
 # - caching --
 import cache_io
 
+# -- timer --
+from uformer.utils.timer import ExpTimer
+
 # -- uformer imports --
 import uformer
 import uformer.configs as configs
@@ -30,32 +33,67 @@ def count_params(model):
 
 def compute_flops(_cfg):
 
-    # -- set-up --
+    # -=-=-=-=-=-=-=-=-=-
+    #      Setup
+    # -=-=-=-=-=-=-=-=-=-
+
+    # -- unpack --
     cfg = copy.deepcopy(_cfg)
     cache_io.exp_strings2bools(cfg)
     configs.set_seed(cfg.seed)
     root = (Path(__file__).parents[0] / ".." ).absolute()
+    timer = ExpTimer()
 
     # -- load model --
     model_cfg = uformer.extract_model_io(cfg)
     model = uformer.load_model(**model_cfg)
 
+    # -- load data --
+    data,loaders = data_hub.sets.load(cfg)
+    sample = data.tr[0]
+    clean,noisy = sample['clean'],sample['noisy']
+    print("clean.shape: ",clean.shae)
+
+    # -=-=-=-=-=-=-=-=-=-
+    #      Flops
+    # -=-=-=-=-=-=-=-=-=-
+
     # -- compute flops --
     H,W = [int(x) for x in cfg.isize.split("_")]
     flops = model.flops(H,W)
 
+    # -=-=-=-=-=-=-=-=-=-
+    #      Params
+    # -=-=-=-=-=-=-=-=-=-
+
     # -- compute params --
     params = count_params(model)
 
-    # -- forward runtime --
+    # -=-=-=-=-=-=-=-=-=-
+    #      Timing
+    # -=-=-=-=-=-=-=-=-=-
 
-    # -- backward runtime --
+    # -- computer time "nruns" times --
+    for run in range(cfg.nruns):
 
+        # -- forward runtime --
+        output = model(noisy)
+        th.cuda.synchronize() # init
+        with timer("fwd_%d"%run):
+            output = model(noisy)
+
+        # -- backward runtime --
+        loss = th.mean((output - clean)**2)
+        th.cuda.synchronize()
+        with timer("bwd_%d"%run):
+            loss.backward()
 
     # -- format results --
     results = edict()
     results.flops = flops
     results.params = params
+    for key,val in timer.items():
+        results[key] = val
 
     return results
 
@@ -67,23 +105,34 @@ def compute_flops(_cfg):
 
 
 def create_grids_depth3():
+
+    # -- init --
     expl = exps_menu.exp_test_init()
+
+    # -- default new model --
     expl['load_pretrained'] = ["false"]
     expl['freeze'] = ["false"]
     expl['in_attn_mode'] = ["w-w-w"]
     expl['attn_mode'] = ["pd-pd-pd"]
     expl['attn_reset'] = ["f-f-f"]
-    expl['embed_dim'] = ["3-3-6"]
+    expl['embed_dim'] = [9]
     expl['stride0'] = ["4-2-1"]
     expl['stride1'] = ["1-1-1"]
     expl['ws'] = ["29-15-9"]
     expl['wt'] = ["0-0-0"]
     expl['k'] = ["64-64-64"]
-    expl['ps'] = ["7-5-3"]
-    expl['model_depths'] = ["2-2-2","2-4-8"]
+    expl['ps'] = ["7-5-3",7]
+    expl['model_depths'] = ["2-2-2"],"2-4-8"]
     expl['num_heads'] = ["1-2-4"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
 
+    # -- using qk frac --
+    expl['embed_dim'] = [16,24,32]
+    expl['qk_frac'] = [0.25,0.5,1.]
+    exps = cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- original --
+    expl['qk_frac'] = [1.]
     expl['attn_mode'] = ["w-w-w"]
     expl['attn_reset'] = ["f-f-f"]
     expl['embed_dim'] = ["32-32-32"]
@@ -96,6 +145,7 @@ def create_grids_depth3():
     expl['model_depths'] = ["2-4-8"]
     expl['num_heads'] = ["1-2-4"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
+
     return exps
 
 def create_grids_depth4():
