@@ -83,7 +83,7 @@ class ProductAttention(nn.Module):
         weights = th.cat(weights,0)
         return weights
 
-    def forward(self, vid, attn_kv=None, mask=None):
+    def forward(self, vid, mask=None, state=None):
 
         # -- unpack --
         B, T, C, H, W = vid.shape
@@ -97,7 +97,7 @@ class ProductAttention(nn.Module):
 
         # -- qkv --
         vid = vid.view(B*T,C,H,W)
-        q_vid, k_vid, v_vid = self.qkv(vid,attn_kv)
+        q_vid, k_vid, v_vid = self.qkv(vid,None)
         q_vid = q_vid * self.scale
         #print("q_vid.shape:",q_vid.shape,q_vid.shape[1]//self.num_heads,self.num_heads)
 
@@ -115,6 +115,9 @@ class ProductAttention(nn.Module):
         # print("k_vid[min,max]: ",k_vid.min().item(),k_vid.max().item())
         # print(ntotal,q_vid.shape,k_vid.shape)
         dists,inds = self.search(q_vid,0,ntotal,k_vid)
+
+        # -- update state --
+        # state.dists,state.inds
 
         # -- debug --
         # any_nan = th.any(th.isnan(dists))
@@ -170,7 +173,7 @@ class ProductAttention(nn.Module):
         any_zero = th.any(th.abs(fold.zvid)<1e-10)
         any_fold_nan = th.any(th.isnan(fold.vid))
         vid = fold.vid / fold.zvid
-        vid = rearrange(vid,'b t c h w -> b t h w c')
+        # vid = rearrange(vid,'b t c h w -> b t h w c')
 
         # -- debug --
         any_nan = th.any(th.isnan(vid))

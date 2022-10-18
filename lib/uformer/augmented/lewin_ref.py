@@ -123,14 +123,16 @@ class LeWinTransformerBlockRefactored(nn.Module):
         return f"dim={self.dim}, input_resolution={self.input_resolution}, num_heads={self.num_heads}, " \
                f"win_size={self.win_size}, shift_size={self.shift_size}, mlp_ratio={self.mlp_ratio},modulator={self.modulator}"
 
-    def forward(self, x, H, W, mask=None):
+    def forward(self, x, H, W, mask=None, state=None):
+
+        # -- unpack --
         B,T,C,H,W = x.shape
         # print("x.shape: ",x.shape)
         # B, L, C = x.shape
         # H = int(math.sqrt(L))
         # W = int(math.sqrt(L))
 
-        ## input mask
+        # -- input mask --
         # assert mask is None:
         if mask != None:
             input_mask = F.interpolate(mask, size=(H,W)).permute(0,2,3,1)
@@ -142,30 +144,16 @@ class LeWinTransformerBlockRefactored(nn.Module):
         else:
             attn_mask = None
 
-        ## shift mask
+        # -=-=-=-=-=-=-=-=-
+        #    Shift Mask
+        # -=-=-=-=-=-=-=-=-
+
         if self.shift_size > 0:
-            # calculate attention mask for SW-MSA
-            shift_mask = th.zeros((1, H, W, 1)).type_as(x)
-            h_slices = (slice(0, -self.win_size),
-                        slice(-self.win_size, -self.shift_size),
-                        slice(-self.shift_size, None))
-            w_slices = (slice(0, -self.win_size),
-                        slice(-self.win_size, -self.shift_size),
-                        slice(-self.shift_size, None))
-            cnt = 0
-            for h in h_slices:
-                for w in w_slices:
-                    shift_mask[:, h, w, :] = cnt
-                    cnt += 1
-            shift_mask_windows = window_partition(shift_mask, self.win_size)  # nW, win_size, win_size, 1
-            shift_mask_windows = shift_mask_windows.view(-1, self.win_size * self.win_size) # nW, win_size*win_size
-            shift_attn_mask = shift_mask_windows.unsqueeze(1) - \
-                shift_mask_windows.unsqueeze(2) # nW, win_size*win_size, win_size*win_size
-            shift_attn_mask = shift_attn_mask.masked_fill(
-                shift_attn_mask != 0,float(-100.0)).\
-                masked_fill(shift_attn_mask == 0, float(0.0))
-            attn_mask = attn_mask + shift_attn_mask if attn_mask is \
-                not None else shift_attn_mask
+            attn_mask = self.get_shift_mask(x,attn_mask)
+
+        # -=-=-=-=-=-=-=-=-
+        #    Modulator
+        # -=-=-=-=-=-=-=-=-
 
         if self.cross_modulator is not None:
             x_rs = x.view(B*T,C,H*W).transpose(1,2)
@@ -175,60 +163,131 @@ class LeWinTransformerBlockRefactored(nn.Module):
             x = shortcut + x_cross
             x = x.transpose(1,2).view(B,T,C,H,W)
 
-        # -- shortcut --
-        shortcut = x.view(B*T,C,H*W).transpose(1,2)
+        # -=-=-=-=-=-=-=-=-
+        #    Main Layer
+        # -=-=-=-=-=-=-=-=-
+
+        # -- create shortcut --
+        shortcut = x
 
         # -- norm layer --
         x = x.view(B*T,C,H*W).transpose(1,2)
-        # print("x.shape: ",x.shape)
         x = self.norm1(x)
         x = x.transpose(1,2).view(B, T, C, H, W)
 
         # -- cyclic shift --
         if self.shift_size > 0:
-            shifted_x = th.roll(x, shifts=(-self.shift_size, -self.shift_size), dims=(2, 3))
+            shifts = (-self.shift_size, -self.shift_size)
+            shifted_x = th.roll(x,shifts=shifts,dims=(3, 4))
         else:
             shifted_x = x
 
-        shifted_x = self.run_attn(shifted_x,attn_mask)
+        # -- run attention --
+        shifted_x = self.run_attn(shifted_x,attn_mask,state)
 
-        # reverse cyclic shift
+        # -- reverse cyclic shift --
         if self.shift_size > 0:
-            x = th.roll(shifted_x, shifts=(self.shift_size,
-                                           self.shift_size), dims=(1, 2))
+            shifts = (self.shift_size, self.shift_size)
+            x = th.roll(shifted_x, shifts=shifts, dims=(3, 4))
         else:
             x = shifted_x
-        x = x.view(B*T, H * W, C)
+        # x = x.view(B*T, H * W, C)
 
-        # FFN
+        # -- view for ffn --
+        x = x.view(B*T,C,H*W).transpose(1,2)
+        shortcut = shortcut.view(B*T,C,H*W).transpose(1,2)
+
+        # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        #    Fully Connected Layer
+        # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+        # -- FFN --
         x = shortcut + self.drop_path(x)
         x = x + self.drop_path(self.mlp(self.norm2(x)))
-        del attn_mask
         x = x.transpose(1,2).view(B,T,C,H,W)
         return x
 
-    def run_attn(self,shifted_x,attn_mask):
+    def run_attn(self,shifted_x,attn_mask,state):
         if self.attn_mode == "window_default":
             return self.run_partition_attn(shifted_x,attn_mask)
         else:
-            return self.run_video_attn(shifted_x,attn_mask)
+            return self.run_video_attn(shifted_x,attn_mask,state)
 
-    def run_video_attn(self,shifted_x,attn_mask,wsize=8):
+    def get_shift_mask(self,x,attn_mask):
 
-        # -- unpack --
-        B,T,H,W,C = shifted_x.shape
+        # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        #
+        #    interface with input shape
+        #
+        # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        B,T,C,H,W = x.shape
 
-        # with_modulator
+        # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        #
+        #         original
+        #
+        # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+        # -- calculate attention mask for SW-MSA --
+        shift_mask = th.zeros((1, H, W, 1)).type_as(x)
+        h_slices = (slice(0, -self.win_size),
+                    slice(-self.win_size, -self.shift_size),
+                    slice(-self.shift_size, None))
+        w_slices = (slice(0, -self.win_size),
+                    slice(-self.win_size, -self.shift_size),
+                    slice(-self.shift_size, None))
+        cnt = 0
+        for h in h_slices:
+            for w in w_slices:
+                shift_mask[:, h, w, :] = cnt
+                cnt += 1
+        shift_mask_windows = window_partition(shift_mask, self.win_size) # nW, win_size, win_size, 1
+        shift_mask_windows = shift_mask_windows.view(-1, self.win_size * self.win_size) # nW, win_size*win_size
+        shift_attn_mask = shift_mask_windows.unsqueeze(1) - \
+            shift_mask_windows.unsqueeze(2) # nW, win_size*win_size, win_size*win_size
+        shift_attn_mask = shift_attn_mask.masked_fill(
+            shift_attn_mask != 0,float(-100.0)).\
+            masked_fill(shift_attn_mask == 0, float(0.0))
+        attn_mask = attn_mask + shift_attn_mask if attn_mask is \
+            not None else shift_attn_mask
+
+        # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        #
+        #    interface with input shape
+        #
+        # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+        # no reshape for attn_mask!
+
+        return attn_mask
+
+    def run_video_attn(self,shifted_x,attn_mask,state,wsize=8):
+        B,T,C,H,W = shifted_x.shape
         wmsa_in = self.apply_modulator(shifted_x,wsize)
-
-        # W-MSA/SW-MSA
-        attn_windows = self.attn(wmsa_in, mask=attn_mask)  # nW*B, win_size*win_size, C
-
+        attn_windows = self.attn(wmsa_in, mask=attn_mask, state=state)
         return attn_windows
 
     def run_partition_attn(self,shifted_x,attn_mask):
-        # -- unpack --
-        B,H,W,C = shifted_x.shape
+
+        # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        #
+        #    interface with input shape
+        #
+        # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+        # -- compress batch dim & swap (C <-> HW) --
+        B,T,C,H,W = shifted_x.shape
+        shifted_x = rearrange(shifted_x,'b t c h w-> (b t) h w c')
+        # shifted_x = shifted_x.view(B*T,C,H,W)
+
+        # -- swap C and HW --
+        shifted_x = rearrange(shifted_x,'b c h w -> b h w c')
+
+        # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        #
+        #          original layer
+        #
+        # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
         # partition windows
         x_windows = window_partition(shifted_x, self.win_size)  # nW*B, win_size, win_size, C  N*C->C
@@ -246,6 +305,15 @@ class LeWinTransformerBlockRefactored(nn.Module):
         # merge windows
         attn_windows = attn_windows.view(-1, self.win_size, self.win_size, C)
         shifted_x = window_reverse(attn_windows, self.win_size, H, W)  # B H' W' C
+
+        # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        #
+        #    interface with input shape
+        #
+        # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+        # -- swap C and HW --
+        shifted_x = rearrange(shifted_x,'(b t) h w c -> b t c h w',b=B)
 
         return shifted_x
 

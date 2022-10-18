@@ -10,12 +10,21 @@ import pprint
 from pathlib import Path
 from easydict import EasyDict as edict
 pp = pprint.PrettyPrinter(indent=4)
+import pandas as pd
+# pd.set_option('display.max_columns', 100)
+pd.set_option('display.max_rows', 100)
 
-# - caching --
+# -- linalg --
+import torch as th
+
+# -- data --
+import data_hub
+
+# -- caching --
 import cache_io
 
 # -- timer --
-from uformer.utils.timer import ExpTimer
+from uformer.utils.timer import ExpTimer,TimeIt
 
 # -- uformer imports --
 import uformer
@@ -51,8 +60,10 @@ def compute_flops(_cfg):
     # -- load data --
     data,loaders = data_hub.sets.load(cfg)
     sample = data.tr[0]
-    clean,noisy = sample['clean'],sample['noisy']
-    print("clean.shape: ",clean.shae)
+    clean,noisy = sample['sharp'],sample['blur']
+    clean,noisy = clean.unsqueeze(0),noisy.unsqueeze(0)
+    clean,noisy = clean.to(cfg.device),noisy.to(cfg.device)
+    print("clean.shape: ",clean.shape)
 
     # -=-=-=-=-=-=-=-=-=-
     #      Flops
@@ -79,21 +90,23 @@ def compute_flops(_cfg):
         # -- forward runtime --
         output = model(noisy)
         th.cuda.synchronize() # init
-        with timer("fwd_%d"%run):
+        with TimeIt(timer,"fwd_%d"%run):
             output = model(noisy)
 
         # -- backward runtime --
         loss = th.mean((output - clean)**2)
         th.cuda.synchronize()
-        with timer("bwd_%d"%run):
+        with TimeIt(timer,"bwd_%d"%run):
             loss.backward()
 
     # -- format results --
     results = edict()
     results.flops = flops
     results.params = params
+    nskip = len("timer_")
     for key,val in timer.items():
-        results[key] = val
+        results[key[nskip:]] = val
+    print(results)
 
     return results
 
@@ -108,6 +121,7 @@ def create_grids_depth3():
 
     # -- init --
     expl = exps_menu.exp_test_init()
+    expl['rbwd'] = ['true','false']
 
     # -- default new model --
     expl['load_pretrained'] = ["false"]
@@ -118,18 +132,18 @@ def create_grids_depth3():
     expl['embed_dim'] = [9]
     expl['stride0'] = ["4-2-1"]
     expl['stride1'] = ["1-1-1"]
-    expl['ws'] = ["29-15-9"]
+    expl['ws'] = ["25-15-9"]
     expl['wt'] = ["0-0-0"]
     expl['k'] = ["64-64-64"]
     expl['ps'] = ["7-5-3",7]
-    expl['model_depths'] = ["2-2-2"],"2-4-8"]
+    expl['model_depths'] = ["2-2-2","2-4-8"]
     expl['num_heads'] = ["1-2-4"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
 
     # -- using qk frac --
-    expl['embed_dim'] = [16,24,32]
+    expl['embed_dim'] = [9,16,24]
     expl['qk_frac'] = [0.25,0.5,1.]
-    exps = cache_io.mesh_pydicts(expl) # create mesh
+    exps += cache_io.mesh_pydicts(expl) # create mesh
 
     # -- original --
     expl['qk_frac'] = [1.]
@@ -148,12 +162,8 @@ def create_grids_depth3():
 
     return exps
 
-def create_grids_depth4():
-    pass
-
 def create_grids():
     exps = create_grids_depth3()
-    # exps += create_grids_depth4()
     return exps
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -172,13 +182,17 @@ def main():
     cache_dir = ".cache_io"
     cache_name = "compute_flops"
     cache = cache_io.ExpCache(cache_dir,cache_name)
-    cache.clear()
+    # cache.clear()
 
     # -- get experimental configs --
     cfg = configs.default_train_cfg()
+    cfg.dname = "gopro"
+    cfg.sigma = 50.
     cfg.seed = 234
-    cfg.isize = "512_512"
+    cfg.nruns = 2
+    # cfg.isize = "512_512"
     # cfg.isize = "256_256"
+    cfg.isize = "128_128"
     exps = create_grids()
     cache_io.append_configs(exps,cfg) # merge the two
 
@@ -204,9 +218,15 @@ def main():
 
     # -- results --
     records = cache.load_flat_records(exps)
-    vals = ['flops','params','attn_mode','embed_dim','model_depths']
-    vals += ['stride0','stride1']
+    vals = ['attn_mode','flops','params','embed_dim','model_depths','ps']
+    vals += ['stride0','qk_frac']
     print(records[vals])
+
+    vals = ['attn_mode','embed_dim','ps','model_depths','stride0','rbwd']
+    vals += ['qk_frac','bwd_1','fwd_1']
+    print(records[vals])
+
+    # -- pretty plots --
 
 
 if __name__ == "__main__":

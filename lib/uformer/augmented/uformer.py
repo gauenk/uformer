@@ -189,7 +189,7 @@ class Uformer(nn.Module):
     def no_weight_decay_keywords(self):
         return {'relative_position_bias_table'}
 
-    def forward(self, x, mask=None, flows=None):
+    def forward(self, x, mask=None, flows=None, states=None):
 
         # -- Input Projection --
         b,t,c,h,w = x.shape
@@ -199,11 +199,15 @@ class Uformer(nn.Module):
         z = y
         num_encs = self.num_enc_layers
 
+        # -- init states --
+        if states is None:
+            states = [0 for _ in range(2*num_encs+1)]
+
         # -- enc --
         encs = []
         for i,(enc,down) in enumerate(self.enc_list):
             _h,_w = h//(2**i),w//(2**i)
-            z = enc(z,_h,_w,mask=mask)
+            z = enc(z,_h,_w,mask=mask,state=states[i])
             encs.append(z)
             z = down(z)
 
@@ -218,7 +222,7 @@ class Uformer(nn.Module):
             _h,_w = h//(2**(i_rev)),w//(2**(i_rev))
             z = up(z)
             z = th.cat([z,encs[i_rev]],-3)
-            z = dec(z,_h,_w,mask=mask)
+            z = dec(z,_h,_w,mask=mask,state=states[i+num_encs])
 
         # -- Output Projection --
         y = self.output_proj(z)
