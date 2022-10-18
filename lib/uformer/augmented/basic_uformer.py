@@ -63,12 +63,12 @@ class BasicUformerLayer(nn.Module):
     def extra_repr(self) -> str:
         return f"dim={self.dim}, input_resolution={self.input_resolution}, depth={self.depth}"
 
-    def forward(self, x, h, w, mask=None):
+    def forward(self, x, h, w, mask=None, flows=None):
         for blk in self.blocks:
             if self.use_checkpoint:
                 x = checkpoint.checkpoint(blk, x)
             else:
-                x = blk(x,h,w,mask)
+                x = blk(x,h,w,mask,flows)
         return x
 
     def flops(self,h,w):

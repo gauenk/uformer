@@ -123,7 +123,7 @@ class LeWinTransformerBlockRefactored(nn.Module):
         return f"dim={self.dim}, input_resolution={self.input_resolution}, num_heads={self.num_heads}, " \
                f"win_size={self.win_size}, shift_size={self.shift_size}, mlp_ratio={self.mlp_ratio},modulator={self.modulator}"
 
-    def forward(self, x, H, W, mask=None):
+    def forward(self, x, H, W, mask=None, flows=None):
         B,T,C,H,W = x.shape
         # print("x.shape: ",x.shape)
         # B, L, C = x.shape

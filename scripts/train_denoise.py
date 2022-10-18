@@ -211,7 +211,7 @@ def main():
     cache_dir = ".cache_io"
     cache_name = "train_davis"
     cache = cache_io.ExpCache(cache_dir,cache_name)
-    # cache.clear()
+    cache.clear()
 
     # -- search info --
     exps = exps_menu.exps_rgb_denoising(mode="train")
@@ -252,12 +252,13 @@ def main():
     cfg.aug_training_scales = [0.5,0.75,1.]
     cfg.aug_training_flips = True
     cfg.shift_flag = False
+    cfg.load_pretrained = False
 
     # -- pick an exp --
-    # exps = [exps[0]] # run0
+    exps = [exps[0]] # run0
     # exps = [exps[2]] # a success
     # exps = [exps[3]] # run0
-    exps = [exps[5]] # run0
+    # exps = [exps[5]] # run0
     # exps = [exps[-3]] # run0
     # exps = [exps[-2]] # run0
     # exps = [exps[-1]] # run0

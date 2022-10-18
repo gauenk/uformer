@@ -203,19 +203,22 @@ class UformerLit(pl.LightningModule):
         noisy_key = self.get_data_keys()[0]
         loss = 0 # init @ zero
         nbatch = len(batch[noisy_key])
-        denos,cleans,loss = self.training_step_i(batch, slice(0,nbatch))
-        # denos,cleans = [],[]
-        # for i in range(nbatch):
-        #     # th.cuda.empty_cache()
-        #     deno_i,clean_i,loss_i = self.training_step_i(batch, i)
-        #     loss += loss_i
-        #     denos.append(deno_i)
-        #     cleans.append(clean_i)
-        # loss = loss / nbatch
+        max_bs = self.net.max_batch_size
+        bsize = nbatch if max_bs == -1 else max_bs
+        ngroups = (nbatch-1)//bsize+1
+        denos,cleans = [],[]
+        for i in range(ngroups):
+            # th.cuda.empty_cache()
+            binds = slice(i*bsize,(i+1)*bsize)
+            deno_i,clean_i,loss_i = self.training_step_i(batch, binds)
+            loss += loss_i
+            denos.append(deno_i)
+            cleans.append(clean_i)
+        loss = loss / nbatch
+        denos = th.cat(denos)
+        cleans = th.cat(cleans)
 
         # -- append --
-        # denos = th.stack(denos)
-        # cleans = th.stack(cleans)
         # grab_grad(self.net)
 
         # -- log --

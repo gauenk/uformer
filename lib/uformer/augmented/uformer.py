@@ -15,7 +15,7 @@ from .basic_uformer import create_basic_enc_layer,create_basic_dec_layer
 from .basic_uformer import create_basic_conv_layer
 from .scaling import Downsample,Upsample
 from .parse import fields2blocks
-from ..utils.model_utils import apply_freeze
+from ..utils.model_utils import apply_freeze,rescale_flows
 # from ..utils.model_utils import expand_embed_dims
 
 class Uformer(nn.Module):
@@ -203,7 +203,8 @@ class Uformer(nn.Module):
         encs = []
         for i,(enc,down) in enumerate(self.enc_list):
             _h,_w = h//(2**i),w//(2**i)
-            z = enc(z,_h,_w,mask=mask)
+            flows_i = rescale_flows(flows,_h,_w)
+            z = enc(z,_h,_w,mask=mask,flows=flows_i)
             encs.append(z)
             z = down(z)
 
@@ -216,9 +217,10 @@ class Uformer(nn.Module):
         for i,(up,dec) in enumerate(self.dec_list):
             i_rev = (num_encs-1)-i
             _h,_w = h//(2**(i_rev)),w//(2**(i_rev))
+            flows_i = rescale_flows(flows,_h,_w)
             z = up(z)
             z = th.cat([z,encs[i_rev]],-3)
-            z = dec(z,_h,_w,mask=mask)
+            z = dec(z,_h,_w,mask=mask,flows=flows_i)
 
         # -- Output Projection --
         y = self.output_proj(z)
@@ -227,6 +229,10 @@ class Uformer(nn.Module):
         out = x + y if self.dd_in == 3 else y
 
         return out
+
+    @property
+    def max_batch_size(self):
+        return -1
 
     def flops(self,h,w):
 

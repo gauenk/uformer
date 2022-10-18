@@ -7,6 +7,8 @@ ccopy = copy.copy
 from einops import repeat
 from pathlib import Path
 from collections import OrderedDict
+from easydict import EasyDict as edict
+import torch.nn.functional as tnnf
 
 from .model_keys import translate_attn_mode,expand_attn_mode
 from .qkv_convert import qkv_convert_state,block_name2num
@@ -138,6 +140,28 @@ def load_checkpoint(model,use_train,substr="",croot="output/checkpoints/"):
         state = th.load(mpath)['state_dict']
         remove_lightning_load_state(state)
         model.load_state_dict(state)
+
+def rescale_flows(flows_og,H,W):
+
+    # -- corner case --
+    if flows_og is None: return None
+
+    # -- output size --
+    B,T,_,_H,_W = flows_og.fflow.shape
+    fflows = flows_og.fflow.view(B*T,2,_H,_W)
+    bflows = flows_og.bflow.view(B*T,2,_H,_W)
+    shape = (B*T,2,H,W)
+
+    # -- create new flows --
+    flows = edict()
+    flows.fflow = tnnf.interpolate(fflow,size=shape,mode="bilinear")
+    flows.bflow = tnnf.interpolate(bflow,size=shape,mode="bilinear")
+
+    # -- reshape --
+    flows.fflow = flows.fflow.view(B,T,2,H,W)
+    flows.bflow = flows.bflow.view(B,T,2,H,W)
+
+    return flows
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #
