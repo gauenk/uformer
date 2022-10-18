@@ -19,7 +19,7 @@ from easydict import EasyDict as edict
 import data_hub
 
 # -- optical flow --
-# import svnlb
+from uformer import flow
 
 # -- caching results --
 import cache_io
@@ -148,11 +148,8 @@ class UformerLit(pl.LightningModule):
 
     def _get_flow(self,vid):
         if self.flow == True:
-            noisy_np = vid.cpu().numpy()
-            if noisy_np.shape[1] == 1:
-                noisy_np = np.repeat(noisy_np,3,axis=1)
-            flows = svnlb.compute_flow(noisy_np,30.)
-            flows = edict({k:th.from_numpy(v).to(self.device) for k,v in flows.items()})
+            sigma_est = flow.est_sigma(vid)
+            flows = flow.run(vid,sigma_est)
         else:
             t,c,h,w = vid.shape
             zflows = th.zeros((t,2,h,w)).to(self.device)

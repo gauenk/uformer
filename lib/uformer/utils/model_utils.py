@@ -148,9 +148,9 @@ def rescale_flows(flows_og,H,W):
 
     # -- output size --
     B,T,_,_H,_W = flows_og.fflow.shape
-    fflows = flows_og.fflow.view(B*T,2,_H,_W)
-    bflows = flows_og.bflow.view(B*T,2,_H,_W)
-    shape = (B*T,2,H,W)
+    fflow = flows_og.fflow.view(B*T,2,_H,_W)
+    bflow = flows_og.bflow.view(B*T,2,_H,_W)
+    shape = (H,W)
 
     # -- create new flows --
     flows = edict()

@@ -380,6 +380,22 @@ def exps_rgb_denoising_train(iexps=None):
     expl['qk_frac'] = [.25]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
+    # -- [exp f:6] -- ["qk_frac" modded ]
+    expl['in_attn_mode'] = ["w-w-w"]
+    expl['num_heads'] = ['1-2-4']
+    expl['attn_mode'] = ["pd-pd-pd"]
+    expl['attn_reset'] = ["t-t-t"]
+    expl['embed_dim'] = ["24-24-24"]
+    expl['stride0'] = ['4-2-1']
+    expl['stride1'] = ['1-1-1']
+    expl['ws'] = ["25-15-9"]
+    expl['wt'] = ["0-0-0"]
+    expl['k'] = [64]
+    expl['ps'] = [7]
+    expl['model_depths'] = ["2-4-4"]
+    expl['qk_frac'] = [.25]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
     return exps
 
 def exps_rgb_denoising_test(iexps=None):

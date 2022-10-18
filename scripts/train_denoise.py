@@ -231,7 +231,7 @@ def main():
     # -- trainig --
     cfg.ndevices = 1
     cfg.accumulate_grad_batches = 1
-    cfg.batch_size_tr = 4
+    cfg.batch_size_tr = 1
     cfg.lr_init = 2e-4
     cfg.weight_decay = 2e-3
     cfg.warmup_epochs = 5
@@ -249,16 +249,18 @@ def main():
     cfg.output_proj_depth = 1
     cfg.in_prod_attn = "pd-pd-pd"
 
+    cfg.nframes = 4
+    cfg.flow=True
     cfg.aug_training_scales = [0.5,0.75,1.]
     cfg.aug_training_flips = True
     cfg.shift_flag = False
     cfg.load_pretrained = False
 
     # -- pick an exp --
-    exps = [exps[0]] # run0
+    # exps = [exps[0]] # run0
     # exps = [exps[2]] # a success
     # exps = [exps[3]] # run0
-    # exps = [exps[5]] # run0
+    exps = [exps[6]] # run0
     # exps = [exps[-3]] # run0
     # exps = [exps[-2]] # run0
     # exps = [exps[-1]] # run0

@@ -5,6 +5,7 @@ from . import augmented
 from . import warmup_scheduler
 from . import configs
 from . import exps
+from . import flow
 
 # -- for loading model --
 from .utils.misc import optional
