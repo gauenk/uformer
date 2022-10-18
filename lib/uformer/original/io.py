@@ -21,14 +21,8 @@ def load_model(*args,**kwargs):
 
     # -- defaults changed by noise version --
     noise_version = optional(kwargs,'noise_version',"noise")
-    if noise_version == "noise":
-        default_modulator = True
-        default_depth = [1, 2, 8, 8, 2, 8, 8, 2, 1]
-    elif noise_version == "blur":
-        default_modulator = True
-        default_depth = [1, 2, 8, 8, 2, 8, 8, 2, 1]
-    else:
-        raise ValueError(f"Uknown noise version [{noise_version}]")
+    default_modulator = True
+    default_depth = [1, 2, 8, 8, 2, 8, 8, 2, 1]
 
     # -- get cfg --
     nchnls = optional(kwargs,'nchnls',3)
@@ -65,9 +59,11 @@ def load_model(*args,**kwargs):
     elif noise_version == "blur":
         state_fn = fdir / "weights/Uformer_gopro_B.pth"
     else:
-        raise ValueError(f"Uknown noise_version [{noise_version}]")
-    assert os.path.isfile(str(state_fn))
-    # model_state = th.load(str(state_fn))
+        state_fn = None
+        # raise ValueError(f"Uknown noise_version [{noise_version}]")
+    if not(state_fn is None):
+        assert os.path.isfile(str(state_fn))
+        # model_state = th.load(str(state_fn))
 
     # -- fill weights --
     load_pretrained = optional(kwargs,"load_pretrained",True)

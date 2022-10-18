@@ -306,16 +306,18 @@ def exps_rgb_denoising_train(iexps=None):
     # -- init --
     expl = exp_init(iexps,"train")
     expl['freeze'] = ['false']
-    expl['input_proj_depth'] = [4]
-    expl['output_proj_depth'] = [4]
 
     # -- [exp a:0] step 0 --
+    expl['input_proj_depth'] = [1]
+    expl['output_proj_depth'] = [1]
     expl['in_attn_mode'] = ["w-w-w-w-w"]
-    expl['attn_mode'] = ["w-w-w-w-w"]
+    expl['attn_mode'] = ["original"]
     expl['attn_reset'] = ["t-t-t-t-t"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
 
     # -- [exp b:1] step 0 --
+    expl['input_proj_depth'] = [4]
+    expl['output_proj_depth'] = [4]
     expl['in_attn_mode'] = ["w-w-w-w-w"]
     expl['attn_mode'] = ["pd-pd-w-w-w"]
     expl['attn_reset'] = ["t-t-f-f-f"]

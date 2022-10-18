@@ -83,7 +83,7 @@ class ProductAttention(nn.Module):
         weights = th.cat(weights,0)
         return weights
 
-    def forward(self, vid, mask=None, state=None):
+    def forward(self, vid, mask=None, flows=None, state=None):
 
         # -- unpack --
         B, T, C, H, W = vid.shape
@@ -93,7 +93,7 @@ class ProductAttention(nn.Module):
         mask = None
         rel_pos = self.get_rel_pos()
         fold = self.init_fold((B,T,C,H,W),vid.device)
-        self.search.update_flow(vid)
+        self.search.update_flow(vid,flows)
 
         # -- qkv --
         vid = vid.view(B*T,C,H,W)

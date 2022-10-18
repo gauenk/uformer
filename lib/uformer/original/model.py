@@ -1257,6 +1257,9 @@ class Uformer(nn.Module):
 
         self.apply(self._init_weights)
 
+    def _apply_freeze(self,*args):
+        print("Warning:  _apply_freeze does nothing for original model.")
+
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
             trunc_normal_(m.weight, std=.02)
@@ -1277,7 +1280,18 @@ class Uformer(nn.Module):
     def extra_repr(self) -> str:
         return f"embed_dim={self.embed_dim}, token_projection={self.token_projection}, token_mlp={self.mlp},win_size={self.win_size}"
 
-    def forward(self, x, mask=None):
+    @property
+    def max_batch_size(self):
+        return 1
+
+    def forward(self, x, mask=None, flows=None):
+        # -- handle batch size --
+        add_dim = False
+        if x.ndim == 5:
+            assert x.shape[0] == 1
+            x = x[0]
+            add_dim = True
+            
         # -- Input Projection --
         y = self.input_proj(x)
         y = self.pos_drop(y)
@@ -1314,7 +1328,13 @@ class Uformer(nn.Module):
 
         # Output Projection
         y = self.output_proj(deconv3)
-        return x + y if self.dd_in == 3 else y
+        out = x + y if self.dd_in == 3 else y
+
+        # -- add extra dim --
+        if add_dim:
+            out = out.unsqueeze(0)
+
+        return out
 
     def flops(self):
         flops = 0

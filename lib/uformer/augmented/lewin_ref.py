@@ -123,9 +123,7 @@ class LeWinTransformerBlockRefactored(nn.Module):
         return f"dim={self.dim}, input_resolution={self.input_resolution}, num_heads={self.num_heads}, " \
                f"win_size={self.win_size}, shift_size={self.shift_size}, mlp_ratio={self.mlp_ratio},modulator={self.modulator}"
 
-    def forward(self, x, H, W, mask=None, state=None):
-
-        # -- unpack --
+    def forward(self, x, H, W, mask=None, flows=None, state=None):
         B,T,C,H,W = x.shape
         # print("x.shape: ",x.shape)
         # B, L, C = x.shape
@@ -183,7 +181,7 @@ class LeWinTransformerBlockRefactored(nn.Module):
             shifted_x = x
 
         # -- run attention --
-        shifted_x = self.run_attn(shifted_x,attn_mask,state)
+        shifted_x = self.run_attn(shifted_x,attn_mask,flows,state)
 
         # -- reverse cyclic shift --
         if self.shift_size > 0:
@@ -207,11 +205,11 @@ class LeWinTransformerBlockRefactored(nn.Module):
         x = x.transpose(1,2).view(B,T,C,H,W)
         return x
 
-    def run_attn(self,shifted_x,attn_mask,state):
+    def run_attn(self,shifted_x,attn_mask,flows,state):
         if self.attn_mode == "window_default":
             return self.run_partition_attn(shifted_x,attn_mask)
         else:
-            return self.run_video_attn(shifted_x,attn_mask,state)
+            return self.run_video_attn(shifted_x,attn_mask,flows,state)
 
     def get_shift_mask(self,x,attn_mask):
 
@@ -261,10 +259,10 @@ class LeWinTransformerBlockRefactored(nn.Module):
 
         return attn_mask
 
-    def run_video_attn(self,shifted_x,attn_mask,state,wsize=8):
+    def run_video_attn(self,shifted_x,attn_mask,flows,state,wsize=8):
         B,T,C,H,W = shifted_x.shape
         wmsa_in = self.apply_modulator(shifted_x,wsize)
-        attn_windows = self.attn(wmsa_in, mask=attn_mask, state=state)
+        attn_windows = self.attn(wmsa_in, mask=attn_mask, flows=flows, state=state)
         return attn_windows
 
     def run_partition_attn(self,shifted_x,attn_mask):
