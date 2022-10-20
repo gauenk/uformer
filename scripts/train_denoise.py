@@ -251,6 +251,7 @@ def main():
     cfg.load_pretrained = True
     cfg.pretrained_prefix = "net."
     cfg.pretrained_path = "output/checkpoints/a40d6c5f-d612-42fe-9ecf-de0d93ab28ba-epoch=116.ckpt"
+    cfg.attn_reset = False
     cfg.nframes = 4
     cfg.flow=True
     cfg.aug_training_scales = [0.5,0.75,1.]
