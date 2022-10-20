@@ -18,7 +18,8 @@ from ..common import optional as _optional
 from ..utils.model_utils import load_checkpoint_module,load_checkpoint_qkv
 # from ..utils.model_utils import load_checkpoint_mix_qkv
 from ..utils.model_utils import remove_lightning_load_state
-from ..utils.model_utils import filter_rel_pos,get_recent_filename
+from ..utils.model_utils import filter_rel_pos#,get_recent_filename
+from ..utils.model_io import get_pretrained_path
 
 # -- auto populate fields to extract config --
 _fields = []
@@ -62,7 +63,7 @@ def load_model(*args,**kwargs):
 
     # -- relevant configs --
     attn_mode = optional(kwargs,'attn_mode',"window_dnls")
-    in_attn_mode = optional(kwargs,'in_attn_mode',"window_dnls")
+    in_attn_mode = optional(kwargs,'in_attn_mode',attn_mode)
     k = optional(kwargs,'k',-1)
     ps = optional(kwargs,'ps',1)
     pt = optional(kwargs,'pt',1)
@@ -86,11 +87,12 @@ def load_model(*args,**kwargs):
     pretrained_path = optional(kwargs,"pretrained_path","")
     pretrained_prefix = optional(kwargs,"pretrained_prefix","module.")
     pretrained_qkv = optional(kwargs,"pretrained_qkv","lin2conv")
+
+    # -- load configs --
     reset_qkv = optional(kwargs,"reset_qkv",False)
     attn_reset = optional(kwargs,"attn_reset",False)
     strict_model_load = optional(kwargs,"strict_model_load",True)
     skip_mismatch_model_load = optional(kwargs,"skip_mismatch_model_load",False)
-    # strict_model_load = True
 
     # -- break here if init --
     if init: return
@@ -138,24 +140,6 @@ def load_model(*args,**kwargs):
     model.eval()
 
     return model
-
-def get_pretrained_path(noise_version,optional_path):
-    fdir = Path(__file__).absolute().parents[0] / "../../../" # parent of "./lib"
-    if optional_path != "":
-        croot = fdir / "output/checkpoints/"
-        mpath = get_recent_filename(croot,optional_path)
-        return mpath
-    if noise_version == "noise":
-        state_fn = fdir / "weights/Uformer_sidd_B.pth"
-        assert os.path.isfile(str(state_fn))
-    elif noise_version == "blur":
-        state_fn = fdir / "weights/Uformer_gopro_B.pth"
-        assert os.path.isfile(str(state_fn))
-    elif noise_version in ["rgb_noise","rain"]:
-        state_fn = None
-    else:
-        raise ValueError(f"Uknown noise_version [{noise_version}]")
-    return state_fn
 
 
 def parse_heads(heads):

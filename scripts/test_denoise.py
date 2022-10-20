@@ -234,25 +234,14 @@ def main():
     flow = ["true","false"]
 
     # -- exp mesh --
-    iexps = {"dname":dname,"vid_name":vid_names,"dset":dset,"flow":flow,
-             "ws":["25-15-9"]}
+    iexps = {"dname":dname,"vid_name":vid_names,"dset":dset}
     # exps = exps_menu.exps_rgb_denoising(iexps,mode="test")
-    # exps[1]['ws'] = '25-15-9'
-    # exps = [exps[1],dcopy(exps[1]),dcopy(exps[1]),dcopy(exps[1])]
-    exps = exps_menu.exps_rgb_denoising_10_20(iexps)
-    # exps[0]['flow'] = 'true'
-    # exps[0]['wt'] = '0-0-0'
-    # exps[1]['wt'] = '3-0-0'
-    # exps[2]['wt'] = '3-3-0'
-    # exps[3]['wt'] = '3-3-3'
-    #exps = [exps[-1]]
-
-    # exps = [exps[1],exps[1]]#,exps[-1]]
-    # exps[0]['ws'] = '25-15-9'
-    # exps[0]['wt'] = '3-0-0'
-
-    # print(cfg)
-    # exit(0)
+    # exps = [exps[0]]
+    # exps = [exps[6]]
+    # iexps = {"dname":dname,"vid_name":vid_names,"dset":dset,"flow":flow,
+    #          "ws":["25-15-9"]}
+    # exps = exps_menu.exps_rgb_denoising_skinny_10_20(iexps)
+    exps = exps_menu.exps_rgb_denoising_qkfrac_10_20(iexps)
 
     # -- group with default --
     cfg = configs.default_cfg()
@@ -260,8 +249,10 @@ def main():
     # del cfg['uuid']
     # del cfg['dname']
     cfg.pretrained_prefix = "net."
-    cfg.pretrained_path = "output/checkpoints/a40d6c5f-d612-42fe-9ecf-de0d93ab28ba-epoch=116.ckpt"
-    cfg.strict_model_load = "true"
+    # cfg.pretrained_path = "output/checkpoints/a40d6c5f-d612-42fe-9ecf-de0d93ab28ba-epoch=116.ckpt"
+    # cfg.pretrained_path = "./output/checkpoints/ab14bd96-4b6d-41d8-bf90-e0ca682853b6-epoch=129.ckpt"
+    # cfg.input_proj_depth = 4
+    # cfg.strict_model_load = "true"
     # exps = [exps]
     # cfg = configs.default_cfg()
     cfg.cropmode = "rand"

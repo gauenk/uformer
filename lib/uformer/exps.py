@@ -397,7 +397,7 @@ def exps_rgb_denoising_train(iexps=None):
 
     return exps
 
-def exps_rgb_denoising_10_20(iexps=None):
+def exps_rgb_denoising_skinny_10_20(iexps=None):
     # -- init --
     expl = exp_init(iexps,"test")
     expl['use_train'] = ['false']
@@ -413,7 +413,41 @@ def exps_rgb_denoising_10_20(iexps=None):
     expl['k'] = [64]
     expl['ps'] = [7]
     expl['model_depths'] = ["2-4-4"]
-    expl['pretrained_path'] = ["a40d6c5f-d612-42"]
+    expl['pretrained_path'] = ["output/checkpoints/a40d6c5f-d612-42fe-9ecf-de0d93ab28ba-epoch=116.ckpt"]
+    expl['input_proj_depth'] = [4]
+    # expl['pretrained_path'] = ["ad209414"]
+    # expl['in_attn_mode'] = ["w-w-w-w-w"]
+    # expl['attn_mode'] = ["pd-pd-w-w-w"]
+    # model_depths = ["1-2-8-8-2"]
+    exps = cache_io.mesh_pydicts(expl) # create mesh
+    expl['wt'] = ['3-0-0']
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+    expl['wt'] = ['3-3-0']
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+    expl['wt'] = ['3-3-3']
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    return exps
+
+def exps_rgb_denoising_qkfrac_10_20(iexps=None):
+    # -- init --
+    expl = exp_init(iexps,"test")
+    expl['use_train'] = ['false']
+    del expl['freeze']# = ['false']
+    expl['in_attn_mode'] = ["w-w-w"]
+    expl['num_heads'] = ['1-2-4']
+    expl['attn_mode'] = ["pd-pd-pd"]
+    expl['attn_reset'] = ["t-t-t"]
+    expl['embed_dim'] = ["32-32-32"]
+    expl['stride0'] = ['4-2-1']
+    expl['stride1'] = ['1-1-1']
+    expl['ws'] = ["25-15-9"]
+    expl['wt'] = ["0-0-0"]
+    expl['k'] = [64]
+    expl['ps'] = [7]
+    expl['model_depths'] = ["2-4-4"]
+    expl['qk_frac'] = [.25]
+    expl['pretrained_path'] = ["output/checkpoints/b9024811-080a-4909-9458-af0d42c6c5f2-epoch=20.ckpt"]
     expl['input_proj_depth'] = [4]
     # expl['pretrained_path'] = ["ad209414"]
     # expl['in_attn_mode'] = ["w-w-w-w-w"]
@@ -434,15 +468,15 @@ def exps_rgb_denoising_test(iexps=None):
     # -- init --
     expl = exp_init(iexps,"test")
     expl['use_train'] = ['false']
-    expl['attn_reset'] = ["f-f-f-f-f"]
+    expl['attn_reset'] = ["false"]
     expl['pretrained_prefix'] = ["net."]
 
     # -- [exp a] step 0 --
-    expl['pretrained_path'] = ["98918264-f802-44da-9255-8788f37cb0fc-epoch=60-val_loss=9.69e-04.ckpt"]
-    expl['in_attn_mode'] = ["w-w-w-w-w"]
-    expl['attn_mode'] = ["w-w-w-w-w"]
+    expl['pretrained_path'] = [""]
+    expl['in_attn_mode'] = ["original"]
+    expl['attn_mode'] = ["original"]
+    expl['model_depths'] = ["none"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
-
 
     # -- [exp b] step 0 --
     del expl['freeze']# = ['false']
