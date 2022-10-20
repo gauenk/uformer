@@ -395,6 +395,27 @@ def exps_rgb_denoising_train(iexps=None):
     expl['qk_frac'] = [.25]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
+    # -- [exp g:7] --
+    expl['num_heads'] = ['1-2-4-8-16']
+    # expl['attn_mode'] = ["product_attn"]
+    expl['attn_mode'] = ["pd-w-w-w-w"]
+    expl['attn_reset'] = ["true"]
+    expl['embed_dim'] = ['24-32-32-32-32']
+    expl['qk_frac'] = [0.25]
+    expl['stride0'] = ['4-2-1-1-1']
+    expl['stride1'] = ['1-1-1-1-1']
+    expl['ws'] = ["29-15-9-9-9"]
+    expl['wt'] = ["0-0-0-0-0"]
+    expl['k'] = [64]
+    expl['ps'] = ['7-5-3-3-3']
+    expl['model_depths'] = ["1-2-8-8-2"]
+    expl['pretrained_path'] = [""]
+    expl['input_proj_depth'] = [1]
+    expl['output_proj_depth'] = [1]
+    expl['qk_frac'] = ['.25-1-1-1-1']
+    expl['rbwd'] = ['false']
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
     return exps
 
 def exps_rgb_denoising_skinny_10_20(iexps=None):
@@ -408,7 +429,7 @@ def exps_rgb_denoising_skinny_10_20(iexps=None):
     expl['embed_dim'] = ["9-9-9"]
     expl['stride0'] = ['4-2-1']
     expl['stride1'] = ['1-1-1']
-    expl['ws'] = ["25-15-9"]
+    expl['ws'] = ["29-15-9"]
     expl['wt'] = ["0-0-0"]
     expl['k'] = [64]
     expl['ps'] = [7]
@@ -441,7 +462,7 @@ def exps_rgb_denoising_qkfrac_10_20(iexps=None):
     expl['embed_dim'] = ["32-32-32"]
     expl['stride0'] = ['4-2-1']
     expl['stride1'] = ['1-1-1']
-    expl['ws'] = ["25-15-9"]
+    expl['ws'] = ["29-15-9"]
     expl['wt'] = ["0-0-0"]
     expl['k'] = [64]
     expl['ps'] = [7]
@@ -493,10 +514,6 @@ def exps_rgb_denoising_test(iexps=None):
     expl['model_depths'] = ["2-4-4"]
     expl['pretrained_path'] = ["a40d6c5f-d612-42"]
     expl['input_proj_depth'] = [4]
-    # expl['pretrained_path'] = ["ad209414"]
-    # expl['in_attn_mode'] = ["w-w-w-w-w"]
-    # expl['attn_mode'] = ["pd-pd-w-w-w"]
-    # model_depths = ["1-2-8-8-2"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
     # -- [exp c] step 0 --
@@ -515,7 +532,7 @@ def exps_rgb_denoising_test(iexps=None):
     expl['model_depths'] = ["2-2-2-2-2-2-2-2-2"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
-    # -- [exp e] --
+    # -- [exp d] --
     expl['pretrained_path'] = ["f69d3cc4-986f-4f55-b0b9-b5f90b3b5957-epoch=58-val_loss=1.03e-03.ckpt"]
     expl['in_attn_mode'] = ["pd-pd-w-w-w"]
     expl['attn_mode'] = ["pd-pd-w-w-w"]

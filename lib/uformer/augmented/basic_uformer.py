@@ -85,10 +85,11 @@ def create_basic_enc_layer(base,embed_dim,img_size,depths,num_heads,win_size,
                            nbwd,rbwd,num_enc,exact,bs,drop_path,l):
     mult = 2**l
     isize = img_size // 2**l
+    nheads = num_heads[l]
     # print("[enc] l,mult,num_heads: ",l,mult,num_heads[l])
     # print("enc: ",drop_path[sum(depths[:l]):sum(depths[:l+1])])
-    layer = BasicUformerLayer(dim=embed_dim[l]*mult,
-                              output_dim=embed_dim[l]*mult,
+    layer = BasicUformerLayer(dim=embed_dim[l]*nheads,
+                              output_dim=embed_dim[l]*nheads,
                               input_resolution=(isize,isize),
                               depth=depths[l],
                               num_heads=num_heads[l],
@@ -114,11 +115,10 @@ def create_basic_conv_layer(base,embed_dim,img_size,depths,num_heads,win_size,
                             token_projection,token_mlp,shift_flag,attn_mode,
                             k,ps,pt,ws,wt,dil,stride0,stride1,
                             nbwd,rbwd,num_enc,exact,bs,drop_path,l):
-    mult = 2**l
+    nheads = num_heads[l]
     isize = img_size // 2**l
-    # print("[conv] l,mult,num_heads: ",l,mult,num_heads[l])
-    layer = BasicUformerLayer(dim=embed_dim[l]*mult,
-                              output_dim=embed_dim[l]*mult,
+    layer = BasicUformerLayer(dim=embed_dim[l]*nheads,
+                              output_dim=embed_dim[l]*nheads,
                               input_resolution=(isize,isize),
                               depth=depths[num_enc],
                               num_heads=num_heads[l],
@@ -148,8 +148,9 @@ def create_basic_dec_layer(base,embed_dim,img_size,depths,num_heads,win_size,
     # -- size --
     _l = (num_enc - l)
     lr = num_enc - l - 1
-    mult = 2**(_l)
-    isize = img_size // (mult//2)
+    isize = img_size // (2**lr)
+    nheads = 2*num_heads[lr]
+    # print("[dec]: ",l,lr,2**lr,nheads)
 
     # -- drop paths --
     # l == 0 | dec_dpr[:depths[5]]
@@ -171,8 +172,8 @@ def create_basic_dec_layer(base,embed_dim,img_size,depths,num_heads,win_size,
     # print("[dec] l,mult,num_heads: ",l,mult,num_heads[num_enc+1+l])
 
     # -- init --
-    layer = BasicUformerLayer(dim=embed_dim[lr]*mult,
-                              output_dim=embed_dim[lr]*mult,
+    layer = BasicUformerLayer(dim=embed_dim[lr]*nheads,
+                              output_dim=embed_dim[lr]*nheads,
                               input_resolution=(isize,isize),
                               depth=depths[num_enc+1+l],
                               num_heads=num_heads[num_enc+1+l],

@@ -136,6 +136,7 @@ class Uformer(nn.Module):
             # -- decl --
             mod_in = num_heads[l_enc]
             mod_out = num_heads[l_enc+1]
+            # print("l_enc,mod_in,mod_out: ",l_enc,mod_in,mod_out)
             setattr(self,"encoderlayer_%d" % l_enc,basic_enc_layer(l_enc))
             setattr(self,"dowsample_%d" % l_enc,dowsample(embed_dim[l_enc]*mod_in,
                                                           embed_dim[l_enc+1]*mod_out))
@@ -226,6 +227,7 @@ class Uformer(nn.Module):
             flows_i = rescale_flows(flows,_h,_w)
             z = up(z)
             z = th.cat([z,encs[i_rev]],-3)
+            # print("z.shape: ",z.shape)
             z = dec(z,_h,_w,mask=mask,flows=flows_i,state=states[i+num_encs])
 
         # -- Output Projection --
