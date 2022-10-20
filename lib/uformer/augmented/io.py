@@ -150,7 +150,6 @@ def get_pretrained_path(noise_version,optional_path):
         assert os.path.isfile(str(state_fn))
     elif noise_version == "blur":
         state_fn = fdir / "weights/Uformer_gopro_B.pth"
-        print(state_fn)
         assert os.path.isfile(str(state_fn))
     elif noise_version in ["rgb_noise","rain"]:
         state_fn = None
@@ -168,7 +167,7 @@ def parse_heads(heads):
         return heads_l
     else:
         raise ValueError(f"Uknown value format for num_heads [{heads}]")
-        
+
 def parse_depths(depths):
     if isinstance(depths,list):# and len(depths) == 5:
         return depths

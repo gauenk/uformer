@@ -201,7 +201,7 @@ class Uformer(nn.Module):
 
         # -- init states --
         if states is None:
-            states = [0 for _ in range(2*num_encs+1)]
+            states = [None for _ in range(2*num_encs+1)]
 
         # -- enc --
         encs = []
@@ -215,7 +215,9 @@ class Uformer(nn.Module):
         # -- middle --
         mod = 2**num_encs
         _h,_w = h//mod,w//mod
-        z = self.conv(z,_h,_w,mask=mask)
+        flows_i = rescale_flows(flows,_h,_w)
+        z = self.conv(z,_h,_w,mask=mask,flows=flows_i)
+        del flows_i
 
         # -- dec --
         for i,(up,dec) in enumerate(self.dec_list):

@@ -248,7 +248,9 @@ def main():
     cfg.input_proj_depth = 4
     cfg.output_proj_depth = 1
     cfg.in_prod_attn = "pd-pd-pd"
-
+    cfg.load_pretrained = True
+    cfg.pretrained_prefix = "net."
+    cfg.pretrained_path = "output/checkpoints/a40d6c5f-d612-42fe-9ecf-de0d93ab28ba-epoch=116.ckpt"
     cfg.nframes = 4
     cfg.flow=True
     cfg.aug_training_scales = [0.5,0.75,1.]
@@ -258,9 +260,9 @@ def main():
 
     # -- pick an exp --
     # exps = [exps[0]] # run0
-    # exps = [exps[2]] # a success
+    exps = [exps[2]] # a success
     # exps = [exps[3]] # run0
-    exps = [exps[6]] # run0
+    # exps = [exps[6]] # run0 [qk_frac]
     # exps = [exps[-3]] # run0
     # exps = [exps[-2]] # run0
     # exps = [exps[-1]] # run0

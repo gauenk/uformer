@@ -16,7 +16,8 @@ class ProductAttention(nn.Module):
     def __init__(self, dim, win_size,num_heads, token_projection='linear',
                  qkv_bias=True, qk_scale=None, attn_drop=0., proj_drop=0.,
                  ps=1,pt=1,k=-1,ws=8,wt=0,dil=1,stride0=1,stride1=1,
-                 nbwd=1,rbwd=False,exact=False,bs=-1,qk_frac=1.):
+                 nbwd=1,rbwd=False,exact=False,bs=-1,qk_frac=1.,
+                 update_dists=False):
 
         super().__init__()
 
@@ -33,6 +34,7 @@ class ProductAttention(nn.Module):
         self.rbwd = rbwd
         self.exact = exact
         self.bs = bs
+        self.update_dists = False #update_dists
 
         # -- attn info --
         self.dim = dim
@@ -88,6 +90,7 @@ class ProductAttention(nn.Module):
         # -- unpack --
         B, T, C, H, W = vid.shape
         # vid = rearrange(vid,'b t h w c -> (b t) c h w')
+        # print("flows is None: ",flows is None)
 
         # -- init --
         mask = None
@@ -114,9 +117,15 @@ class ProductAttention(nn.Module):
         # print("q_vid[min,max]: ",q_vid.min().item(),q_vid.max().item())
         # print("k_vid[min,max]: ",k_vid.min().item(),k_vid.max().item())
         # print(ntotal,q_vid.shape,k_vid.shape)
-        dists,inds = self.search(q_vid,0,ntotal,k_vid)
+
+        # -- run search --
+        if state is None:
+            dists,inds = self.search(q_vid,0,ntotal,k_vid)
+        else:
+            dists,inds = self.stream_search(q_vid,0,ntotal,k_vid,state)
 
         # -- update state --
+        self.update_state(state,dists,inds)
         # state.dists,state.inds
 
         # -- debug --
@@ -198,6 +207,15 @@ class ProductAttention(nn.Module):
         #                                 'nH l c -> nH l (c d)', d = ratio)
         return relative_position_bias
 
+    def stream_search(self,q_vid,qstart,ntotal,k_vid,state):
+        fstart = state.fstart
+        dists_new,inds_new = self.search_new(q_vid,qstart,ntotal,k_vid,fstart)
+        if self.update_dists: dists = self.update_dists(q_vid,k_vid,inds,fstart)
+        else: dists = state.dists
+        dists = th.cat([state.dists,dists_new],0)
+        inds = th.cat([state.inds,inds_new],0)
+        return dists,inds
+
     def init_dnls(self):
 
         # -- unpack params --
@@ -256,6 +274,11 @@ class ProductAttention(nn.Module):
                            use_reflect=reflect_bounds,device=device)
         return fold
 
+
+    def update_state(self,state,dists,inds):
+        if state is None: return
+        state.dists = dists
+        state.inds = inds
 
     def extra_repr(self) -> str:
         return f'dim={self.dim}, win_size={self.win_size}, num_heads={self.num_heads}'

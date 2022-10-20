@@ -20,6 +20,18 @@ import cv2 as cv
 # -- local --
 from uformer.utils import color
 
+def run_batch(vid,sigma):
+    B = vid.shape[0]
+    flows = edict()
+    flows.fflow,flows.bflow = [],[]
+    for b in range(B):
+        flows_b = run(vid[b],sigma)
+        flows.fflow.append(flows_b.fflow)
+        flows.bflow.append(flows_b.bflow)
+    flows.fflow = th.stack(flows.fflow)
+    flows.bflow = th.stack(flows.bflow)
+    return flows
+
 def run(vid_in,sigma):
 
     # -- init --
@@ -42,7 +54,7 @@ def run(vid_in,sigma):
     for ti in range(t-1):
         fflow[ti] = pair2flow(vid[ti],vid[ti+1],device)
     for ti in reversed(range(t-1)):
-        bflow[ti] = pair2flow(vid[ti+1],vid[ti],device)
+        bflow[ti+1] = pair2flow(vid[ti+1],vid[ti],device)
 
     # -- final shaping --
     # fflow = rearrange(fflow,'t h w c -> t c h w')
@@ -59,8 +71,11 @@ def run(vid_in,sigma):
     return flows
 
 def est_sigma(vid):
-    vid_np = vid.cpu().numpy()
-    sigma = estimate_sigma(vid_np,channel_axis=1)
+    vid = vid.cpu().clone()
+    color.rgb2yuv(vid)
+    vid_np = vid.numpy()
+    vid_np = vid_np[:,[0]] # Y only
+    sigma = estimate_sigma(vid_np,channel_axis=1)[0]
     return sigma
 
 def pair2flow(frame_a,frame_b,device):

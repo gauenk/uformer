@@ -11,6 +11,7 @@ from functools import partial
 def _vprint(verbose,*args,**kwargs):
     if verbose:
         print(*args,**kwargs)
+
 def expand2square(timg,factor=16.0):
     b, t, _, h, w = timg.size()
 

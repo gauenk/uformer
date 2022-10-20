@@ -1,9 +1,11 @@
 
 # -- misc --
 import os,copy
+dcopy = copy.deepcopy
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
 from functools import partial
+import pandas as pd
 
 # -- vision --
 import scipy.io
@@ -22,7 +24,7 @@ from easydict import EasyDict as edict
 import data_hub
 
 # -- optical flow --
-# import svnlb
+from uformer import flow
 
 # -- caching results --
 import cache_io
@@ -37,15 +39,20 @@ from uformer.utils.metrics import compute_psnrs,compute_ssims
 from uformer.utils.model_utils import load_checkpoint
 from uformer.utils.proc_utils import spatial_chop,temporal_chop,expand2square
 
-def run_exp(_cfg):
+# -- display --
+np.set_printoptions(linewidth=160)
+pd.set_option("display.max_columns",None)
+pd.set_option("max_colwidth",10)
 
-    # -- total time --
-    timer0 = uformer.utils.timer.ExpTimer()
-    timer0.start("total")
+def run_exp(_cfg):
 
     # -- init --
     cfg = copy.deepcopy(_cfg)
     cache_io.exp_strings2bools(cfg)
+
+    # -- total time --
+    timer0 = uformer.utils.timer.ExpTimer()
+    timer0.start("total")
 
     # -- init seed/device --
     th.cuda.set_device(int(cfg.device.split(":")[1]))
@@ -106,10 +113,11 @@ def run_exp(_cfg):
 
         # -- optical flow --
         timer.start("flow")
-        if cfg.flow == "true":
-            noisy_np = noisy.cpu().numpy()
-            flows = svnlb.compute_flow(noisy_np,cfg.sigma)
-            flows = edict({k:th.from_numpy(v).to(cfg.device) for k,v in flows.items()})
+        use_flow = optional(cfg,'flow',False)
+        print("use_flow: ",use_flow)
+        if use_flow:
+            sigma_est = flow.est_sigma(noisy[0])
+            flows = flow.run_batch(noisy,sigma_est)
         else:
             flows = None
         timer.stop("flow")
@@ -121,8 +129,15 @@ def run_exp(_cfg):
         s_overlap = cfg.spatial_crop_overlap
         t_size = cfg.temporal_crop_size
         t_overlap = cfg.temporal_crop_overlap
-        schop_p = partial(spatial_chop,s_size,s_overlap,model,verbose=s_verbose)
-        tchop_p = partial(temporal_chop,t_size,t_overlap,schop_p,verbose=t_verbose)
+        # schop_p = partial(spatial_chop,s_size,s_overlap,model,
+        #                   flows=flows,verbose=s_verbose)
+        # tchop_p = partial(temporal_chop,t_size,t_overlap,schop_p,
+        #                   flows=flows,verbose=t_verbose)
+        model_fwd = lambda vid,flows: model(vid,flows=flows)
+        schop_p = lambda vid,flows: spatial_chop(s_size,s_overlap,model_fwd,vid,
+                                                 flows=flows,verbose=s_verbose)
+        tchop_p = lambda vid,flows: temporal_chop(t_size,t_overlap,schop_p,vid,
+                                                  flows=flows,verbose=t_verbose)
         fwd_fxn = tchop_p # rename
         fsize = int(cfg.isize.split("_")[0]) if not(cfg.isize is None) else 1024
 
@@ -134,7 +149,7 @@ def run_exp(_cfg):
             print("noisy.shape: ",noisy.shape)
             noisy_sq,mask = expand2square(noisy,fsize)
             print("noisy_sq.shape: ",noisy_sq.shape)
-            deno = fwd_fxn(noisy_sq/imax)
+            deno = fwd_fxn(noisy_sq/imax,flows)
             # deno = tchop_p(noisy_sq/imax)
             print("deno.shape: ",deno.shape)
             deno = th.masked_select(deno,mask.bool()).reshape(*vshape)
@@ -184,7 +199,7 @@ def run_exp(_cfg):
     timer0.stop("total")
     ttotal,N = timer0['total'],len(results.psnrs)
     results.timer_total = [ttotal for _ in range(N)]
-    print(results)
+    # print(results)
 
     return results
 
@@ -200,7 +215,7 @@ def main():
     # cache_name = "test_rgb_net"
     cache_name = "davis_bench"
     cache = cache_io.ExpCache(cache_dir,cache_name)
-    cache.clear()
+    # cache.clear()
 
     # -- train cache --
     train_cache = cache_io.ExpCache(cache_dir,"train_davis")
@@ -216,11 +231,25 @@ def main():
     # -- set8 --
     dname,dset = ["set8"],["te"]
     vid_names = ["motorbike"]
+    flow = ["true","false"]
 
     # -- exp mesh --
-    iexps = {"dname":dname,"vid_name":vid_names,"dset":dset}
-    exps = exps_menu.exps_rgb_denoising(iexps,mode="test")
-    exps = [exps[1]]#,exps[-1]]
+    iexps = {"dname":dname,"vid_name":vid_names,"dset":dset,"flow":flow,
+             "ws":["25-15-9"]}
+    # exps = exps_menu.exps_rgb_denoising(iexps,mode="test")
+    # exps[1]['ws'] = '25-15-9'
+    # exps = [exps[1],dcopy(exps[1]),dcopy(exps[1]),dcopy(exps[1])]
+    exps = exps_menu.exps_rgb_denoising_10_20(iexps)
+    # exps[0]['flow'] = 'true'
+    # exps[0]['wt'] = '0-0-0'
+    # exps[1]['wt'] = '3-0-0'
+    # exps[2]['wt'] = '3-3-0'
+    # exps[3]['wt'] = '3-3-3'
+    #exps = [exps[-1]]
+
+    # exps = [exps[1],exps[1]]#,exps[-1]]
+    # exps[0]['ws'] = '25-15-9'
+    # exps[0]['wt'] = '3-0-0'
 
     # print(cfg)
     # exit(0)
@@ -231,23 +260,25 @@ def main():
     # del cfg['uuid']
     # del cfg['dname']
     cfg.pretrained_prefix = "net."
-    cfg.pretrained_path = "output/checkpoints/a40d6c5f-d612-42fe-9ecf-de0d93ab28ba-epoch=20-val_loss=1.09e-03.ckpt"
+    cfg.pretrained_path = "output/checkpoints/a40d6c5f-d612-42fe-9ecf-de0d93ab28ba-epoch=116.ckpt"
     cfg.strict_model_load = "true"
     # exps = [exps]
     # cfg = configs.default_cfg()
     cfg.cropmode = "rand"
     cfg.use_train = "false"
-    cfg.isize = "none"
+    # cfg.isize = "none"
+    cfg.isize = "400_400"
     cfg.task = "rgb_denoise"
     cfg.nframes = 5
     cfg.frame_start = 0
     cfg.frame_end = cfg.frame_start + cfg.nframes - 1
     cfg.noise_version = "rgb_noise"
-    cfg.spatial_crop_size = 512
+    cfg.spatial_crop_size = 256
     cfg.spatial_crop_overlap = 0.1
     cfg.temporal_crop_size = 5
     cfg.temporal_crop_overlap = 1/5. # 3 of 5 frames
     cfg.in_attn_mode = "pd-pd-pd"
+    # del cfg['flow']
     print(cfg)
     cache_io.append_configs(exps,cfg) # merge the two
 
@@ -274,7 +305,7 @@ def main():
 
     # -- load results --
     records = cache.load_flat_records(exps)
-    print(records[['attn_mode','use_train','psnrs','timer_total']])
+    print(records[['wt','flow','psnrs','timer_total']])
     print(np.stack(records['psnrs'].to_numpy()).mean(1))
     exit(0)
 

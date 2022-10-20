@@ -158,7 +158,7 @@ def qkv_convert_state(state_dict,in_attn_modes,out_attn_modes,
     # nheads = [2**l for l in range(5)]
 
     # -- check equal --
-    print(in_attn_modes,out_attn_modes)
+    # print(in_attn_modes,out_attn_modes)
     if all([i==o for i,o in zip(in_attn_modes,out_attn_modes)]):
         new_state = {k[nskip:] if prefix in k else k: v for k,v in state_dict.items()}
         return new_state
