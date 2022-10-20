@@ -247,10 +247,10 @@ def main():
     cfg.nepochs = 200 # 5 epochs = 5 * 20 = 100
     cfg.input_proj_depth = 4
     cfg.output_proj_depth = 1
-    cfg.in_prod_attn = "pd-pd-pd"
     cfg.load_pretrained = True
     cfg.pretrained_prefix = "net."
     cfg.pretrained_path = "output/checkpoints/a40d6c5f-d612-42fe-9ecf-de0d93ab28ba-epoch=116.ckpt"
+    cfg.in_attn_mode = "pd-pd-pd"
     cfg.attn_reset = False
     cfg.nframes = 4
     cfg.flow=True
