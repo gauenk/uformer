@@ -24,6 +24,7 @@ class ConvBlock(nn.Module):
         flops = H*W*self.in_channel*self.out_channel*(3*3+1)+H*W*self.out_channel*self.out_channel*3*3
         return flops
 
+
 class UNet(nn.Module):
     def __init__(self, block=ConvBlock,dim=32):
         super(UNet, self).__init__()

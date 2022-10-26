@@ -263,7 +263,8 @@ def main():
     # exps = [exps[2]] # a success
     # exps = [exps[3]] # run0
     # exps = [exps[6]] # run0 [qk_frac]
-    exps = [exps[7]] # qk_frac (full)
+    # exps = [exps[8]] # qk_frac (full)
+    exps = [exps[9]] # qk_frac (full)
     # exps = [exps[-3]] # run0
     # exps = [exps[-2]] # run0
     # exps = [exps[-1]] # run0

@@ -22,7 +22,8 @@ def expand_embed_dim(embed_dim):
     return embed_dims
 
 def fields2blocks(attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
-                  nbwd,rbwd,exact,bs,qk_frac,embed_dim,freeze,nblocks=5):
+                  nbwd,rbwd,exact,bs,qk_frac,embed_dim,freeze,
+                  update_dists,nblocks=5):
     # return attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,nbwd,exact
     # order = ["attn_mode","k","ps","pt","ws","wt","dil",
     #          "stride0","stride1","nbwd","rbwd","exact","bs","freeze"]
@@ -31,6 +32,7 @@ def fields2blocks(attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
                           "stride1":stride1, "nbwd":nbwd, "rbwd": rbwd,
                           "exact":exact,"bs":bs,"qk_frac":qk_frac,
                           "embed_dim":embed_dim,"freeze":freeze,
+                          "update_dists":update_dists
     })
     order = list(fields.keys())
     outputs = []

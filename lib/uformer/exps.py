@@ -379,7 +379,7 @@ def exps_rgb_denoising_train(iexps=None):
     expl['qk_frac'] = [.25]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
-    # -- [exp f:6] -- ["qk_frac" modded ]
+    # -- [exp g:6] -- ["qk_frac" modded ]
     expl['in_attn_mode'] = ["w-w-w"]
     expl['num_heads'] = ['1-2-4']
     expl['attn_mode'] = ["pd-pd-pd"]
@@ -395,7 +395,7 @@ def exps_rgb_denoising_train(iexps=None):
     expl['qk_frac'] = [.25]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
-    # -- [exp g:7] --
+    # -- [exp h:7] --
     expl['num_heads'] = ['1-2-4-8-16']
     expl['attn_mode'] = ["pd-w-w-w-w"]
     expl['attn_reset'] = ["true"]
@@ -415,18 +415,38 @@ def exps_rgb_denoising_train(iexps=None):
     expl['rbwd'] = ['true']
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
-    # -- [exp h:8] --
+    # -- [exp i:8] --
+    expl['num_heads'] = ['1-2-4-8-16']
+    expl['attn_mode'] = ["pd-pd-w-w-w"]
+    expl['attn_reset'] = ["true"]
+    expl['embed_dim'] = ['24-24-32-32-32']
+    expl['qk_frac'] = [0.25]
+    expl['stride0'] = ['4-4-1-1-1']
+    expl['stride1'] = ['1-1-1-1-1']
+    expl['ws'] = ["29-15-9-9-9"]
+    expl['wt'] = ["0-0-0-0-0"]
+    expl['k'] = [64]
+    expl['ps'] = ['7-7-3-3-3']
+    expl['model_depths'] = ["1-2-8-8-2"]
+    expl['pretrained_path'] = [""]
+    expl['input_proj_depth'] = [1]
+    expl['output_proj_depth'] = [1]
+    expl['qk_frac'] = ['.25-.25-1-1-1']
+    expl['rbwd'] = ['true']
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp j:9] --
     expl['num_heads'] = ['1-2-4-8-16']
     expl['attn_mode'] = ["pd-pd-pd-w-w"]
     expl['attn_reset'] = ["true"]
     expl['embed_dim'] = ['24-24-24-32-32']
     expl['qk_frac'] = [0.25]
-    expl['stride0'] = ['4-2-1-1-1']
+    expl['stride0'] = ['4-4-2-1-1']
     expl['stride1'] = ['1-1-1-1-1']
     expl['ws'] = ["29-15-9-9-9"]
     expl['wt'] = ["0-0-0-0-0"]
     expl['k'] = [64]
-    expl['ps'] = ['7-5-3-3-3']
+    expl['ps'] = ['7-7-5-3-3']
     expl['model_depths'] = ["1-2-8-8-2"]
     expl['pretrained_path'] = [""]
     expl['input_proj_depth'] = [1]
@@ -511,14 +531,14 @@ def exps_rgb_denoising_test(iexps=None):
     expl['attn_reset'] = ["false"]
     expl['pretrained_prefix'] = ["net."]
 
-    # -- [exp a] step 0 --
+    # -- [exp a:0] step 0 --
     expl['pretrained_path'] = [""]
     expl['in_attn_mode'] = ["original"]
     expl['attn_mode'] = ["original"]
     expl['model_depths'] = ["none"]
     exps = cache_io.mesh_pydicts(expl) # create mesh
 
-    # -- [exp b] step 0 --
+    # -- [exp b:1] step 0 --
     del expl['freeze']# = ['false']
     expl['num_heads'] = ['1-2-4']
     expl['attn_mode'] = ["pd-pd-pd"]
@@ -535,7 +555,7 @@ def exps_rgb_denoising_test(iexps=None):
     expl['input_proj_depth'] = [4]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
-    # -- [exp c] step 0 --
+    # -- [exp c:2] step 0 --
     expl['input_proj_depth'] = [1]
     expl['pretrained_path'] = ["f69d3cc4-986f-4f55-b0b9-b5f90b3b5957-epoch=58-val_loss=1.03e-03.ckpt"]
     expl['in_attn_mode'] = ["w-w-w-w-w"]
@@ -551,7 +571,11 @@ def exps_rgb_denoising_test(iexps=None):
     expl['model_depths'] = ["2-2-2-2-2-2-2-2-2"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
-    # -- [exp d] --
+    # -- [exp d:3] step 0 -- ["skinny"]
+    expl['model_depths'] = ["2-2-4"]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp e:4] --
     expl['pretrained_path'] = ["f69d3cc4-986f-4f55-b0b9-b5f90b3b5957-epoch=58-val_loss=1.03e-03.ckpt"]
     expl['in_attn_mode'] = ["pd-pd-w-w-w"]
     expl['attn_mode'] = ["pd-pd-w-w-w"]
@@ -563,6 +587,121 @@ def exps_rgb_denoising_test(iexps=None):
     expl['k'] = ["64-64-0-0-0"]
     expl['ps'] = ["7-7-1-1-1"]
     exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp f:5] -- ["qk_frac"]
+    expl['in_attn_mode'] = ["w-w-w"]
+    expl['num_heads'] = ['1-2-4']
+    expl['attn_mode'] = ["pd-pd-pd"]
+    expl['attn_reset'] = ["t-t-t"]
+    expl['embed_dim'] = ["32-32-32"]
+    expl['stride0'] = ['4-2-1']
+    expl['stride1'] = ['1-1-1']
+    expl['ws'] = ["29-15-9"]
+    expl['wt'] = ["0-0-0"]
+    expl['k'] = [64]
+    expl['ps'] = [7]
+    expl['model_depths'] = ["2-4-4"]
+    expl['qk_frac'] = [.25]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp g:6] -- ["qk_frac" modded ]
+    expl['in_attn_mode'] = ["w-w-w"]
+    expl['num_heads'] = ['1-2-4']
+    expl['attn_mode'] = ["pd-pd-pd"]
+    expl['attn_reset'] = ["t-t-t"]
+    expl['embed_dim'] = ["24-24-24"]
+    expl['stride0'] = ['4-2-1']
+    expl['stride1'] = ['1-1-1']
+    expl['ws'] = ["25-15-9"]
+    expl['wt'] = ["0-0-0"]
+    expl['k'] = [64]
+    expl['ps'] = [7]
+    expl['model_depths'] = ["2-4-4"]
+    expl['qk_frac'] = [.25]
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp h:7] --
+    expl['num_heads'] = ['1-2-4-8-16']
+    expl['in_attn_mode'] = ["pd-w-w-w-w"]
+    expl['attn_mode'] = ["pd-w-w-w-w"]
+    expl['attn_reset'] = ["true"]
+    expl['embed_dim'] = ['24-32-32-32-32']
+    expl['qk_frac'] = [0.25]
+    expl['stride0'] = ['4-2-1-1-1']
+    expl['stride1'] = ['1-1-1-1-1']
+    expl['ws'] = ["29-15-9-9-9"]
+    expl['wt'] = ["0-0-0-0-0"]
+    expl['k'] = [64]
+    expl['ps'] = ['7-5-3-3-3']
+    expl['model_depths'] = ["1-2-8-8-2"]
+    expl['pretrained_path'] = [""]
+    expl['input_proj_depth'] = [1]
+    expl['output_proj_depth'] = [1]
+    expl['qk_frac'] = ['.25-1-1-1-1']
+    expl['rbwd'] = ['true']
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp i:8] --
+    expl['in_attn_mode'] = ["pd-pd-w-w-w"]
+    expl['num_heads'] = ['1-2-4-8-16']
+    expl['attn_mode'] = ["pd-pd-w-w-w"]
+    expl['attn_reset'] = ["true"]
+    expl['embed_dim'] = ['24-24-32-32-32']
+    expl['qk_frac'] = [0.25]
+    expl['stride0'] = ['4-4-1-1-1']
+    expl['stride1'] = ['1-1-1-1-1']
+    expl['ws'] = ["29-15-9-9-9"]
+    expl['wt'] = ["0-0-0-0-0"]
+    expl['k'] = [64]
+    expl['ps'] = ['7-7-3-3-3']
+    expl['model_depths'] = ["1-2-8-8-2"]
+    expl['pretrained_path'] = [""]
+    expl['input_proj_depth'] = [1]
+    expl['output_proj_depth'] = [1]
+    expl['qk_frac'] = ['.25-.25-1-1-1']
+    expl['rbwd'] = ['true']
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # expl['num_heads'] = ['1-2-4-8-16']
+    # expl['attn_mode'] = ["pd-pd-w-w-w"]
+    # expl['attn_reset'] = ["true"]
+    # expl['embed_dim'] = ['24-24-32-32-32']
+    # expl['qk_frac'] = [0.25]
+    # expl['stride0'] = ['4-4-1-1-1']
+    # expl['stride1'] = ['1-1-1-1-1']
+    # expl['ws'] = ["29-15-9-9-9"]
+    # expl['wt'] = ["0-0-0-0-0"]
+    # expl['k'] = [64]
+    # expl['ps'] = ['7-7-3-3-3']
+    # expl['model_depths'] = ["1-2-8-8-2"]
+    # expl['pretrained_path'] = ["7b204601-df7c-4e2c-939e-97186ea06c7"]
+    # expl['input_proj_depth'] = [1]
+    # expl['output_proj_depth'] = [1]
+    # expl['qk_frac'] = ['.25-.25-1-1-1']
+    # expl['rbwd'] = ['true']
+    # exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp j:9] --
+    expl['num_heads'] = ['1-2-4-8-16']
+    expl['in_attn_mode'] = ["pd-pd-pd-w-w"]
+    expl['attn_mode'] = ["pd-pd-pd-w-w"]
+    expl['attn_reset'] = ["true"]
+    expl['embed_dim'] = ['24-24-24-32-32']
+    expl['qk_frac'] = [0.25]
+    expl['stride0'] = ['4-4-2-1-1']
+    expl['stride1'] = ['1-1-1-1-1']
+    expl['ws'] = ["29-15-9-9-9"]
+    expl['wt'] = ["0-0-0-0-0"]
+    expl['k'] = [64]
+    expl['ps'] = ['7-7-5-3-3']
+    expl['model_depths'] = ["1-2-8-8-2"]
+    expl['pretrained_path'] = [""]
+    expl['input_proj_depth'] = [1]
+    expl['output_proj_depth'] = [1]
+    expl['qk_frac'] = ['.25-.25-.25-1-1']
+    expl['rbwd'] = ['true']
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
 
     return exps
 

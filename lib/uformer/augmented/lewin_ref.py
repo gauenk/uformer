@@ -3,6 +3,7 @@
 import torch as th
 import torch.nn as nn
 from einops import rearrange,repeat
+from functools import partial
 
 # -- extra deps --
 import math
@@ -24,13 +25,16 @@ def select_attn(attn_mode,sub_attn_mode):
         return select_window_attn(sub_attn_mode)
     elif attn_mode == "product":
         return select_prod_attn(sub_attn_mode)
+    elif attn_mode == "stream":
+        return select_prod_attn(sub_attn_mode,"stream")
     elif attn_mode == "l2":
         return select_l2_attn(sub_attn_mode)
     else:
         raise ValueError(f"Uknown window attn type [{attn_mode}]")
 
-def select_prod_attn(attn_mode):
-    return ProductAttention
+def select_prod_attn(sub_attn_mode):
+    print("sub_attn_mode: ",sub_attn_mode)
+    return partial(ProductAttention,search_fxn=sub_attn_mode)
 
 def select_l2_attn(sub_attn_mode):
     return L2Attention
@@ -52,7 +56,8 @@ class LeWinTransformerBlockRefactored(nn.Module):
                  token_projection='linear',token_mlp='leff',
                  modulator=False,cross_modulator=False,attn_mode="window_default",
                  ps=1,pt=1,k=-1,ws=8,wt=0,stride0=1,stride1=1,dil=1,
-                 nbwd=1,rbwd=False,exact=False,bs=-1,qk_frac=1.):
+                 nbwd=1,rbwd=False,exact=False,bs=-1,qk_frac=1.,
+                 update_dists=False):
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
@@ -97,7 +102,8 @@ class LeWinTransformerBlockRefactored(nn.Module):
                 proj_drop=drop, token_projection=token_projection,
                 k=k, ps=ps, pt=pt, ws=ws, wt=wt, dil=dil,
                 stride0=stride0, stride1=stride1,
-                nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs, qk_frac=qk_frac)
+                nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs, qk_frac=qk_frac,
+                update_dists=update_dists)
         else:
             raise ValueError(f"Uknown attention mode [{attn_mode}]")
 

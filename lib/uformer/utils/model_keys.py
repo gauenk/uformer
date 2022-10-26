@@ -26,6 +26,8 @@ def translate_freeze(_v):
 def translate_attn_mode(_v): # keys under "augmented/lewin_ref.py"
     if _v == "pd":
         v = "product_dnls"
+    elif _v == "pn":
+        v = "product_nat"
     elif _v == "ld":
         v = "l2_dnls"
     elif _v == "wd":

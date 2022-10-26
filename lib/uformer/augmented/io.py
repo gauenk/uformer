@@ -169,11 +169,6 @@ def parse_depths(depths):
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 def extract_model_io(cfg):
-    # -- used to be manual --
-    # fields = ["attn_mode","ws","wt","k","ps","pt","stride0",
-    #           "stride1","dil","nbwd","rbwd","exact","bs",
-    #           "noise_version","filter_by_attn"]
-
     # -- auto populated fields --
     fields = _fields
     model_cfg = {}

@@ -16,7 +16,8 @@ class BasicUformerLayer(nn.Module):
                  token_projection='linear',token_mlp='ffn', shift_flag=True,
                  modulator=False,cross_modulator=False,attn_mode="window_dnls",
                  ps=1,pt=1,k=-1,ws=8,wt=0,stride0=1,stride1=1,dil=1,
-                 nbwd=1,rbwd=False,exact=False,bs=-1,qk_frac=1.):
+                 nbwd=1,rbwd=False,exact=False,bs=-1,qk_frac=1.,
+                 update_dists=False):
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
@@ -40,7 +41,8 @@ class BasicUformerLayer(nn.Module):
                             modulator=modulator,cross_modulator=cross_modulator,
                             attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
                             wt=wt, dil=dil, stride0=stride0, stride1=stride1,
-                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs, qk_frac=qk_frac)
+                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs, qk_frac=qk_frac,
+                            update_dists=update_dists)
                 for i in range(depth)])
         else:
             self.blocks = nn.ModuleList([
@@ -57,7 +59,8 @@ class BasicUformerLayer(nn.Module):
                             modulator=modulator,cross_modulator=cross_modulator,
                             attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
                             wt=wt, dil=dil, stride0=stride0, stride1=stride1,
-                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs, qk_frac=qk_frac)
+                            nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs, qk_frac=qk_frac,
+                            update_dists=update_dists)
             for i in range(depth)])
 
     def extra_repr(self) -> str:
@@ -82,7 +85,8 @@ def create_basic_enc_layer(base,embed_dim,img_size,depths,num_heads,win_size,
                            attn_drop_rate,norm_layer,use_checkpoint,
                            token_projection,token_mlp,shift_flag,attn_mode,
                            k,ps,pt,ws,wt,dil,stride0,stride1,
-                           nbwd,rbwd,num_enc,exact,bs,drop_path,l):
+                           nbwd,rbwd,num_enc,exact,bs,update_dists,
+                           drop_path,l):
     mult = 2**l
     isize = img_size // 2**l
     nheads = num_heads[l]
@@ -106,7 +110,8 @@ def create_basic_enc_layer(base,embed_dim,img_size,depths,num_heads,win_size,
                               ws=ws[l], wt=wt[l], dil=dil[l],
                               stride0=stride0[l], stride1=stride1[l],
                               nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l],
-                              bs=bs[l], qk_frac=qk_frac[l])
+                              bs=bs[l], qk_frac=qk_frac[l],
+                              update_dists=update_dists[l])
     return layer
 
 def create_basic_conv_layer(base,embed_dim,img_size,depths,num_heads,win_size,
@@ -114,7 +119,8 @@ def create_basic_conv_layer(base,embed_dim,img_size,depths,num_heads,win_size,
                             attn_drop_rate,norm_layer,use_checkpoint,
                             token_projection,token_mlp,shift_flag,attn_mode,
                             k,ps,pt,ws,wt,dil,stride0,stride1,
-                            nbwd,rbwd,num_enc,exact,bs,drop_path,l):
+                            nbwd,rbwd,num_enc,exact,bs,update_dists,
+                            drop_path,l):
     nheads = num_heads[l]
     isize = img_size // 2**l
     layer = BasicUformerLayer(dim=embed_dim[l]*nheads,
@@ -135,7 +141,8 @@ def create_basic_conv_layer(base,embed_dim,img_size,depths,num_heads,win_size,
                               ws=ws[l], wt=wt[l], dil=dil[l],
                               stride0=stride0[l], stride1=stride1[l],
                               nbwd=nbwd[l], rbwd=rbwd[l], exact=exact[l],
-                              bs=bs[l], qk_frac=qk_frac[l])
+                              bs=bs[l], qk_frac=qk_frac[l],
+                              update_dists=update_dists[l])
     return layer
 
 def create_basic_dec_layer(base,embed_dim,img_size,depths,num_heads,win_size,
@@ -144,7 +151,8 @@ def create_basic_dec_layer(base,embed_dim,img_size,depths,num_heads,win_size,
                            token_projection,token_mlp,shift_flag,
                            modulator,cross_modulator,attn_mode,
                            k,ps,pt,ws,wt,dil,stride0,stride1,
-                           nbwd,rbwd,num_enc,exact,bs,drop_path,l):
+                           nbwd,rbwd,num_enc,exact,bs,update_dists,
+                           drop_path,l):
     # -- size --
     _l = (num_enc - l)
     lr = num_enc - l - 1
@@ -191,6 +199,7 @@ def create_basic_dec_layer(base,embed_dim,img_size,depths,num_heads,win_size,
                               ws=ws[lr], wt=wt[lr], dil=dil[lr],
                               stride0=stride0[lr], stride1=stride1[lr],
                               nbwd=nbwd[lr], rbwd=rbwd[lr], exact=exact[lr],
-                              bs=bs[lr], qk_frac=qk_frac[lr])
+                              bs=bs[lr], qk_frac=qk_frac[lr],
+                              update_dists=update_dists[lr])
     return layer
 

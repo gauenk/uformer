@@ -235,13 +235,14 @@ def main():
 
     # -- exp mesh --
     iexps = {"dname":dname,"vid_name":vid_names,"dset":dset}
-    # exps = exps_menu.exps_rgb_denoising(iexps,mode="test")
+    exps = exps_menu.exps_rgb_denoising(iexps,mode="test")
     # exps = [exps[0]]
     # exps = [exps[6]]
+    exps = [exps[8]]
     # iexps = {"dname":dname,"vid_name":vid_names,"dset":dset,"flow":flow,
     #          "ws":["25-15-9"]}
     # exps = exps_menu.exps_rgb_denoising_skinny_10_20(iexps)
-    exps = exps_menu.exps_rgb_denoising_qkfrac_10_20(iexps)
+    # exps = exps_menu.exps_rgb_denoising_qkfrac_10_20(iexps)
 
     # -- group with default --
     cfg = configs.default_cfg()

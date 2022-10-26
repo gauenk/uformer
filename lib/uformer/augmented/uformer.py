@@ -33,7 +33,7 @@ class Uformer(nn.Module):
                  attn_mode="default", k=-1, ps=1, pt=1, ws=8,
                  wt=0, dil=1, stride0=1, stride1=1, nbwd=1, rbwd=False,
                  exact=False, bs=-1, freeze=False,
-                 embed_dim=32, **kwargs):
+                 embed_dim=32, update_dists=False, **kwargs):
         super().__init__()
 
         # -- init --
@@ -69,10 +69,12 @@ class Uformer(nn.Module):
         # -- unroll for each module --
         out = fields2blocks(attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
                             nbwd,rbwd,exact,bs,qk_frac,embed_dim,freeze,
-                            nblocks=self.nblocks)
+                            update_dists,nblocks=self.nblocks)
         attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1 = out[:9]
-        nbwd,rbwd,exact,bs,qk_frac,embed_dim,freeze = out[9:]
+        nbwd,rbwd,exact,bs,qk_frac,embed_dim,freeze = out[9:16]
+        update_dists = out[16]
         self.freeze = freeze
+        self.update_dists = update_dists
         # print(embed_dim)
 
         # stochastic depth
@@ -106,14 +108,14 @@ class Uformer(nn.Module):
                                   attn_drop_rate,norm_layer,use_checkpoint,
                                   token_projection,token_mlp,shift_flag,
                                   attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
-                                  nbwd,rbwd,num_encs,exact,bs,enc_dpr)
+                                  nbwd,rbwd,num_encs,exact,bs,update_dists,enc_dpr)
         basic_conv_layer = partial(create_basic_conv_layer,BasicUformerLayer,embed_dim,
                                    img_size,depths_ref,num_heads_ref,win_size,
                                    self.mlp_ratio,qk_frac,qkv_bias,qk_scale,drop_rate,
                                    attn_drop_rate,norm_layer,use_checkpoint,
                                    token_projection,token_mlp,shift_flag,
                                    attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
-                                   nbwd,rbwd,num_encs,exact,bs,conv_dpr)
+                                   nbwd,rbwd,num_encs,exact,bs,update_dists,conv_dpr)
         basic_dec_layer = partial(create_basic_dec_layer,BasicUformerLayer,embed_dim,
                                   img_size,depths_ref,num_heads_ref,win_size,
                                   self.mlp_ratio,qk_frac,qkv_bias,qk_scale,drop_rate,
@@ -121,7 +123,7 @@ class Uformer(nn.Module):
                                   token_projection,token_mlp,
                                   shift_flag,modulator,cross_modulator,
                                   attn_mode,k,ps,pt,ws,wt,dil,stride0,stride1,
-                                  nbwd,rbwd,num_encs,exact,bs,dec_dpr)
+                                  nbwd,rbwd,num_encs,exact,bs,update_dists,dec_dpr)
         # -- info --
         # print("depths: ",depths)
         # print("drop_path[enc]: ",enc_dpr)
