@@ -7,10 +7,6 @@ pp = pprint.PrettyPrinter(indent=4)
 from functools import partial
 import pandas as pd
 
-# -- vision --
-import scipy.io
-from PIL import Image
-
 # -- linalg --
 import numpy as np
 import torch as th
@@ -23,20 +19,20 @@ from easydict import EasyDict as edict
 # -- data --
 import data_hub
 
-# -- optical flow --
-from uformer import flow
-
 # -- caching results --
 import cache_io
+
+# -- optical flow --
+from uformer import flow
 
 # -- network --
 import uformer
 import uformer.exps as exps_menu
 from uformer import configs
 from uformer import lightning
+from uformer.utils.model_utils import load_checkpoint
 from uformer.utils.misc import optional,rslice_pair,task_keys
 from uformer.utils.metrics import compute_psnrs,compute_ssims
-from uformer.utils.model_utils import load_checkpoint
 from uformer.utils.proc_utils import spatial_chop,temporal_chop,expand2square
 
 # -- display --
@@ -182,7 +178,7 @@ def run_exp(_cfg):
         noisy_ssims = compute_ssims(clean,noisy,div=imax).ravel()
         ssims = compute_ssims(clean,deno,div=imax).ravel()
         print(noisy_psnrs)
-        print(psnrs)
+        print(psnrs,psnrs.mean())
 
         # -- append results --
         results.noisy_psnrs.append(noisy_psnrs)
@@ -239,6 +235,8 @@ def main():
     # exps = [exps[0]]
     # exps = [exps[6]]
     exps = [exps[8]]
+    # exps = [exps[9]]
+
     # iexps = {"dname":dname,"vid_name":vid_names,"dset":dset,"flow":flow,
     #          "ws":["25-15-9"]}
     # exps = exps_menu.exps_rgb_denoising_skinny_10_20(iexps)
@@ -250,6 +248,9 @@ def main():
     # del cfg['uuid']
     # del cfg['dname']
     cfg.pretrained_prefix = "net."
+    # cfg.pretrained_path = "output/checkpoints/2b4d0a80-2521-4dff-9ffa-d163b46b987c-epoch=49.ckpt"
+    cfg.pretrained_path = "output/checkpoints/7b204601-df7c-4e2c-939e-97186ea06c7c-epoch=49-val_loss=9.09e-04.ckpt"
+    # cfg.pretrained_path = "./output/checkpoints/7b204601-df7c-4e2c-939e-97186ea06c7c-epoch=60.ckpt"
     # cfg.pretrained_path = "output/checkpoints/a40d6c5f-d612-42fe-9ecf-de0d93ab28ba-epoch=116.ckpt"
     # cfg.pretrained_path = "./output/checkpoints/ab14bd96-4b6d-41d8-bf90-e0ca682853b6-epoch=129.ckpt"
     # cfg.input_proj_depth = 4
@@ -269,7 +270,6 @@ def main():
     cfg.spatial_crop_overlap = 0.1
     cfg.temporal_crop_size = 5
     cfg.temporal_crop_overlap = 1/5. # 3 of 5 frames
-    cfg.in_attn_mode = "pd-pd-pd"
     # del cfg['flow']
     print(cfg)
     cache_io.append_configs(exps,cfg) # merge the two
@@ -287,7 +287,7 @@ def main():
 
         # -- logic --
         uuid = cache.get_uuid(exp) # assing ID to each Dict in Meshgrid
-        # cache.clear_exp(uuid)
+        cache.clear_exp(uuid)
         results = cache.load_exp(exp) # possibly load result
         if results is None: # check if no result
             exp.uuid = uuid

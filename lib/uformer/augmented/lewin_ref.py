@@ -33,7 +33,6 @@ def select_attn(attn_mode,sub_attn_mode):
         raise ValueError(f"Uknown window attn type [{attn_mode}]")
 
 def select_prod_attn(sub_attn_mode):
-    print("sub_attn_mode: ",sub_attn_mode)
     return partial(ProductAttention,search_fxn=sub_attn_mode)
 
 def select_l2_attn(sub_attn_mode):

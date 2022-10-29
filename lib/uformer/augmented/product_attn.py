@@ -80,6 +80,7 @@ class ProductAttention(nn.Module):
         # -- init search --
         self.search = self.init_search(search_fxn)
         self.wpsum = self.init_wpsum()
+        # self.fold = self.init_fold()
 
     def get_weights(self,module):
         weights = []
@@ -113,43 +114,48 @@ class ProductAttention(nn.Module):
         return q_patches,k_patches,v_patches
 
     def run_softmax(self,dists,mask,vshape):
-        if self.search.ws != 8: # don't match
-            dists = self.softmax(dists)
-        else:
-            rel_pos = self.get_rel_pos()
-            dists = self.search.window_attn_mod(dists,rel_pos,mask,vid.shape)
+        dists = self.softmax(dists)
+        # if self.search.ws != 8: # don't match
+        #     dists = self.softmax(dists)
+        # else:
+        #     rel_pos = self.get_rel_pos()
+        #     dists = self.search.window_attn_mod(dists,rel_pos,mask,vid.shape)
         dists = self.attn_drop(dists)
         dists = dists.contiguous()
         return dists
 
     def run_aggregation(self,v_vid,dists,inds):
-        B, T, -1, H, W = v_vid.shape
+        B, T, _, H, W = v_vid.shape
         stride0 = self.stride0
         ntotal = T*((H-1)//stride0+1)*((W-1)//stride0+1)
-        patches = self.wpsum_patches(v_vid,dists,inds)
+        patches = self.wpsum(v_vid,dists,inds)
         ps = patches.shape[-1]
         shape_str = 'b h (o n) c ph pw -> (b o ph pw) n (h c)'
         patches = rearrange(patches,shape_str,o=ntotal)
         return patches
 
     def run_fold(self,patches,vshape):
-        # -- prepare for folding --
+
+        # -- init folding --
         B,ps = vshape[0],self.ps
+        fold = self.init_fold(vshape,patches.device)
+
+        # -- reshape for folding --
         shape_str = '(b o ph pw) n c -> b (o n) 1 1 c ph pw'
         patches = rearrange(patches,shape_str,b=B,ph=ps,pw=ps)
         patches = patches.contiguous()
 
         # -- fold --
-        fold(x,0)
+        fold(patches,0)
 
         # -- unpack --
-        any_zero = th.any(th.abs(fold.zvid)<1e-10)
-        any_fold_nan = th.any(th.isnan(fold.vid))
         vid = fold.vid / fold.zvid
 
         # -- debug --
         any_nan = th.any(th.isnan(vid))
         if any_nan:
+            any_fold_nan = th.any(th.isnan(fold.vid))
+            any_zero = th.any(th.abs(fold.zvid)<1e-10)
             print("found a nan!: ",any_nan,any_zero,any_fold_nan)
             exit(0)
         return vid
@@ -160,20 +166,19 @@ class ProductAttention(nn.Module):
         # self.wpsum_patches = None
 
         # -- init --
-        fold = self.init_fold(vid.shape,vid.device)
         self.search.update_flow(vid,flows)
 
         # -- qkv --
-        q,k,v = self.get_qkv(vid)
+        q_vid,k_vid,v_vid = self.get_qkv(vid)
 
         # -- run search --
-        dists,inds = self.run_search(q,k)
+        dists,inds = self.run_search(q_vid,k_vid,state)
 
         # -- softmax --
         dists = self.run_softmax(dists,mask,vid.shape)
 
         # -- aggregate --
-        patches = self.run_aggregation(v,dists,inds)
+        patches = self.run_aggregation(v_vid,dists,inds)
 
         # -- post-process --
         patches = self.proj(patches)
@@ -203,11 +208,11 @@ class ProductAttention(nn.Module):
         dists,inds = None,None
         return dists,inds
 
-    def run_search(self,q_vid,k_vid):
+    def run_search(self,q_vid,k_vid,state):
         if state is None:
             # -- dnls search --
-            B, T, -1, H, W = q_vid.shape
-            stride0 = self.stride0
+            B, T, _, H, W = q_vid.shape
+            qstart,stride0 = 0,self.stride0
             ntotal = T*((H-1)//stride0+1)*((W-1)//stride0+1)
             dists,inds = self.search(q_vid,qstart,ntotal,k_vid)
         else:
@@ -232,7 +237,7 @@ class ProductAttention(nn.Module):
         if k == 0: k = -1
         ps      = self.ps
         pt      = self.pt
-        ws      = self.ws
+        ws      = min(self.ws,25)
         wt      = self.wt
         dil     = self.dil
         stride0 = self.stride0
