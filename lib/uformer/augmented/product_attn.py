@@ -13,7 +13,7 @@ from .proj import ConvProjection,LinearProjection,ConvProjectionNoReshape
 from .state import update_state,run_state_search
 
 # -- neighborhood attn --
-import nat
+# import nat
 
 # -- dnls --
 import dnls

@@ -455,6 +455,29 @@ def exps_rgb_denoising_train(iexps=None):
     expl['rbwd'] = ['true']
     exps += cache_io.mesh_pydicts(expl) # create mesh
 
+    # -- [exp l:10] --
+    expl['num_heads'] = ['1-2-4-8-16']
+    expl['in_attn_mode'] = ["pd-pd-pd-pd-pd"]
+    expl['attn_mode'] = ["pd-pd-pd-pd-pd"]
+    expl['attn_reset'] = ["true"]
+    expl['embed_dim'] = ['24-24-24-24-24']
+    expl['stride0'] = ['4-4-2-1-1']
+    expl['stride1'] = ['1-1-1-1-1']
+    expl['ws'] = ["29-15-9-9-9"]
+    # expl['ws'] = ["9-9-9-9-9"]
+    # expl['ws'] = ["5-5-5-5-5"]
+    expl['wt'] = ["0-0-0-0-0"]
+    expl['k'] = [7]
+    expl['ps'] = ['7-7-5-3-3']
+    expl['model_depths'] = ["1-2-8-8-2"]
+    expl['pretrained_path'] = [""]
+    expl['input_proj_depth'] = [1]
+    expl['output_proj_depth'] = [1]
+    expl['qk_frac'] = [.25]
+    # expl['qk_frac'] = ['.25-.25-.25-.25-.25']
+    expl['rbwd'] = ['true']
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
     return exps
 
 def exps_rgb_denoising_skinny_10_20(iexps=None):
@@ -699,6 +722,26 @@ def exps_rgb_denoising_test(iexps=None):
     expl['input_proj_depth'] = [1]
     expl['output_proj_depth'] = [1]
     expl['qk_frac'] = ['.25-.25-.25-1-1']
+    expl['rbwd'] = ['true']
+    exps += cache_io.mesh_pydicts(expl) # create mesh
+
+    # -- [exp l:10] --
+    expl['num_heads'] = ['1-2-4-8-16']
+    expl['in_attn_mode'] = ["pd-pd-pd-pd-pd"]
+    expl['attn_mode'] = ["pd-pd-pd-pd-pd"]
+    expl['attn_reset'] = ["true"]
+    expl['embed_dim'] = ['24-24-24-24-24']
+    expl['stride0'] = ['4-4-2-1-1']
+    expl['stride1'] = ['1-1-1-1-1']
+    expl['ws'] = ["7-7-7-7-7"]
+    expl['wt'] = ["0-0-0-0-0"]
+    expl['k'] = [64]
+    expl['ps'] = ['7-7-5-3-3']
+    expl['model_depths'] = ["1-2-8-8-2"]
+    expl['pretrained_path'] = [""]
+    expl['input_proj_depth'] = [1]
+    expl['output_proj_depth'] = [1]
+    expl['qk_frac'] = ['.25-.25-.25-0.25-0.25']
     expl['rbwd'] = ['true']
     exps += cache_io.mesh_pydicts(expl) # create mesh
 

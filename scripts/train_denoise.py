@@ -231,7 +231,7 @@ def main():
     # -- trainig --
     cfg.ndevices = 1
     cfg.accumulate_grad_batches = 1
-    cfg.batch_size_tr = 4
+    cfg.batch_size_tr = 32
     cfg.lr_init = 2e-4
     cfg.weight_decay = 2e-3
     cfg.warmup_epochs = 5
@@ -242,7 +242,8 @@ def main():
     cfg.rbwd = "true"
     # cfg.rbwd = "false"
     # cfg.limit_train_batches = 0.25 # with w
-    cfg.limit_train_batches = 0.05 # with pd
+    cfg.limit_train_batches = 0.25 # with pd
+    # cfg.limit_train_batches = 0.05 # with pd
     # cfg.limit_train_batches = 0.025 # with pd
     cfg.nepochs = 200 # 5 epochs = 5 * 20 = 100
     cfg.input_proj_depth = 1
@@ -260,11 +261,12 @@ def main():
 
     # -- pick an exp --
     # exps = [exps[0]] # run0
+    exps = [exps[10]] # run0
     # exps = [exps[2]] # a success
     # exps = [exps[3]] # run0
     # exps = [exps[6]] # run0 [qk_frac]
     # exps = [exps[8]] # qk_frac (full)
-    exps = [exps[9]] # qk_frac (full)
+    # exps = [exps[9]] # qk_frac (full)
     # exps = [exps[-3]] # run0
     # exps = [exps[-2]] # run0
     # exps = [exps[-1]] # run0
