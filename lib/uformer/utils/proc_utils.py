@@ -13,11 +13,11 @@ def _vprint(verbose,*args,**kwargs):
         print(*args,**kwargs)
 
 def expand2square(timg,factor=16.0):
-    b, t, _, h, w = timg.size()
+    b, t, c, h, w = timg.size()
 
     X = int(math.ceil(max(h,w)/float(factor))*factor)
 
-    img = th.zeros(b,t,3,X,X).type_as(timg) # 3, h,w
+    img = th.zeros(b,t,c,X,X).type_as(timg) # 3, h,w
     mask = th.zeros(b,t,1,X,X).type_as(timg)
 
     # print(img.size(),mask.size())

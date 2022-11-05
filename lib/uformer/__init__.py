@@ -7,9 +7,14 @@ from . import configs
 from . import exps
 from . import flow
 
+# -- copmaring search (swin) --
+from . import search
+from .search import init_search,extract_search_config
+
 # -- for loading model --
 from .utils.misc import optional
 from .augmented import extract_model_io # set input params
+from .augmented import extract_model_io as extract_model_config # aka
 
 def load_model(*args,**kwargs):
     attn_mode = optional(kwargs,"attn_mode","product_dnls")

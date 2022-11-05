@@ -230,8 +230,8 @@ def main():
 
     # -- trainig --
     cfg.ndevices = 1
-    cfg.accumulate_grad_batches = 1
-    cfg.batch_size_tr = 32
+    cfg.accumulate_grad_batches = 2
+    cfg.batch_size_tr = 16
     cfg.lr_init = 2e-4
     cfg.weight_decay = 2e-3
     cfg.warmup_epochs = 5
@@ -261,7 +261,8 @@ def main():
 
     # -- pick an exp --
     # exps = [exps[0]] # run0
-    exps = [exps[10]] # run0
+    # exps = [exps[10]] # run0
+    exps = [exps[11]] # run0
     # exps = [exps[2]] # a success
     # exps = [exps[3]] # run0
     # exps = [exps[6]] # run0 [qk_frac]

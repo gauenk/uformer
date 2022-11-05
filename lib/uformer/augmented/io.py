@@ -177,8 +177,6 @@ def extract_model_io(cfg):
             model_cfg[field] = cfg[field]
     return model_cfg
 
-
-
 # -- run to populate "_fields" --
 load_model(__init=True)
 
