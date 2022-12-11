@@ -72,7 +72,7 @@ def load_model(*args,**kwargs):
     ws = optional(kwargs,'ws',8)
     wt = optional(kwargs,'wt',0)
     nbwd = optional(kwargs,'nbwd',1)
-    rbwd = optional(kwargs,'rbwd',False)
+    rbwd = optional(kwargs,'rbwd',True)
     exact = optional(kwargs,'exact',False)
     bs = optional(kwargs,'bs',-1)
     freeze = optional(kwargs,'freeze',False)

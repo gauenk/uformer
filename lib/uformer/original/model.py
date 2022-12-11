@@ -438,13 +438,13 @@ class LinearProjection(nn.Module):
         q = self.to_q(x).reshape(B_, N, 1, self.heads, C // self.heads).permute(2, 0, 3, 1, 4)
         kv = self.to_kv(attn_kv).reshape(B_, N_kv, 2, self.heads, C // self.heads).permute(2, 0, 3, 1, 4)
         q = q[0]
-        k, v = kv[0], kv[1] 
+        k, v = kv[0], kv[1]
         return q,k,v
 
-    def flops(self, q_L, kv_L=None): 
+    def flops(self, q_L, kv_L=None):
         kv_L = kv_L or q_L
         flops = q_L*self.dim*self.inner_dim+kv_L*self.dim*self.inner_dim*2
-        return flops 
+        return flops
 
 
 #########################################
@@ -493,10 +493,15 @@ class WindowAttention(nn.Module):
 
     def forward(self, x, attn_kv=None, mask=None):
         B_, N, C = x.shape
+        # x.shape = (L,64,embed_dim*num_heads)
         # print("x.shape: ",x.shape)
         q, k, v = self.qkv(x,attn_kv)
         q = q * self.scale
+        # q.shape = (L,num_heads,64,embed_dim)
+        # print("q.shape: ",q.shape,self.num_heads)
         attn = (q @ k.transpose(-2, -1))
+        # attn.shape = (L,num_heads,64,embed_dim)
+        # print("attn.shape: ",attn.shape,self.num_heads)
 
         relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-1)].view(
             self.win_size[0] * self.win_size[1], self.win_size[0] * self.win_size[1], -1)  # Wh*Ww,Wh*Ww,nH
@@ -555,9 +560,9 @@ class Attention(nn.Module):
         self.num_heads = num_heads
         head_dim = dim // num_heads
         self.scale = qk_scale or head_dim ** -0.5
-            
+
         self.qkv = LinearProjection(dim,num_heads,dim//num_heads,bias=qkv_bias)
-        
+
         self.token_projection = token_projection
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(dim, dim)
@@ -783,7 +788,8 @@ class InputProj(nn.Module):
     def __init__(self, in_channel=3, out_channel=64, kernel_size=3, stride=1, norm_layer=None,act_layer=nn.LeakyReLU):
         super().__init__()
         self.proj = nn.Sequential(
-            nn.Conv2d(in_channel, out_channel, kernel_size=3, stride=stride, padding=kernel_size//2),
+            nn.Conv2d(in_channel, out_channel, kernel_size=3,
+                      stride=stride, padding=kernel_size//2),
             act_layer(inplace=True)
         )
         if norm_layer is not None:

@@ -6,6 +6,7 @@ from . import warmup_scheduler
 from . import configs
 from . import exps
 from . import flow
+from . import lightning
 
 # -- copmaring search (swin) --
 from . import search

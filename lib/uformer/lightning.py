@@ -19,7 +19,8 @@ from easydict import EasyDict as edict
 import data_hub
 
 # -- optical flow --
-from uformer import flow
+# from uformer import flow
+from dev_basics import flow
 
 # -- caching results --
 import cache_io
@@ -89,7 +90,7 @@ class UformerLit(pl.LightningModule):
         # -- set logger --
         self.gen_loger = logging.getLogger('lightning')
         self.gen_loger.setLevel("NOTSET")
-        self.attn_mode = model_cfg['attn_mode']
+        # self.attn_mode = "product"#model_cfg['attn_mode']
 
         # -- manual optim --
         # self.automatic_optimization = False
@@ -100,28 +101,30 @@ class UformerLit(pl.LightningModule):
     def forward(self,vid,clamp=False):
 
         # -- pick if prod --
-        use_prod = not("_" in self.attn_mode)
-        if not(use_prod):
-            main,sub = self.attn_mode.split("_")
-            use_prod = main == "product"
-
+        # use_prod = not("_" in self.attn_mode)
+        # if not(use_prod):
+        #     # main,sub = self.attn_mode.split("_")
+        #     main = self.attn_mode
+        #     use_prod = main == "product"
         # -- fwd pass --
-        if use_prod:
-            return self.forward_product(vid,clamp=clamp)
-        else:
-            return self.forward_default(vid,clamp=clamp)
+        return self.forward_default(vid,clamp=clamp)
+        # if use_prod:
+        #     return self.forward_product(vid,clamp=clamp)
+        # else:
+        #     return self.forward_default(vid,clamp=clamp)
 
-    def forward_product(self,vid,clamp=False):
-        flows = self._get_flow_batch(vid)
-        # print("vid.shape: ",vid.shape)
-        # print("flows.fflow.shape: ",flows.fflow.shape)
-        deno = self.net(vid,flows=flows)
-        if clamp:
-            deno = th.clamp(deno,0.,1.)
-        return deno
+    # def forward_product(self,vid,clamp=False):
+    #     flows = self._get_flow_batch(vid)
+    #     # print("vid.shape: ",vid.shape)
+    #     # print("flows.fflow.shape: ",flows.fflow.shape)
+    #     deno = self.net(vid,flows=flows)
+    #     if clamp:
+    #         deno = th.clamp(deno,0.,1.)
+    #     return deno
 
     def forward_default(self,vid,clamp=False):
-        flows = self._get_flow_batch(vid)
+        flows = flow.orun(vid,self.flow)
+        # flows = self._get_flow_batch(vid)
         # model = self._model[0]
         # model.model = self.net
         model = self.net
@@ -133,29 +136,16 @@ class UformerLit(pl.LightningModule):
             deno = th.clamp(deno,0.,1.)
         return deno
 
-    def _get_flow_batch(self,vid):
-        flows = edict()
-        flows.fflow = []
-        flows.bflow = []
-        B = vid.shape[0]
-        for b in range(B):
-            flows_b = self._get_flow(vid[b])
-            flows.fflow.append(flows_b.fflow)
-            flows.bflow.append(flows_b.bflow)
-        flows.fflow = th.stack(flows.fflow)
-        flows.bflow = th.stack(flows.bflow)
-        return flows
-
-    def _get_flow(self,vid):
-        if self.flow == True:
-            sigma_est = flow.est_sigma(vid)
-            flows = flow.run(vid,sigma_est)
-        else:
-            t,c,h,w = vid.shape
-            zflows = th.zeros((t,2,h,w)).to(self.device)
-            flows = edict()
-            flows.fflow,flows.bflow = zflows,zflows
-        return flows
+    # def _get_flow(self,vid):
+    #     if self.flow == True:
+    #         sigma_est = flow.est_sigma(vid)
+    #         flows = flow.run(vid,sigma_est)
+    #     else:
+    #         t,c,h,w = vid.shape
+    #         zflows = th.zeros((t,2,h,w)).to(self.device)
+    #         flows = edict()
+    #         flows.fflow,flows.bflow = zflows,zflows
+    #     return flows
 
     def get_default_optim(self):
         optim = th.optim.AdamW(self.parameters(),
@@ -357,7 +347,8 @@ class UformerLit(pl.LightningModule):
         # print("noisy.shape: ",noisy.shape)
 
         # -- foward --
-        deno = self.forward(noisy,False)
+        # print("noisy.shape: ",noisy.shape)
+        deno = self.forward(noisy,None)
         # print("deno.shape: ",deno.shape)
 
         # -- save a few --
