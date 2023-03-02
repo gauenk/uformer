@@ -16,6 +16,11 @@ from .search import init_search,extract_search_config
 from .utils.misc import optional
 from .augmented import extract_model_io # set input params
 from .augmented import extract_model_io as extract_model_config # aka
+extract_config = extract_model_config # yet another name. standardization in your future.
+
+# -- don't use this lightning. --
+from dev_basics import lightning
+
 
 def load_model(*args,**kwargs):
     attn_mode = optional(kwargs,"attn_mode","product_dnls")

@@ -257,6 +257,8 @@ class NonLocalAttention(nn.Module):
             dists,inds = self.search(q_vid,k_vid)
         else:
             dists,inds = self.search(q_vid,k_vid,flows.fflow,flows.bflow)
+        dists = dists.contiguous()
+        inds = inds.contiguous()
         self.update_state(state,dists,inds,q_vid.shape)
         self.timer.sync_stop("search")
         return dists,inds

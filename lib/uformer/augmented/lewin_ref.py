@@ -99,7 +99,7 @@ class LeWinTransformerBlockRefactored(nn.Module):
         use_state_update = sub_attn_mode in ["first","refine"]
         if sub_attn_mode in ["first","refine"] and (layer_index > 0):
             sub_attn_mode = "refine"
-        elif sub_attn_mode in ["full","first","refine"]:
+        elif sub_attn_mode in ["full","first","refine","exact"]:
             sub_attn_mode = "nls"
         attn_block = select_attn(main_attn_mode,sub_attn_mode)
         # main_attn_mode = main_attn_mode == "window"
