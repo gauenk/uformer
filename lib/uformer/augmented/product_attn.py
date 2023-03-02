@@ -166,7 +166,9 @@ class ProductAttention(nn.Module):
         # self.wpsum_patches = None
 
         # -- init --
-        self.search.update_flow(vid,flows)
+        # print("vid.shape: ",vid.shape)
+        # print("flows.fflow.shape: ",flows.fflow.shape)
+        self.search.update_flow(vid.shape,vid.device,flows)
 
         # -- qkv --
         q_vid,k_vid,v_vid = self.get_qkv(vid)

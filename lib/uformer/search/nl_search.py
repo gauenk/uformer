@@ -15,10 +15,14 @@ def fold(windows,ws,B,H,W):
     x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(B, H, W, -1)
     return x
 
+def windows_to_qkv(windows,nheads):
+    L,N,C = windows.shape
+    q = rearrange(windows,'l n (c h) -> l h n c',h=nheads)
+    return q,q,q
 
 class NLSearch():
 
-    def __init__(self,k=7, ps=7, ws=10, nheads=1,
+    def __init__(self,k=7, ps=7, ws=8, nheads=1,
                  stride0=4, stride1=1):
         self.k = k
         self.ps = ps
@@ -29,14 +33,31 @@ class NLSearch():
 
     def __call__(self,vid,foo=0,bar=0):
         B,T,C,H,W = vid.shape
-        print("vid.shape: ",vid.shape)
         vid = expand2square(vid,self.ws)[0]
-        print("vid.shape: ",vid.shape)
         vid = rearrange(vid,'b t c h w -> (b t) h w c')
-        print("vid.shape: ",vid.shape)
         windows = unfold(vid,self.ws)
-        q,k,v = windows,windows,windows
+        q,k,v = windows_to_qkv(windows,self.nheads)
         attn = (q @ k.transpose(-2, -1))
         inds = th.zeros_like(attn).type(th.int32)
-        print("attn.shape: ",attn.shape)
         return attn,inds
+
+    def flops(self,B,C,H,W):
+
+        #
+        # -- init --
+        #
+        ws = self.ws
+        assert (H % ws == 0) and (W % ws == 0)
+        N = ws**2
+        nW = H*W/N
+
+        #
+        # -- compute --
+        #
+
+        # attn = (q @ k.transpose(-2, -1))
+        nflops = nW * self.nheads * N * (C // self.nheads) * N
+        #  x = (attn @ v)
+        nflops += nW * self.nheads * N * N * (C // self.nheads)
+        nflops = B * nflops
+        return nflops

@@ -270,6 +270,12 @@ def main():
     cfg.spatial_crop_overlap = 0.1
     cfg.temporal_crop_size = 5
     cfg.temporal_crop_overlap = 1/5. # 3 of 5 frames
+
+    # -- [delete] me] --
+    cfg.attn_mode = "original"
+    cfg.embed_dim = 32
+    cfg.load_pretrained = False
+
     # del cfg['flow']
     print(cfg)
     cache_io.append_configs(exps,cfg) # merge the two

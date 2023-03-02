@@ -67,3 +67,28 @@ class GpuRecord():
         self.mems.append(mem_res)
         self.mems_alloc.append(mem_alloc)
 
+class MemIt():
+    """
+
+    Support using GpuRecord and "with"
+
+    memer = GpuRecord()
+    with MemIt(memer,"name"):
+       ...
+
+    """
+
+    def __init__(self,memer,name):
+        self.memer = memer
+        self.name = name
+
+    def __enter__(self):
+        """Start a new timer as a context manager"""
+        self.memer.reset()
+        return self
+
+    def __exit__(self, *exc_info):
+        """Stop the context manager timer"""
+        self.memer.snap(self.name)
+
+
