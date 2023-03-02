@@ -29,75 +29,79 @@ def optional_full(init,pydict,field,default):
     return _optional(pydict,field,default)
 
 # -- load model --
-def load_model(*args,**kwargs):
+# def load_model(*args,**kwargs):
+def load_model(cfg):
 
     # -- allows for all keys to be aggregated at init --
-    init = _optional(kwargs,'__init',False) # purposefully weird key
+    init = _optional(cfg,'__init',False) # purposefully weird key
     optional = partial(optional_full,init)
 
     # -- defaults changed by noise version --
-    noise_version = optional(kwargs,'noise_version',"noise")
+    noise_version = optional(cfg,'noise_version',"noise")
     default_modulator = True
-    default_depth = [1, 2, 8, 8, 2]
+    # default_depth = [1, 2, 8, 8, 2]
+    default_depth = [2, 2, 2, 2, 2]
 
     # -- get cfg --
-    nchnls = optional(kwargs,'nchnls',3)
-    input_size = optional(kwargs,'input_size',128)
-    depths = parse_depths(optional(kwargs,'model_depths',default_depth))
-    num_heads = parse_heads(optional(kwargs,'num_heads',[1,2,4,8,16]))
-    device = optional(kwargs,'device','cuda:0')
+    nchnls = optional(cfg,'nchnls',3)
+    input_size = optional(cfg,'input_size',128)
+    depths = parse_depths(optional(cfg,'model_depths',default_depth))
+    num_heads = parse_heads(optional(cfg,'num_heads',[1,2,4,8,16]))
+    device = optional(cfg,'device','cuda:0')
     assert len(depths) == len(num_heads),"Must match length."
     nblocks = len(depths)
 
     # -- other configs --
-    embed_dim = optional(kwargs,'embed_dim',32)
-    win_size = optional(kwargs,'win_size',8)
-    mlp_ratio = optional(kwargs,'mlp_ratio',4)
-    qkv_bias = optional(kwargs,'qkv_bias',True)
-    token_projection = optional(kwargs,'token_projection','linear')
-    token_mlp = optional(kwargs,'token_mlp','leff')
-    modulator = optional(kwargs,'modulator',default_modulator)
-    cross_modulator = optional(kwargs,'cross_modulator',False)
-    dd_in = optional(kwargs,'dd_in',3)
-    shift_flag = optional(kwargs,'shift_flag',True)
+    embed_dim = optional(cfg,'embed_dim',32)
+    win_size = optional(cfg,'win_size',8)
+    mlp_ratio = optional(cfg,'mlp_ratio',4)
+    qkv_bias = optional(cfg,'qkv_bias',True)
+    token_projection = optional(cfg,'token_projection','linear')
+    token_mlp = optional(cfg,'token_mlp','leff')
+    modulator = optional(cfg,'modulator',default_modulator)
+    cross_modulator = optional(cfg,'cross_modulator',False)
+    dd_in = optional(cfg,'dd_in',3)
+    shift_flag = optional(cfg,'shift_flag',True)
 
     # -- relevant configs --
-    attn_mode = optional(kwargs,'attn_mode',"window_dnls")
-    in_attn_mode = optional(kwargs,'in_attn_mode',attn_mode)
-    k = optional(kwargs,'k',-1)
-    ps = optional(kwargs,'ps',1)
-    pt = optional(kwargs,'pt',1)
-    stride0 = optional(kwargs,'stride0',1)
-    stride1 = optional(kwargs,'stride1',1)
-    ws = optional(kwargs,'ws',8)
-    wt = optional(kwargs,'wt',0)
-    nbwd = optional(kwargs,'nbwd',1)
-    rbwd = optional(kwargs,'rbwd',False)
-    exact = optional(kwargs,'exact',False)
-    bs = optional(kwargs,'bs',-1)
-    freeze = optional(kwargs,'freeze',False)
-    input_proj_depth = optional(kwargs,"input_proj_depth",1)
-    output_proj_depth = optional(kwargs,"output_proj_depth",1)
-    qk_frac = optional(kwargs,'qk_frac',1.)
+    # attn_mode = optional(cfg,'attn_mode',"window_dnls")
+    attn_mode = optional(cfg,'attn_mode',"nls_full")
+    in_attn_mode = optional(cfg,'in_attn_mode',attn_mode)
+    k = optional(cfg,'k',-1)
+    ps = optional(cfg,'ps',1)
+    pt = optional(cfg,'pt',1)
+    stride0 = optional(cfg,'stride0',1)
+    stride1 = optional(cfg,'stride1',1)
+    ws = optional(cfg,'ws',8)
+    wt = optional(cfg,'wt',0)
+    nbwd = optional(cfg,'nbwd',1)
+    rbwd = optional(cfg,'rbwd',False)
+    exact = optional(cfg,'exact',False)
+    bs = optional(cfg,'bs',-1)
+    freeze = optional(cfg,'freeze',False)
+    input_proj_depth = optional(cfg,"input_proj_depth",1)
+    output_proj_depth = optional(cfg,"output_proj_depth",1)
+    qk_frac = optional(cfg,'qk_frac',1.)
 
     # -- modify network after load --
-    filter_by_attn_pre = optional(kwargs,"filter_by_attn_pre",False)
-    filter_by_attn_post = optional(kwargs,"filter_by_attn_post",False)
-    load_pretrained = optional(kwargs,"load_pretrained",True)
-    pretrained_path = optional(kwargs,"pretrained_path","")
-    pretrained_prefix = optional(kwargs,"pretrained_prefix","module.")
-    pretrained_qkv = optional(kwargs,"pretrained_qkv","lin2conv")
+    filter_by_attn_pre = optional(cfg,"filter_by_attn_pre",False)
+    filter_by_attn_post = optional(cfg,"filter_by_attn_post",False)
+    load_pretrained = optional(cfg,"load_pretrained",False)
+    pretrained_path = optional(cfg,"pretrained_path","")
+    pretrained_prefix = optional(cfg,"pretrained_prefix","module.")
+    pretrained_qkv = optional(cfg,"pretrained_qkv","lin2conv")
 
     # -- load configs --
-    reset_qkv = optional(kwargs,"reset_qkv",False)
-    attn_reset = optional(kwargs,"attn_reset",False)
-    strict_model_load = optional(kwargs,"strict_model_load",True)
-    skip_mismatch_model_load = optional(kwargs,"skip_mismatch_model_load",False)
+    reset_qkv = optional(cfg,"reset_qkv",False)
+    attn_reset = optional(cfg,"attn_reset",False)
+    strict_model_load = optional(cfg,"strict_model_load",True)
+    skip_mismatch_model_load = optional(cfg,"skip_mismatch_model_load",False)
 
     # -- break here if init --
     if init: return
 
     # -- init model --
+    # print(ws,wt,attn_mode)
     model = Uformer(img_size=input_size, in_chans=nchnls,
                     input_proj_depth=input_proj_depth,
                     output_proj_depth=output_proj_depth,
@@ -178,6 +182,6 @@ def extract_model_io(cfg):
     return model_cfg
 
 # -- run to populate "_fields" --
-load_model(__init=True)
+load_model({"__init":True})
 
 

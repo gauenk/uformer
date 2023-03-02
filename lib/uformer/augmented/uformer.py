@@ -192,8 +192,9 @@ class Uformer(nn.Module):
     def no_weight_decay_keywords(self):
         return {'relative_position_bias_table'}
 
-    def forward(self, x, mask=None, flows=None, states=None):
+    def forward(self, x, flows=None, states=None):
 
+        mask=None
         # -- Input Projection --
         b,t,c,h,w = x.shape
         y = self.input_proj(x)
@@ -204,14 +205,15 @@ class Uformer(nn.Module):
 
         # -- init states --
         if states is None:
-            states = [None for _ in range(2*num_encs+1)]
+            # states = [None for _ in range(2*num_encs+1)]
+            states = [None,None]
 
         # -- enc --
         encs = []
         for i,(enc,down) in enumerate(self.enc_list):
             _h,_w = h//(2**i),w//(2**i)
             flows_i = rescale_flows(flows,_h,_w)
-            z = enc(z,_h,_w,mask=mask,flows=flows_i,state=states[i])
+            z = enc(z,_h,_w,mask=mask,flows=flows_i,state=states)
             encs.append(z)
             z = down(z)
 
@@ -219,7 +221,7 @@ class Uformer(nn.Module):
         mod = 2**num_encs
         _h,_w = h//mod,w//mod
         flows_i = rescale_flows(flows,_h,_w)
-        z = self.conv(z,_h,_w,mask=mask,flows=flows_i)
+        z = self.conv(z,_h,_w,mask=mask,flows=flows_i,state=states)
         del flows_i
 
         # -- dec --
@@ -230,7 +232,7 @@ class Uformer(nn.Module):
             z = up(z)
             z = th.cat([z,encs[i_rev]],-3)
             # print("z.shape: ",z.shape)
-            z = dec(z,_h,_w,mask=mask,flows=flows_i,state=states[i+num_encs])
+            z = dec(z,_h,_w,mask=mask,flows=flows_i,state=states)
 
         # -- Output Projection --
         y = self.output_proj(z)

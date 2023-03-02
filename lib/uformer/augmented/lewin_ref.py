@@ -17,20 +17,26 @@ from .window_attn import WindowAttention
 from .window_attn_ref import WindowAttentionRefactored
 from .window_attn_dnls import WindowAttentionDnls
 from .window_utils import window_partition,window_reverse
-from .product_attn import ProductAttention
-from .l2_attn import L2Attention
+# from .product_attn import ProductAttention
+# from .l2_attn import L2Attention
+from .nl_attn import NonLocalAttention
 
 def select_attn(attn_mode,sub_attn_mode):
     if attn_mode == "window":
         return select_window_attn(sub_attn_mode)
-    elif attn_mode == "product":
-        return select_prod_attn(sub_attn_mode)
+    elif attn_mode in ["product","l2","refine","nls","exact"]:
+        return select_nls_attn(sub_attn_mode)
+        # return NonLocalAttention
+        # select_prod_attn(sub_attn_mode)
     elif attn_mode == "stream":
         return select_prod_attn(sub_attn_mode,"stream")
-    elif attn_mode == "l2":
-        return select_l2_attn(sub_attn_mode)
+    # elif attn_mode == "l2":
+    #     return select_l2_attn(sub_attn_mode)
     else:
         raise ValueError(f"Uknown window attn type [{attn_mode}]")
+
+def select_nls_attn(sub_attn_mode):
+    return partial(NonLocalAttention,search_fxn=sub_attn_mode)
 
 def select_prod_attn(sub_attn_mode):
     return partial(ProductAttention,search_fxn=sub_attn_mode)
@@ -54,9 +60,9 @@ class LeWinTransformerBlockRefactored(nn.Module):
                  drop_path=0., act_layer=nn.GELU,norm_layer=nn.LayerNorm,
                  token_projection='linear',token_mlp='leff',
                  modulator=False,cross_modulator=False,attn_mode="window_default",
-                 ps=1,pt=1,k=-1,ws=8,wt=0,stride0=1,stride1=1,dil=1,
+                 ps=1,pt=1,k=-1,ws=8,wt=0,stride0=1,stride1=1,dil=1,wr=1,kr=1.,
                  nbwd=1,rbwd=False,exact=False,bs=-1,qk_frac=1.,
-                 update_dists=False):
+                 update_dists=False,layer_index=-1):
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
@@ -77,8 +83,10 @@ class LeWinTransformerBlockRefactored(nn.Module):
 
         if cross_modulator:
             self.cross_modulator = nn.Embedding(win_size*win_size, dim) # cross_modulator
-            self.cross_attn = Attention(dim,num_heads,qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop, proj_drop=drop,
-                    token_projection=token_projection,)
+            self.cross_attn = Attention(dim,num_heads,qkv_bias=qkv_bias,
+                                        qk_scale=qk_scale, attn_drop=attn_drop,
+                                        proj_drop=drop,
+                                        token_projection=token_projection,)
             self.norm_cross = norm_layer(dim)
         else:
             self.cross_modulator = None
@@ -88,23 +96,27 @@ class LeWinTransformerBlockRefactored(nn.Module):
 
         self.attn_mode = attn_mode
         main_attn_mode,sub_attn_mode = attn_mode.split("_")
+        use_state_update = sub_attn_mode in ["first","refine"]
+        if sub_attn_mode in ["first","refine"] and (layer_index > 0):
+            sub_attn_mode = "refine"
+        elif sub_attn_mode in ["full","first","refine"]:
+            sub_attn_mode = "nls"
         attn_block = select_attn(main_attn_mode,sub_attn_mode)
+        # main_attn_mode = main_attn_mode == "window"
         if main_attn_mode == "window":
             self.attn = attn_block(
                 dim, win_size=to_2tuple(self.win_size), num_heads=num_heads,
                 qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop,
                 proj_drop=drop, token_projection=token_projection)
-        elif main_attn_mode in ["product","l2"]:
+        else:
             self.attn = attn_block(
                 dim, win_size=to_2tuple(self.win_size), num_heads=num_heads,
                 qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop,
                 proj_drop=drop, token_projection=token_projection,
                 k=k, ps=ps, pt=pt, ws=ws, wt=wt, dil=dil,
-                stride0=stride0, stride1=stride1,
+                stride0=stride0, stride1=stride1, wr=wr, kr=kr,
                 nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs, qk_frac=qk_frac,
-                update_dists=update_dists)
-        else:
-            raise ValueError(f"Uknown attention mode [{attn_mode}]")
+                update_dists=update_dists,use_state_update=use_state_update)
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         self.norm2 = norm_layer(dim)
@@ -211,7 +223,7 @@ class LeWinTransformerBlockRefactored(nn.Module):
         return x
 
     def run_attn(self,shifted_x,attn_mask,flows,state):
-        if self.attn_mode == "window_default":
+        if "window" in self.attn_mode:
             return self.run_partition_attn(shifted_x,attn_mask)
         else:
             return self.run_video_attn(shifted_x,attn_mask,flows,state)

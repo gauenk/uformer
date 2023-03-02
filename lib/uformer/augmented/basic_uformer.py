@@ -16,7 +16,7 @@ class BasicUformerLayer(nn.Module):
                  token_projection='linear',token_mlp='ffn', shift_flag=True,
                  modulator=False,cross_modulator=False,attn_mode="window_dnls",
                  ps=1,pt=1,k=-1,ws=8,wt=0,stride0=1,stride1=1,dil=1,
-                 nbwd=1,rbwd=False,exact=False,bs=-1,qk_frac=1.,
+                 nbwd=1,rbwd=False,exact=False,bs=-1,qk_frac=1., wr=1, kr=1.,
                  update_dists=False):
         super().__init__()
         self.dim = dim
@@ -39,10 +39,11 @@ class BasicUformerLayer(nn.Module):
                             norm_layer=norm_layer,
                             token_projection=token_projection,token_mlp=token_mlp,
                             modulator=modulator,cross_modulator=cross_modulator,
-                            attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
-                            wt=wt, dil=dil, stride0=stride0, stride1=stride1,
+                            attn_mode=attn_mode, k=k, ps=ps, pt=pt,
+                            ws=ws, wr=wr, kr=kr, wt=wt, dil=dil,
+                            stride0=stride0, stride1=stride1,
                             nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs, qk_frac=qk_frac,
-                            update_dists=update_dists)
+                            update_dists=update_dists,layer_index=i)
                 for i in range(depth)])
         else:
             self.blocks = nn.ModuleList([
@@ -60,7 +61,7 @@ class BasicUformerLayer(nn.Module):
                             attn_mode=attn_mode, k=k, ps=ps, pt=pt, ws=ws,
                             wt=wt, dil=dil, stride0=stride0, stride1=stride1,
                             nbwd=nbwd, rbwd=rbwd, exact=exact, bs=bs, qk_frac=qk_frac,
-                            update_dists=update_dists)
+                            update_dists=update_dists,layer_index=i)
             for i in range(depth)])
 
     def extra_repr(self) -> str:
