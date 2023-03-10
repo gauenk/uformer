@@ -9,11 +9,8 @@ from timm.models.layers import trunc_normal_
 # -- project deps --
 from .proj import ConvProjection,LinearProjection,ConvProjectionNoReshape
 
-# # -- local --
-# from .state import update_state,run_state_search
-
-# -- benchmarking --
-from dev_basics.utils.timer import ExpTimer,ExpTimerList
+# -- local --
+from .state import update_state,run_state_search
 
 # -- neighborhood attn --
 # import nat
@@ -21,12 +18,12 @@ from dev_basics.utils.timer import ExpTimer,ExpTimerList
 # -- dnls --
 import dnls
 
-class NonLocalAttention(nn.Module):
+class ProductAttention(nn.Module):
     def __init__(self, dim, win_size,num_heads, token_projection='linear',
                  qkv_bias=True, qk_scale=None, attn_drop=0., proj_drop=0.,
                  ps=1,pt=1,k=-1,ws=8,wt=0,dil=1,stride0=1,stride1=1,
-                 nbwd=1,rbwd=False,exact=False,bs=-1,qk_frac=1.,wr=1,kr=1.,
-                 update_dists=False,search_fxn="dnls",use_state_update=False):
+                 nbwd=1,rbwd=False,exact=False,bs=-1,qk_frac=1.,
+                 update_dists=False,search_fxn="dnls"):
 
         super().__init__()
 
@@ -36,8 +33,6 @@ class NonLocalAttention(nn.Module):
         self.pt = pt
         self.ws = ws
         self.wt = wt
-        self.wr = wr
-        self.kr = kr
         self.dil = dil
         self.stride0 = stride0
         self.stride1 = stride1
@@ -45,8 +40,7 @@ class NonLocalAttention(nn.Module):
         self.rbwd = rbwd
         self.exact = exact
         self.bs = bs
-        self.use_state_update = use_state_update
-        # self.update_dists = False #update_dists
+        self.update_dists = False #update_dists
         self.search_fxn = search_fxn
 
         # -- attn info --
@@ -57,8 +51,8 @@ class NonLocalAttention(nn.Module):
         self.scale = qk_scale or head_dim ** -0.5
 
         # define a parameter table of relative position bias
-        # self.relative_position_bias_table = nn.Parameter(
-        #     th.zeros((2 * win_size[0] - 1) * (2 * win_size[1] - 1), num_heads))  # 2*Wh-1 * 2*Ww-1, nH
+        self.relative_position_bias_table = nn.Parameter(
+            th.zeros((2 * win_size[0] - 1) * (2 * win_size[1] - 1), num_heads))  # 2*Wh-1 * 2*Ww-1, nH
 
         # get pair-wise relative position index for each token inside the window
         coords_h = th.arange(self.win_size[0]) # [0,...,Wh-1]
@@ -72,8 +66,8 @@ class NonLocalAttention(nn.Module):
         relative_coords[:, :, 0] *= 2 * self.win_size[1] - 1
         relative_position_index = relative_coords.sum(-1)  # Wh*Ww, Wh*Ww
         # print(self.relative_position_bias_table.shape,relative_position_index.shape)
-        # self.register_buffer("relative_position_index", relative_position_index)
-        # trunc_normal_(self.relative_position_bias_table, std=.02)
+        self.register_buffer("relative_position_index", relative_position_index)
+        trunc_normal_(self.relative_position_bias_table, std=.02)
         self.qkv = ConvProjectionNoReshape(dim,num_heads,dim//num_heads,
                                            qk_frac,bias=qkv_bias)
 
@@ -84,15 +78,9 @@ class NonLocalAttention(nn.Module):
         self.softmax = nn.Softmax(dim=-1)
 
         # -- init search --
-        self.search_name = search_fxn
         self.search = self.init_search(search_fxn)
         self.wpsum = self.init_wpsum()
         # self.fold = self.init_fold()
-
-        # -- timers --
-        self.use_timer = False
-        self.times = ExpTimerList(self.use_timer)
-        self.timer = None
 
     def get_weights(self,module):
         weights = []
@@ -174,24 +162,19 @@ class NonLocalAttention(nn.Module):
 
     def forward(self, vid, mask=None, flows=None, state=None):
 
-        # -- update state --
-        # if state is None: state = ["None","none"]
-        # print([state[0] is None, state[1] is None],self.search,self.search_name)
-
-        # -- init timer --
-        self.timer = ExpTimer(self.use_timer)
-
         # -- unpack --
         # self.wpsum_patches = None
 
         # -- init --
-        # self.search.update_flow(vid,flows)
+        # print("vid.shape: ",vid.shape)
+        # print("flows.fflow.shape: ",flows.fflow.shape)
+        self.search.update_flow(vid.shape,vid.device,flows)
 
         # -- qkv --
         q_vid,k_vid,v_vid = self.get_qkv(vid)
 
         # -- run search --
-        dists,inds = self.run_search(q_vid,k_vid,flows,state)
+        dists,inds = self.run_search(q_vid,k_vid,state)
 
         # -- softmax --
         dists = self.run_softmax(dists,mask,vid.shape)
@@ -205,7 +188,6 @@ class NonLocalAttention(nn.Module):
 
         # -- fold --
         vid = self.run_fold(patches,vid.shape)
-        # print("vid.shape: ",vid.shape)
 
         return vid
 
@@ -224,104 +206,41 @@ class NonLocalAttention(nn.Module):
         #                                 'nH l c -> nH l (c d)', d = ratio)
         return relative_position_bias
 
-    # def run_search_patches(self,q_patches,qstart,ntotal,k_patches,state):
-    #     dists,inds = None,None
-    #     return dists,inds
-
-    # def run_search(self,q_vid,k_vid,state):
-    #     if state is None:
-    #         # -- dnls search --
-    #         B, T, _, H, W = q_vid.shape
-    #         qstart,stride0 = 0,self.stride0
-    #         ntotal = T*((H-1)//stride0+1)*((W-1)//stride0+1)
-    #         dists,inds = self.search(q_vid,qstart,ntotal,k_vid)
-    #     else:
-    #         # -- streaming search --
-    #         dists,inds = run_state_search(q_vid,qstart,ntotal,k_vid,state)
-    #         update_state(state,dists,inds)
-    #     return dists,inds
-
-    def init_search(self,search_fxn):
-        if search_fxn in ["refine"]:
-            search = self.init_refine()
-        else:
-            search = self.init_nls()
-        return search
-
-    def run_search(self,q_vid,k_vid,flows,state):
-        self.timer.sync_start("search")
-        if self.search_name == "refine":
-            inds_p = self.inds_rs1(state[0])
-            dists,inds = self.search(q_vid,k_vid,inds_p)
-        elif self.search_name == "rand_inds":
-            dists,inds = self.search(q_vid,k_vid)
-        else:
-            dists,inds = self.search(q_vid,k_vid,flows.fflow,flows.bflow)
-        dists = dists.contiguous()
-        inds = inds.contiguous()
-        self.update_state(state,dists,inds,q_vid.shape)
-        self.timer.sync_stop("search")
+    def run_search_patches(self,q_patches,qstart,ntotal,k_patches,state):
+        dists,inds = None,None
         return dists,inds
 
-    def update_state(self,state,dists,inds,vshape):
-        if not(self.use_state_update): return
-        T,C,H,W = vshape[-4:]
-        nH = (H-1)//self.stride0+1
-        nW = (W-1)//self.stride0+1
-        # state[0] = state[1]
-        state[0] = self.inds_rs0(inds.detach(),nH,nW) # forward state
+    def run_search(self,q_vid,k_vid,state):
+        if state is None:
+            # -- dnls search --
+            B, T, _, H, W = q_vid.shape
+            qstart,stride0 = 0,self.stride0
+            ntotal = T*((H-1)//stride0+1)*((W-1)//stride0+1)
+            dists,inds = self.search(q_vid,qstart,ntotal,k_vid)
+        else:
+            # -- streaming search --
+            dists,inds = run_state_search(q_vid,qstart,ntotal,k_vid,state)
+            update_state(state,dists,inds)
+        return dists,inds
 
-    def inds_rs0(self,inds,nH,nW):
-        if not(inds.ndim == 5): return inds
-        rshape = 'b h (T nH nW) k tr -> T nH nW b h k tr'
-        inds = rearrange(inds,rshape,nH=nH,nW=nW)
-        return inds
-
-    def inds_rs1(self,inds):
-        if not(inds.ndim == 7): return inds
-        rshape = 'T nH nW b h k tr -> b h (T nH nW) k tr'
-        inds = rearrange(inds,rshape)
-        return inds
-
-    def init_nls(self):
-
-        # # -- unpack params --
-        k       = self.k
-        ps      = self.ps
-        pt      = self.pt
-        ws      = self.ws
-        wt      = self.wt
-        dil     = self.dil
-        stride0 = self.stride0
-        stride1 = self.stride1
-        nbwd    = self.nbwd
-        rbwd    = self.rbwd
-        exact   = self.exact
-        nheads  = self.num_heads
-        reflect_bounds = True
-        use_adj = False
-        full_ws = True
-
-        # print(k,ps,pt,ws,wt,dil,stride0,stride1,nheads)
-        NonLocalSearch = dnls.search.NonLocalSearch
-        search = NonLocalSearch(ps, pt, ws, wt, nheads,
-                                dist_type="prod",dilation=dil,
-                                reflect_bounds=reflect_bounds,
-                                use_adj=use_adj,full_ws=full_ws,
-                                stride0=stride0,stride1=stride1,
-                                nbwd=nbwd,rbwd=rbwd,exact=exact)
+    def init_search(self,search_fxn):
+        if search_fxn in ["dnls","stream"]:
+            search = self.init_dnls()
+        elif search_fxn in ["nat"]:
+            search = self.init_nat()
+        else:
+            raise ValueError(f"Uknown search function [{search_fxn}]")
         return search
-        
-    def init_refine(self):
 
-        # # -- unpack params --
+    def init_dnls(self):
+
+        # -- unpack params --
         k       = self.k
+        if k == 0: k = -1
         ps      = self.ps
         pt      = self.pt
-        ws      = self.ws
+        ws      = min(self.ws,25)
         wt      = self.wt
-        wr      = self.wr
-        kr      = self.kr
         dil     = self.dil
         stride0 = self.stride0
         stride1 = self.stride1
@@ -329,17 +248,29 @@ class NonLocalAttention(nn.Module):
         rbwd    = self.rbwd
         exact   = self.exact
         nheads  = self.num_heads
+        # print("k,ps,ws,wt: ",k,ps,ws,wt)
+        # print(rbwd,nbwd)
+
+        # -- fixed --
+        fflow,bflow = None,None
+        use_k = k > 0
         reflect_bounds = True
+        use_search_abs = False
+        only_full = False
         use_adj = False
         full_ws = True
+        stype = "prod_with_heads"
 
-        RefineSearch = dnls.search.RefineSearch
-        search = RefineSearch(ws, ps, k, wr, kr, nheads,
-                              dist_type="prod",dilation=dil,
-                              reflect_bounds=reflect_bounds,
-                              use_adj=use_adj,full_ws=full_ws,
-                              stride0=stride0,stride1=stride1,
-                              nbwd=nbwd,rbwd=rbwd,exact=exact)
+        # -- init --
+        search = dnls.search.init(stype,fflow, bflow, k,
+                                  ps, pt, ws, wt, nheads,
+                                  chnls=-1,dilation=dil,
+                                  stride0=stride0,stride1=stride1,
+                                  reflect_bounds=reflect_bounds,
+                                  use_k=use_k,use_adj=use_adj,
+                                  search_abs=use_search_abs,full_ws=full_ws,
+                                  h0_off=0,w0_off=0,h1_off=0,w1_off=0,
+                                  exact=exact,nbwd=nbwd,rbwd=rbwd)
         return search
 
     def init_nat(self):

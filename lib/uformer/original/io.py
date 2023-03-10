@@ -18,44 +18,58 @@ from ..utils.model_utils import load_checkpoint_module
 from ..utils.model_io import get_pretrained_path
 from ..utils.model_utils import load_checkpoint_module,load_checkpoint_qkv
 
-def load_model(*args,**kwargs):
+# -- extract config --
+from dev_basics.configs import ExtractConfig
+econfig = ExtractConfig(__file__)
+extract_config = econfig.extract_config
+
+@econfig.set_init
+def load_model(cfg):
+
+    # -- relevant configs --
+    econfig.init(cfg)
 
     # -- defaults changed by noise version --
-    noise_version = optional(kwargs,'noise_version',"noise")
+    noise_version = optional(cfg,'noise_version',"noise")
     default_modulator = True
-    default_depth = [1, 2, 8, 8, 2, 8, 8, 2, 1]
+    # default_depth = [1, 2, 8, 8, 2, 8, 8, 2, 1]
+    default_depth = [2,2,2,2,2,2,2,2,2]
     default_state_fn = get_default_state(noise_version)
 
     # -- get cfg --
-    nchnls = optional(kwargs,'nchnls',3)
-    input_size = optional(kwargs,'input_size',128)
-    device = optional(kwargs,'device','cuda:0')
-    depths = optional(kwargs,'input_depth',default_depth)
+    nchnls = optional(cfg,'nchnls',3)
+    input_size = optional(cfg,'input_size',128)
+    device = optional(cfg,'device','cuda:0')
+    depths = optional(cfg,'input_depth',default_depth)
     nblocks = len(depths)
 
     # -- other configs --
-    embed_dim = optional(kwargs,'embed_dim',32)
-    win_size = optional(kwargs,'win_size',8)
-    mlp_ratio = optional(kwargs,'mlp_ratio',4)
-    qkv_bias = optional(kwargs,'qkv_bias',True)
-    token_projection = optional(kwargs,'token_projection','linear')
-    token_mlp = optional(kwargs,'token_mlp','leff')
-    modulator = optional(kwargs,'modulator',default_modulator)
-    cross_modulator = optional(kwargs,'cross_modulator',False)
-    dd_in = optional(kwargs,'dd_in',3)
-    attn_mode = optional(kwargs,'attn_mode',"window_dnls")
-    in_attn_mode = optional(kwargs,'in_attn_mode',attn_mode)
+    embed_dim = optional(cfg,'embed_dim',32)
+    win_size = optional(cfg,'win_size',8)
+    mlp_ratio = optional(cfg,'mlp_ratio',4)
+    qkv_bias = optional(cfg,'qkv_bias',True)
+    token_projection = optional(cfg,'token_projection','linear')
+    token_mlp = optional(cfg,'token_mlp','leff')
+    modulator = optional(cfg,'modulator',default_modulator)
+    cross_modulator = optional(cfg,'cross_modulator',False)
+    dd_in = optional(cfg,'dd_in',3)
+    attn_mode = optional(cfg,'attn_mode',"window_dnls")
+    in_attn_mode = optional(cfg,'in_attn_mode',attn_mode)
 
     # -- load configs [files] --
-    pretrained_prefix = optional(kwargs,"pretrained_prefix","module.")
-    load_pretrained = optional(kwargs,"load_pretrained",True)
-    pretrained_path = optional(kwargs,"pretrained_path",default_state_fn)
+    pretrained_prefix = optional(cfg,"pretrained_prefix","module.")
+    load_pretrained = optional(cfg,"load_pretrained",False)
+    pretrained_path = optional(cfg,"pretrained_path",default_state_fn)
 
     # -- load configs --
-    reset_qkv = optional(kwargs,"reset_qkv",False)
-    attn_reset = optional(kwargs,"attn_reset",False)
-    strict_model_load = optional(kwargs,"strict_model_load",True)
-    skip_mismatch_model_load = optional(kwargs,"skip_mismatch_model_load",False)
+    reset_qkv = optional(cfg,"reset_qkv",False)
+    attn_reset = optional(cfg,"attn_reset",False)
+    strict_model_load = optional(cfg,"strict_model_load",True)
+    skip_mismatch_model_load = optional(cfg,"skip_mismatch_model_load",False)
+
+    # -- end --
+    if econfig.is_init: return
+
 
     # -- init model --
     model = Uformer(img_size=input_size, in_chans=nchnls, embed_dim=embed_dim,
