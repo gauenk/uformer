@@ -43,7 +43,7 @@ def load_model(*args,**kwargs):
     modulator = optional(kwargs,'modulator',default_modulator)
     cross_modulator = optional(kwargs,'cross_modulator',False)
     dd_in = optional(kwargs,'dd_in',3)
-    attn_mode = optional(kwargs,'attn_mode',"window_dnls")
+    attn_mode = optional(kwargs,'attn_mode',"window_stnls")
     in_attn_mode = optional(kwargs,'in_attn_mode',attn_mode)
 
     # -- load configs [files] --

@@ -61,8 +61,8 @@ def run_exp(cfg):
     #     model = uformer.augmented.load_model(cfg.sigma,attn_mode=attn_mode,
     #                                          stride=cfg.stride,sb=-1)
     #                                          # ws=cfg.ws,wt=cfg.wt)#*1024)
-    # elif cfg.model_type == "aug_dnls":
-    #     attn_mode = "dnls"
+    # elif cfg.model_type == "aug_stnls":
+    #     attn_mode = "stnls"
     #     model = uformer.augmented.load_model(cfg.sigma,attn_mode=attn_mode,
     #                                          stride=cfg.stride)
     #                                          # ws=cfg.ws,wt=cfg.wt)
@@ -284,7 +284,7 @@ def main():
     isizes = ["none"]
     stride = [1]
     use_train = ["false"]
-    model_type = ["aug_refactored","aug_dnls"]
+    model_type = ["aug_refactored","aug_stnls"]
     exp_lists = {"dname":dnames,"vid_name":vid_names,"dset":dset,
                  "flow":flow,"ws":ws,"wt":wt,"model_type":model_type,
                  "isize":isizes,"stride":stride,"use_train":use_train}
@@ -326,7 +326,7 @@ def main():
         #     cache.clear_exp(uuid)
         # if exp.model_type == "aug_refactored":
         #     cache.clear_exp(uuid)
-        if exp.model_type == "aug_dnls":
+        if exp.model_type == "aug_stnls":
             cache.clear_exp(uuid)
         # if exp.use_train == "true":
         #     cache.clear_exp(uuid)

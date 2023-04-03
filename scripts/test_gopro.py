@@ -228,11 +228,11 @@ def main():
         #     cache.clear_exp(uuid)
         # if exp.attn_mode == "aug_refactored":
         #     cache.clear_exp(uuid)
-        # if exp.attn_mode == "aug_dnls":
+        # if exp.attn_mode == "aug_stnls":
         #     cache.clear_exp(uuid)
-        # if exp.attn_mode == "product_dnls":
+        # if exp.attn_mode == "product_stnls":
         #     cache.clear_exp(uuid)
-        # if exp.use_train == "true" and exp.attn_mode == "product_dnls":
+        # if exp.use_train == "true" and exp.attn_mode == "product_stnls":
         #     cache.clear_exp(uuid)
         # if exp.use_train == "true" and exp.attn_mode == "pd-w-w-w-w":
         #     cache.clear_exp(uuid)

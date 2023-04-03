@@ -15,15 +15,15 @@ from .state import update_state,run_state_search
 # -- neighborhood attn --
 # import nat
 
-# -- dnls --
-import dnls
+# -- stnls --
+import stnls
 
 class ProductAttention(nn.Module):
     def __init__(self, dim, win_size,num_heads, token_projection='linear',
                  qkv_bias=True, qk_scale=None, attn_drop=0., proj_drop=0.,
                  ps=1,pt=1,k=-1,ws=8,wt=0,dil=1,stride0=1,stride1=1,
                  nbwd=1,rbwd=False,exact=False,bs=-1,qk_frac=1.,
-                 update_dists=False,search_fxn="dnls"):
+                 update_dists=False,search_fxn="stnls"):
 
         super().__init__()
 
@@ -212,7 +212,7 @@ class ProductAttention(nn.Module):
 
     def run_search(self,q_vid,k_vid,state):
         if state is None:
-            # -- dnls search --
+            # -- stnls search --
             B, T, _, H, W = q_vid.shape
             qstart,stride0 = 0,self.stride0
             ntotal = T*((H-1)//stride0+1)*((W-1)//stride0+1)
@@ -224,15 +224,15 @@ class ProductAttention(nn.Module):
         return dists,inds
 
     def init_search(self,search_fxn):
-        if search_fxn in ["dnls","stream"]:
-            search = self.init_dnls()
+        if search_fxn in ["stnls","stream"]:
+            search = self.init_stnls()
         elif search_fxn in ["nat"]:
             search = self.init_nat()
         else:
             raise ValueError(f"Uknown search function [{search_fxn}]")
         return search
 
-    def init_dnls(self):
+    def init_stnls(self):
 
         # -- unpack params --
         k       = self.k
@@ -262,7 +262,7 @@ class ProductAttention(nn.Module):
         stype = "prod_with_heads"
 
         # -- init --
-        search = dnls.search.init(stype,fflow, bflow, k,
+        search = stnls.search.init(stype,fflow, bflow, k,
                                   ps, pt, ws, wt, nheads,
                                   chnls=-1,dilation=dil,
                                   stride0=stride0,stride1=stride1,
@@ -316,7 +316,7 @@ class ProductAttention(nn.Module):
         reflect_bounds = True
 
         # -- init --
-        wpsum = dnls.reducers.WeightedPatchSumHeads(ps, pt, h_off=0, w_off=0,
+        wpsum = stnls.reducers.WeightedPatchSumHeads(ps, pt, h_off=0, w_off=0,
                                                     dilation=dil,
                                                     reflect_bounds=reflect_bounds,
                                                     adj=0, exact=exact)
@@ -327,7 +327,7 @@ class ProductAttention(nn.Module):
         stride0 = self.stride0
         only_full = False
         reflect_bounds = True
-        fold = dnls.iFoldz(vshape,None,stride=stride0,dilation=dil,
+        fold = stnls.iFoldz(vshape,None,stride=stride0,dilation=dil,
                            adj=0,only_full=only_full,
                            use_reflect=reflect_bounds,device=device)
         return fold

@@ -28,7 +28,7 @@ from einops import rearrange,repeat
 import data_hub
 
 # -- package imports [to test] --
-import dnls # supporting
+import stnls # supporting
 from torchvision.transforms.functional import center_crop
 
 # -- package imports [to test] --
@@ -122,8 +122,8 @@ def test_augmented_fwd(sigma,ref_version):
     t,c,h,w = noisy.shape
     region = None#[0,t,0,0,h,w] if ref_version == "ref" else None
     # attn_mode = "window_original"
-    # attn_mode = "window_dnls"
-    attn_mode = "product_dnls"
+    # attn_mode = "window_stnls"
+    attn_mode = "product_stnls"
     # attn_mode = "window_refactored"
     # model_te = uformer.original.load_model(sigma,noise_version=noise_version)
     model_te = uformer.augmented.load_model(sigma,attn_mode=attn_mode,
@@ -147,9 +147,9 @@ def test_augmented_fwd(sigma,ref_version):
     print(diff_s.max())
     diff_s /= diff_s.max()
     print("diff_s.shape: ",diff_s.shape)
-    dnls.testing.data.save_burst(diff_s[:3],SAVE_DIR,"diff")
-    dnls.testing.data.save_burst(deno_gt[:3],SAVE_DIR,"deno_gt")
-    dnls.testing.data.save_burst(deno_te[:3],SAVE_DIR,"deno_te")
+    stnls.testing.data.save_burst(diff_s[:3],SAVE_DIR,"diff")
+    stnls.testing.data.save_burst(deno_gt[:3],SAVE_DIR,"deno_gt")
+    stnls.testing.data.save_burst(deno_te[:3],SAVE_DIR,"deno_te")
 
     # -- test --
     error = th.abs(deno_gt - deno_te).mean().item()
@@ -217,7 +217,7 @@ def test_augmented_bwd(sigma,ref_version):
     region = None#[0,t,0,0,h,w] if ref_version == "ref" else None
     # attn_mode = "window_original"
     attn_mode = "window_refactored"
-    # attn_mode = "window_dnls"
+    # attn_mode = "window_stnls"
     # model_te = uformer.original.load_model(sigma,noise_version=noise_version)
     # model_te.train()
     model_te = uformer.augmented.load_model(sigma,attn_mode=attn_mode,

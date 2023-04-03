@@ -212,7 +212,7 @@ def filter_rel_pos(model,in_attn_mode):
             bname = name.split(".")[0]
             bnum = block_name2num(bname)
             attn_mode_b = attn_modes[bnum]
-            if attn_mode_b == "product_dnls":
+            if attn_mode_b == "product_stnls":
                 submod = model
                 submods = name.split(".")
                 for submod_i in submods[:-1]:

@@ -18,7 +18,7 @@ from .augmented import extract_model_io # set input params
 from .augmented import extract_model_io as extract_model_config # aka
 
 def load_model(*args,**kwargs):
-    attn_mode = optional(kwargs,"attn_mode","product_dnls")
+    attn_mode = optional(kwargs,"attn_mode","product_stnls")
     if attn_mode == "original":
         return original.load_model(*args,**kwargs)
     else:

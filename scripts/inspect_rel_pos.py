@@ -115,7 +115,7 @@ def main():
     isizes = ["none"]
     stride = [1]
     use_train = ["false"]
-    attn_mode = ["window_dnls","window_refactored","window_default","product_dnls"]
+    attn_mode = ["window_stnls","window_refactored","window_default","product_stnls"]
     exp_lists = {"dname":dnames,"vid_name":vid_names,"dset":dset,"flow":flow,
                  "ws":ws,"wt":wt,"attn_mode":attn_mode,"isize":isizes,
                  "stride":stride,"use_train":use_train,"chkpt_fn":chkpt_fn}
@@ -128,7 +128,7 @@ def main():
                  "7815163b-842f-4edb-9cf5-21ee7abb1dd6",
                  ]
     exp_lists['use_train'] = ['true']
-    exp_lists['attn_mode'] = ['product_dnls']
+    exp_lists['attn_mode'] = ['product_stnls']
     exp_lists['chkpt_fn'] = chkpt_fns
     exps_b = cache_io.mesh_pydicts(exp_lists) # create mesh
     exps = exps_a + exps_b
@@ -165,7 +165,7 @@ def main():
         #     cache.clear_exp(uuid)
         # if exp.attn_mode == "window_refactored":
         #     cache.clear_exp(uuid)
-        # if exp.attn_mode == "product_dnls":
+        # if exp.attn_mode == "product_stnls":
         #     cache.clear_exp(uuid)
         if exp.use_train == "true":
             cache.clear_exp(uuid)

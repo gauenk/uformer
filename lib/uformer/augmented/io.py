@@ -62,7 +62,7 @@ def load_model(*args,**kwargs):
     shift_flag = optional(kwargs,'shift_flag',True)
 
     # -- relevant configs --
-    attn_mode = optional(kwargs,'attn_mode',"window_dnls")
+    attn_mode = optional(kwargs,'attn_mode',"window_stnls")
     in_attn_mode = optional(kwargs,'in_attn_mode',attn_mode)
     k = optional(kwargs,'k',-1)
     ps = optional(kwargs,'ps',1)

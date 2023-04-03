@@ -9,9 +9,9 @@ from timm.models.layers import trunc_normal_
 # -- project deps --
 from .proj import ConvProjection,LinearProjection,ConvProjectionNoReshape
 
-# -- dnls --
-import dnls
-from dnls.utils.inds import get_nums_hw
+# -- stnls --
+import stnls
+from stnls.utils.inds import get_nums_hw
 
 class WindowAttentionRefactored(nn.Module):
     def __init__(self, dim, win_size,num_heads, token_projection='linear',
@@ -66,7 +66,7 @@ class WindowAttentionRefactored(nn.Module):
 
         # -- init --
         rel_pos = self.get_rel_pos()
-        search,wpsum,fold = self.init_dnls(vid.shape,vid.device,self.num_heads)
+        search,wpsum,fold = self.init_stnls(vid.shape,vid.device,self.num_heads)
 
         # -- qkv --
         q_vid, k_vid, v_vid = self.qkv_videos(vid,attn_kv)
@@ -135,7 +135,7 @@ class WindowAttentionRefactored(nn.Module):
         return relative_position_bias
 
 
-    def init_dnls(self,vshape,device,nheads):
+    def init_stnls(self,vshape,device,nheads):
         fflow,bflow = None,None
         k = -1
         ps_search = 1
@@ -149,7 +149,7 @@ class WindowAttentionRefactored(nn.Module):
         use_search_abs = False
         only_full = False
         exact = True
-        search = dnls.search.init("window",fflow, bflow, k,
+        search = stnls.search.init("window",fflow, bflow, k,
                                   ps_search, pt, ws, wt, nheads,
                                   chnls=-1,dilation=dil,
                                   stride0=stride,stride1=stride,
@@ -158,11 +158,11 @@ class WindowAttentionRefactored(nn.Module):
                                   search_abs=use_search_abs,
                                   h0_off=0,w0_off=0,h1_off=0,w1_off=0,
                                   exact=exact)
-        wpsum = dnls.reducers.WeightedPatchSumHeads(ps_search, pt, h_off=0, w_off=0,
+        wpsum = stnls.reducers.WeightedPatchSumHeads(ps_search, pt, h_off=0, w_off=0,
                                                     dilation=dil,
                                                     reflect_bounds=reflect_bounds,
                                                     adj=0, exact=exact)
-        fold = dnls.iFoldz(vshape,None,stride=stride,dilation=dil,
+        fold = stnls.iFoldz(vshape,None,stride=stride,dilation=dil,
                            adj=0,only_full=only_full,
                            use_reflect=reflect_bounds,device=device)
         return search,wpsum,fold
@@ -180,15 +180,15 @@ class WindowAttentionRefactored(nn.Module):
         stride = 8
         vshape = x.shape
         only_full = True
-        unfold = dnls.iUnfold(ps,None,stride=stride,dilation=dil,
+        unfold = stnls.iUnfold(ps,None,stride=stride,dilation=dil,
                               adj=adj,only_full=only_full,border="reflect")
-        qfold = dnls.iFold(vshape,None,stride=stride,dilation=dil,
+        qfold = stnls.iFold(vshape,None,stride=stride,dilation=dil,
                            adj=adj,only_full=only_full,
                            use_reflect=True,device=x.device)
-        kfold = dnls.iFold(vshape,None,stride=stride,dilation=dil,
+        kfold = stnls.iFold(vshape,None,stride=stride,dilation=dil,
                            adj=adj,only_full=only_full,
                            use_reflect=True,device=x.device)
-        vfold = dnls.iFold(vshape,None,stride=stride,dilation=dil,
+        vfold = stnls.iFold(vshape,None,stride=stride,dilation=dil,
                            adj=adj,only_full=only_full,
                            use_reflect=True,device=x.device)
         # -- unfold --

@@ -9,8 +9,8 @@ from timm.models.layers import trunc_normal_
 # -- project deps --
 from .proj import ConvProjection,LinearProjection,ConvProjectionNoReshape
 
-# -- dnls --
-import dnls
+# -- stnls --
+import stnls
 
 class L2Attention(nn.Module):
     def __init__(self, dim, win_size,num_heads, token_projection='linear',
@@ -78,7 +78,7 @@ class L2Attention(nn.Module):
         # -- init --
         mask = None
         rel_pos = self.get_rel_pos()
-        search,wpsum,fold = self.init_dnls(vid.shape,vid.device,self.num_heads)
+        search,wpsum,fold = self.init_stnls(vid.shape,vid.device,self.num_heads)
 
         # -- qkv --
         q_vid, k_vid, v_vid = self.qkv(vid,attn_kv)
@@ -129,7 +129,7 @@ class L2Attention(nn.Module):
         return relative_position_bias
 
 
-    def init_dnls(self,vshape,device,nheads):
+    def init_stnls(self,vshape,device,nheads):
 
         # -- unpack params --
         k       = self.k
@@ -157,7 +157,7 @@ class L2Attention(nn.Module):
         stype = "l2_with_heads"
 
         # -- init --
-        search = dnls.search.init(stype,fflow, bflow, k,
+        search = stnls.search.init(stype,fflow, bflow, k,
                                   ps, pt, ws, wt, nheads,
                                   chnls=-1,dilation=dil,
                                   stride0=stride0,stride1=stride1,
@@ -166,11 +166,11 @@ class L2Attention(nn.Module):
                                   search_abs=use_search_abs,full_ws=full_ws,
                                   h0_off=0,w0_off=0,h1_off=0,w1_off=0,
                                   exact=exact,nbwd=nbwd,rbwd=rbwd)
-        wpsum = dnls.reducers.WeightedPatchSumHeads(ps, pt, h_off=0, w_off=0,
+        wpsum = stnls.reducers.WeightedPatchSumHeads(ps, pt, h_off=0, w_off=0,
                                                     dilation=dil,
                                                     reflect_bounds=reflect_bounds,
                                                     adj=0, exact=exact)
-        fold = dnls.iFoldz(vshape,None,stride=stride0,dilation=dil,
+        fold = stnls.iFoldz(vshape,None,stride=stride0,dilation=dil,
                            adj=0,only_full=only_full,
                            use_reflect=reflect_bounds,device=device)
         return search,wpsum,fold
