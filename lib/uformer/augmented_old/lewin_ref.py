@@ -15,7 +15,7 @@ from .mlps import FastLeFF,LeFF,Mlp
 from .attn import Attention
 from .window_attn import WindowAttention
 from .window_attn_ref import WindowAttentionRefactored
-from .window_attn_stnls import WindowAttentionDnls
+from .window_attn_dnls import WindowAttentionDnls
 from .window_utils import window_partition,window_reverse
 # from .product_attn import ProductAttention
 # from .l2_attn import L2Attention
@@ -49,7 +49,7 @@ def select_window_attn(attn_mode):
         return WindowAttention
     elif attn_mode == "refactored":
         return WindowAttentionRefactored
-    elif attn_mode == "stnls":
+    elif attn_mode == "dnls":
         return WindowAttentionDnls
     else:
         raise ValueError(f"Uknown window attn type [{attn_mode}]")

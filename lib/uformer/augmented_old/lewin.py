@@ -10,32 +10,31 @@ import torch.nn.functional as F
 from timm.models.layers import DropPath, to_2tuple
 
 # -- project deps --
-from .mlps import init_mlp#FastLeFF,LeFF,Mlp
+from .mlps import FastLeFF,LeFF,Mlp
 from .attn import Attention
 from .window_attn import WindowAttention
 from .window_utils import window_partition,window_reverse
 
 
 class LeWinTransformerBlock(nn.Module):
-
-    def __init__(self, block):
+    def __init__(self, dim, input_resolution, num_heads, win_size=8, shift_size=0,
+                 mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0.,
+                 drop_path=0., act_layer=nn.GELU,
+                 norm_layer=nn.LayerNorm,token_projection='linear',token_mlp='leff',
+                 modulator=False,cross_modulator=False):
         super().__init__()
-
-        # -- unpack --
-        self.dim = block.dim
-        self.win_size = block.win_size
-        self.input_resolution = block.input_resolution
-        drop_path = block.drop_path
-        modulator = block.modulator
-        cross_modulator = block.cross_modulator
-
-        # -- mangle input size --
+        self.dim = dim
+        self.input_resolution = input_resolution
+        self.num_heads = num_heads
+        self.win_size = win_size
+        self.shift_size = shift_size
+        self.mlp_ratio = mlp_ratio
+        self.token_mlp = token_mlp
         if min(self.input_resolution) <= self.win_size:
             self.shift_size = 0
             self.win_size = min(self.input_resolution)
         assert 0 <= self.shift_size < self.win_size, "shift_size must in 0-win_size"
 
-        # -- modulator --
         if modulator:
             self.modulator = nn.Embedding(win_size*win_size, dim) # modulator
         else:
@@ -49,9 +48,14 @@ class LeWinTransformerBlock(nn.Module):
         else:
             self.cross_modulator = None
 
-        self.norm1 = norm_layer(block.dim)
-        self.attn = WindowAttention(block)
-        self.drop_path = DropPath(block.drop_path) if drop_path > 0. else nn.Identity()
+        self.norm1 = norm_layer(dim)
+        self.attn = WindowAttention(
+            dim, win_size=to_2tuple(self.win_size), num_heads=num_heads,
+            qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop,
+            proj_drop=drop,
+            token_projection=token_projection)
+
+        self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         self.norm2 = norm_layer(dim)
         mlp_hidden_dim = int(dim * mlp_ratio)
         if token_mlp in ['ffn','mlp']:

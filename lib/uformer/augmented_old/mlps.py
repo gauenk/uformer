@@ -7,19 +7,6 @@ from einops import rearrange,repeat
 # -- extra deps --
 import math
 
-def init_mlp(token_mlp,dim,mlp_ratio,act_layer,drop):
-    mlp_hidden_dim = int(dim * mlp_ratio)
-    if token_mlp in ['ffn','mlp']:
-        mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim,
-                       act_layer=act_layer, drop=drop)
-    elif token_mlp=='leff':
-        mlp =  LeFF(dim,mlp_hidden_dim,act_layer=act_layer, drop=drop)
-
-    elif token_mlp=='fastleff':
-        mlp =  FastLeFF(dim,mlp_hidden_dim,act_layer=act_layer, drop=drop)
-    else:
-        raise Exception("FFN error!")
-    return mlp
 
 class FastLeFF(nn.Module):
 

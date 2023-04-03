@@ -220,7 +220,7 @@ def main():
     cfg = configs.default_train_cfg()
     cfg.seed = 234
     cfg.dname = "davis_cropped"
-    cfg.sigma = 50.
+    cfg.sigma = 25.
     cfg.isize = "128_128"
 
     # -- num to train --

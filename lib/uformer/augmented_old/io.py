@@ -31,33 +31,8 @@ extract_config = econfig.extract_config
 def load_model(cfg):
 
     # -- relevant configs --
-    attn_mode = optional(kwargs,'attn_mode',"window_stnls")
-    in_attn_mode = optional(kwargs,'in_attn_mode',attn_mode)
-    k = optional(kwargs,'k',-1)
-    ps = optional(kwargs,'ps',1)
-    pt = optional(kwargs,'pt',1)
-    stride0 = optional(kwargs,'stride0',1)
-    stride1 = optional(kwargs,'stride1',1)
-    ws = optional(kwargs,'ws',8)
-    wt = optional(kwargs,'wt',0)
-    nbwd = optional(kwargs,'nbwd',1)
-    rbwd = optional(kwargs,'rbwd',True)
-    exact = optional(kwargs,'exact',False)
-    bs = optional(kwargs,'bs',-1)
-    freeze = optional(kwargs,'freeze',False)
-    input_proj_depth = optional(kwargs,"input_proj_depth",1)
-    output_proj_depth = optional(kwargs,"output_proj_depth",1)
-    qk_frac = optional(kwargs,'qk_frac',1.)
-
-    # -- modify network after load --
-    filter_by_attn_pre = optional(kwargs,"filter_by_attn_pre",False)
-    filter_by_attn_post = optional(kwargs,"filter_by_attn_post",False)
-    load_pretrained = optional(kwargs,"load_pretrained",True)
-    pretrained_path = optional(kwargs,"pretrained_path","")
-    pretrained_prefix = optional(kwargs,"pretrained_prefix","module.")
-    pretrained_qkv = optional(kwargs,"pretrained_qkv","lin2conv")
-
     econfig.init(cfg)
+
     arch_cfg = econfig.optional_pairs(cfg,get_arch_pairs())
     search_cfg = econfig.optional_pairs(cfg,get_search_pairs())
     io_cfg = econfig.optional_pairs(cfg,get_io_pairs())
